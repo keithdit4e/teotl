@@ -1,0 +1,394 @@
+# Customer Support Security Policy
+
+mode: allowlist
+
+# Filesystem Policy
+filesystem:
+  mode: allowlist
+
+  allowed_paths:
+    # Support knowledge base
+    - "~/Support"
+    - "~/Support/common-issues"
+    - "~/Support/policies"
+    - "~/Support/docs"
+    - "~/Support/tickets"
+
+    # Agent workspace
+    - "~/.teotl/agents/customer-support"
+
+    # Documentation directories
+    - "~/Documents/Support"
+    - "~/Documents/KB"
+
+  blocked_paths:
+    # Customer data (never access)
+    - "**/customers/**"
+    - "**/customer-data/**"
+    - "**/users/**"
+    - "**/accounts/**"
+
+    # Billing and payment info
+    - "**/billing/**"
+    - "**/payments/**"
+    - "**/credit-cards/**"
+
+    # System directories
+    - "/etc"
+    - "/var"
+    - "/usr"
+    - "/bin"
+
+    # Sensitive user directories
+    - "~/.ssh"
+    - "~/.aws"
+    - "~/.config"
+
+    # Credentials
+    - "**/*credential*"
+    - "**/*secret*"
+    - "**/*.key"
+    - "**/*.pem"
+
+  require_confirmation:
+    - "delete"
+    - "move"
+
+# Network Policy
+network:
+  mode: allowlist
+
+  allowed_domains:
+    # Company domains (replace with your actual domains)
+    - "*.yourcompany.com"
+    - "docs.yourcompany.com"
+    - "help.yourcompany.com"
+    - "status.yourcompany.com"
+    - "community.yourcompany.com"
+
+    # Documentation and help resources
+    - "*.zendesk.com"
+    - "*.intercom.com"
+    - "*.freshdesk.com"
+    - "*.helpscout.com"
+
+    # General references
+    - "*.stackoverflow.com"
+    - "*.github.com"
+
+    # Product documentation sites
+    - "docs.*.com"
+    - "help.*.com"
+    - "support.*.com"
+
+  blocked_domains:
+    # Admin and internal systems
+    - "admin.*.com"
+    - "internal.*.com"
+    - "*.admin.*"
+
+    # Billing systems
+    - "billing.*.com"
+    - "*.billing.*"
+
+    # Customer databases
+    - "*.database.*"
+    - "db.*.com"
+
+    # Dark web
+    - "*.onion"
+    - "*.bit"
+
+  allowed_protocols:
+    - "https"
+    - "http"
+
+  require_confirmation:
+    - "post"
+    - "put"
+    - "delete"
+
+# Command Execution Policy
+bash:
+  mode: denylist
+
+  blocked_commands:
+    # Dangerous file operations
+    - "rm"
+    - "dd"
+    - "mkfs"
+
+    # System operations
+    - "shutdown"
+    - "reboot"
+    - "sudo"
+    - "su"
+
+    # Permission changes
+    - "chmod"
+    - "chown"
+
+    # Network tools (use web skill instead)
+    - "curl"
+    - "wget"
+    - "nc"
+    - "ssh"
+
+  require_confirmation:
+    - "git commit"
+    - "git push"
+
+# Support-Specific Rules
+support:
+  # Customer data protection
+  customer_data:
+    # Never access customer personal information
+    block_access_to_customer_data: true
+
+    # Never log customer personal information
+    no_logging_personal_info: true
+
+    # Redact sensitive info from logs
+    redact_sensitive_info: true
+
+  # Ticket management
+  tickets:
+    # Can create and read tickets
+    allow_ticket_creation: true
+    allow_ticket_reading: true
+
+    # Cannot modify closed tickets
+    block_closed_ticket_modification: true
+
+    # Require approval for bulk operations
+    require_approval_bulk_ops: true
+
+  # Escalation
+  escalation:
+    # Track all escalations
+    log_escalations: true
+
+    # Require reason for escalation
+    require_escalation_reason: true
+
+    # Auto-escalate criteria
+    auto_escalate:
+      - "security_issue"
+      - "data_loss"
+      - "billing_dispute"
+      - "angry_customer"
+
+# Privacy Rules
+privacy:
+  # Customer data handling
+  customer_data:
+    # Never store customer passwords
+    no_password_storage: true
+
+    # Never log credit card numbers
+    no_credit_card_logging: true
+
+    # Redact PII from logs
+    redact_pii: true
+
+  # Communication
+  communication:
+    # Log support conversations (for quality)
+    log_conversations: true
+
+    # Encrypt logged conversations
+    encrypt_logs: true
+
+    # Retention period (days)
+    retention_days: 90
+
+  # PII handling
+  pii:
+    redact_emails: false  # Needed for support
+    redact_phones: false  # Needed for support
+    redact_credit_cards: true
+    redact_ssn: true
+    redact_passwords: true
+
+# Quality Assurance
+quality:
+  # Response requirements
+  response:
+    require_greeting: true
+    require_empathy: true
+    require_solution: true
+    require_closing: true
+
+  # Escalation requirements
+  escalation:
+    require_reason: true
+    require_context: true
+    require_priority: true
+
+  # Documentation requirements
+  documentation:
+    require_ticket_notes: true
+    require_resolution_summary: true
+
+# Rate Limiting
+rate_limits:
+  # To prevent accidental spam
+  messages_per_minute: 10
+  file_operations_per_minute: 30
+  web_requests_per_minute: 20
+
+# Audit Logging
+audit:
+  enabled: true
+  log_path: "~/.teotl/agents/customer-support/audit.log"
+
+  log_events:
+    - "ticket_created"
+    - "ticket_resolved"
+    - "escalation_created"
+    - "knowledge_base_accessed"
+    - "security_violation"
+    - "customer_interaction"
+
+  rotate_days: 30
+
+# Confirmations
+confirmations:
+  always_confirm:
+    - "escalate_to_human"
+    - "close_ticket"
+    - "access_customer_data"
+    - "modify_billing"
+
+  batch_confirmation: true
+  timeout_seconds: 300
+
+# Security Violations
+violations:
+  action: block
+  notify_user: true
+  log_violations: true
+
+  # Violation categories
+  categories:
+    - "customer_data_access"
+    - "billing_access"
+    - "unauthorized_escalation"
+    - "policy_violation"
+
+# Emergency Override
+emergency:
+  allow_override: false  # No overrides for customer support
+  require_supervisor_approval: true
+
+---
+
+# Security Policy Notes
+
+## Purpose
+This policy protects customer privacy and data while enabling effective support operations.
+
+## Key Protections
+
+### 1. Customer Data Protection
+- **No direct access:** Cannot access customer accounts, passwords, payment info
+- **Privacy first:** Redact sensitive information from logs
+- **Limited scope:** Only access support documentation and tickets
+
+### 2. Knowledge Base Only
+- **Can access:** Public documentation, help articles, common issues
+- **Cannot access:** Customer databases, billing systems, admin panels
+- **Safe operations:** Read knowledge base, create tickets, search docs
+
+### 3. Escalation Safety
+- **Logged:** All escalations tracked
+- **Reasoned:** Must provide escalation reason
+- **Automatic:** Certain issues auto-escalate (security, data loss)
+
+### 4. Communication Privacy
+- **Logged for quality:** Support conversations logged (encrypted)
+- **Retention limits:** 90-day retention period
+- **PII redacted:** Sensitive information removed from logs
+
+## What Support Agent CAN Do
+
+✅ Read product documentation
+✅ Search knowledge base
+✅ Create and read support tickets
+✅ Provide troubleshooting guidance
+✅ Escalate to appropriate teams
+✅ Access public help resources
+
+## What Support Agent CANNOT Do
+
+❌ Access customer account data
+❌ View passwords or payment information
+❌ Make billing changes
+❌ Delete customer accounts
+❌ Access admin systems
+❌ Modify closed tickets
+
+## Escalation Requirements
+
+**Must escalate for:**
+- Security or privacy issues
+- Billing disputes or refunds
+- Account deletion requests
+- Technical issues requiring engineering
+- Angry or threatening customers
+- Data loss incidents
+
+**Escalation includes:**
+- Reason for escalation
+- Customer context
+- Priority level
+- Steps already tried
+
+## Customization
+
+### More Restrictive
+
+Disable certain operations:
+```yaml
+support:
+  tickets:
+    allow_ticket_creation: false  # Prevent creating tickets
+```
+
+Add more blocked domains:
+```yaml
+blocked_domains:
+  - "*.competitor.com"  # Block competitor sites
+```
+
+### Less Restrictive
+
+Allow more file access:
+```yaml
+filesystem:
+  allowed_paths:
+    - "~/Documents"  # Access more documentation
+```
+
+## Important
+
+**Always maintain:**
+- No access to customer personal data
+- No access to billing/payment systems
+- All escalations logged
+- PII redacted from logs
+- Require approval for sensitive operations
+
+## Monitoring
+
+Monitor support activity:
+```bash
+# View audit log
+tail -f ~/.teotl/agents/customer-support/audit.log
+
+# Check escalations
+grep "escalation_created" ~/.teotl/agents/customer-support/audit.log
+
+# View violations
+grep "security_violation" ~/.teotl/agents/customer-support/audit.log
+```

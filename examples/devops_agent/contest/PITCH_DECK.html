@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous DevOps Agent - Pitch Deck</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+
+        .slide {
+            width: 100%;
+            min-height: 100vh;
+            padding: 60px 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            page-break-after: always;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+        }
+
+        .slide:last-child { page-break-after: avoid; }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #00d4ff;
+        }
+
+        h3 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 20px 0 15px;
+            color: #a78bfa;
+        }
+
+        p, li {
+            font-size: 20px;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+
+        ul { margin-left: 30px; margin-bottom: 20px; }
+        li { margin-bottom: 10px; }
+
+        .highlight {
+            background: linear-gradient(90deg, #7c3aed, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .stat-box {
+            display: inline-block;
+            background: rgba(124, 58, 237, 0.2);
+            border: 2px solid #7c3aed;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            color: #a0a0a0;
+        }
+
+        .code-block {
+            background: #1e1e2e;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'SF Mono', monospace;
+            font-size: 16px;
+            color: #a6e3a1;
+            margin: 20px 0;
+            border-left: 4px solid #7c3aed;
+        }
+
+        .title-slide {
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .title-slide h1 {
+            font-size: 64px;
+            margin-bottom: 30px;
+        }
+
+        .subtitle {
+            font-size: 28px;
+            color: #a0a0a0;
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #7c3aed;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: rgba(124, 58, 237, 0.3);
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .check { color: #22c55e; }
+        .cross { color: #ef4444; }
+        .partial { color: #f59e0b; }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .caveat {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            margin: 20px 0;
+            font-size: 16px;
+            color: #fbbf24;
+        }
+
+        .honest-note {
+            font-size: 14px;
+            color: #888;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        .flow-box {
+            background: rgba(124, 58, 237, 0.2);
+            border: 2px solid #7c3aed;
+            border-radius: 8px;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 350px;
+        }
+
+        .flow-arrow {
+            font-size: 24px;
+            color: #7c3aed;
+            font-weight: bold;
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .agent-card {
+            background: rgba(124, 58, 237, 0.15);
+            border: 2px solid #7c3aed;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .agent-card.highlight-card {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: #00d4ff;
+        }
+
+        .agent-card h4 {
+            font-size: 18px;
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+
+        .agent-card p {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin: 0;
+        }
+
+        .developer-box {
+            background: rgba(34, 197, 94, 0.15);
+            border: 2px solid #22c55e;
+            border-radius: 10px;
+            padding: 20px 40px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .developer-box h4 {
+            font-size: 20px;
+            color: #22c55e;
+            margin-bottom: 5px;
+        }
+
+        .developer-box p {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin: 0;
+        }
+
+        .collab-arrow {
+            text-align: center;
+            font-size: 20px;
+            color: #666;
+            margin: 15px 0;
+        }
+
+        @media print {
+            .slide { min-height: 100vh; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide title-slide">
+    <h1>Autonomous DevOps Agent</h1>
+    <p class="subtitle">Automated Bug Fixing for Routine Issues</p>
+    <p style="font-size: 24px; margin-bottom: 30px;">Finds Bugs &bull; Investigates &bull; Fixes &bull; Creates PRs</p>
+    <p style="color: #a0a0a0; margin-bottom: 20px;">For routine bugs &bull; Human review before merge</p>
+    <div>
+        <span class="badge">Google Startup Challenge</span>
+        <span class="badge">Track 1 - MCP Integration</span>
+    </div>
+    <p style="margin-top: 40px; color: #666;">Built with Claude Sonnet 4 + Model Context Protocol</p>
+</div>
+
+<!-- Slide 2: Problem -->
+<div class="slide">
+    <h2>The Problem</h2>
+    <h3>Routine Bugs Consume Developer Time</h3>
+
+    <div class="two-col">
+        <div>
+            <h3>Common Scenarios</h3>
+            <ul>
+                <li>Typos and wrong operators</li>
+                <li>Missing return statements</li>
+                <li>Unhandled edge cases</li>
+                <li>Simple logic errors</li>
+            </ul>
+            <p style="margin-top: 20px;">These are <strong>tedious, not hard</strong> &mdash; but still take time to find, fix, test, and PR.</p>
+        </div>
+        <div>
+            <h3>Developer Time</h3>
+            <div class="stat-box">
+                <div class="stat-number">15-60</div>
+                <div class="stat-label">Minutes per routine fix</div>
+            </div>
+            <p style="margin-top: 20px; color: #a0a0a0;">
+                Even simple bugs require: find file → understand context → fix → test → commit → PR
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 3: Solution -->
+<div class="slide">
+    <h2>Our Solution</h2>
+    <h3>Autonomous Agent for Routine Bug Fixes</h3>
+
+    <div class="code-block">
+        1. MONITOR  &rarr; Watch for new issues on GitHub<br>
+        2. INVESTIGATE &rarr; Clone repo, read code, understand bug<br>
+        3. FIX     &rarr; Create branch, write minimal fix, test<br>
+        4. SUBMIT  &rarr; Create PR for human review
+    </div>
+
+    <h3>Key Point: <span class="highlight">Human Review Required</span></h3>
+    <p>Agent creates PRs, but humans approve and merge. Safety first.</p>
+
+    <div style="display: flex; gap: 20px; margin-top: 30px;">
+        <div class="stat-box">
+            <div class="stat-number">~$0.50</div>
+            <div class="stat-label">Per Fix (API cost)</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">~50s</div>
+            <div class="stat-label">Per Fix (time)</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Availability</div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 4: Demo Results -->
+<div class="slide">
+    <h2>Live Demo Results</h2>
+    <h3>3-Minute Test Run</h3>
+
+    <div style="display: flex; gap: 20px; margin: 30px 0;">
+        <div class="stat-box">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Issues Fixed</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">3</div>
+            <div class="stat-label">PRs Created</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Success Rate</div>
+        </div>
+    </div>
+
+    <h3>Bugs Fixed (Simple Examples)</h3>
+    <div class="code-block">
+        #26: subtract() using + instead of -<br>
+        #27: multiply() missing return statement<br>
+        #28: divide() no zero-division check
+    </div>
+
+    <div class="caveat">
+        <strong>Honest note:</strong> These are intentionally simple bugs for demo purposes.
+        Real-world bugs vary in complexity. Agent works best on routine, well-defined issues.
+    </div>
+</div>
+
+<!-- Slide 5: MCP Integration -->
+<div class="slide">
+    <h2>Track 1: MCP Integration</h2>
+    <h3>Model Context Protocol by Anthropic</h3>
+
+    <div class="two-col">
+        <div>
+            <h3>Meta-Tool Pattern</h3>
+            <p><strong>Challenge:</strong> 26 GitHub tools = 8,000 tokens</p>
+            <p><strong>Solution:</strong> 2 meta-tools that discover & execute</p>
+
+            <div class="code-block" style="font-size: 14px;">
+                mcp_discover("github")<br>
+                mcp_execute("github", "get_file", {...})
+            </div>
+        </div>
+        <div>
+            <h3>Context Savings</h3>
+            <div class="stat-box">
+                <div class="stat-number">85%</div>
+                <div class="stat-label">Token Reduction</div>
+            </div>
+            <p style="margin-top: 20px;">
+                Before: 8,000 tokens<br>
+                After: 1,200 tokens
+            </p>
+        </div>
+    </div>
+
+    <p class="honest-note">MCP provides standardized tool integration. Our contribution is the meta-tool pattern for efficiency.</p>
+</div>
+
+<!-- Slide 6: What It Does Well -->
+<div class="slide">
+    <h2>Where It Works</h2>
+
+    <div class="two-col">
+        <div>
+            <h3 class="check">Works Well For</h3>
+            <ul>
+                <li>Typos and syntax errors</li>
+                <li>Wrong operators (+, -, *, /)</li>
+                <li>Missing return statements</li>
+                <li>Simple null/zero checks</li>
+                <li>Obvious logic fixes</li>
+                <li>Well-described GitHub issues</li>
+            </ul>
+        </div>
+        <div>
+            <h3 class="cross">Limitations</h3>
+            <ul>
+                <li>Complex architectural bugs</li>
+                <li>Performance issues</li>
+                <li>Security vulnerabilities</li>
+                <li>Bugs requiring deep domain knowledge</li>
+                <li>Multi-file refactoring</li>
+                <li>Vague or incomplete issue descriptions</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="caveat">
+        <strong>This is a tool, not a replacement for developers.</strong>
+        It handles routine work so developers can focus on harder problems.
+    </div>
+</div>
+
+<!-- Slide 7: Cost Analysis -->
+<div class="slide">
+    <h2>Cost Comparison</h2>
+    <h3>For Routine Bug Fixes</h3>
+
+    <table>
+        <tr>
+            <th>Bug Type</th>
+            <th>Human Time</th>
+            <th>Human Cost*</th>
+            <th>Agent Cost</th>
+        </tr>
+        <tr>
+            <td>Simple (typo, wrong operator)</td>
+            <td>15-30 min</td>
+            <td>$25-50</td>
+            <td style="color: #00d4ff;">~$0.50</td>
+        </tr>
+        <tr>
+            <td>Medium (missing logic)</td>
+            <td>30-60 min</td>
+            <td>$50-100</td>
+            <td style="color: #00d4ff;">~$0.50-1.00</td>
+        </tr>
+        <tr>
+            <td>Complex (architectural)</td>
+            <td>2-4 hours</td>
+            <td>$200-400</td>
+            <td class="partial">May not work</td>
+        </tr>
+    </table>
+
+    <p class="honest-note">*Assuming $100/hr fully-loaded developer cost. Actual costs vary by location and seniority.</p>
+
+    <h3>Value Proposition</h3>
+    <p>For <strong>routine bugs</strong> the agent handles well: <span class="highlight">~95% cost reduction</span> and faster turnaround.</p>
+</div>
+
+<!-- Slide 8: Technical Approach -->
+<div class="slide">
+    <h2>How It Works</h2>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin: 30px 0;">
+        <div class="flow-box">HEARTBEAT DAEMON <span style="color: #888;">(polls every 10s)</span></div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-box">Check GitHub for new issues</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-box">Create TASK for each issue</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-box" style="background: rgba(0, 212, 255, 0.2); border-color: #00d4ff;">AGENT: Clone → Read → Fix → Test → PR</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-box" style="background: rgba(34, 197, 94, 0.2); border-color: #22c55e;">Human reviews and merges PR</div>
+    </div>
+
+    <h3>Safety Features</h3>
+    <ul>
+        <li><strong>No direct commits to main</strong> &mdash; all changes via PR</li>
+        <li><strong>Command allowlist</strong> &mdash; only safe operations permitted</li>
+        <li><strong>Timeout limits</strong> &mdash; prevents runaway execution</li>
+        <li><strong>Human approval required</strong> &mdash; agent never merges its own PRs</li>
+    </ul>
+</div>
+
+<!-- Slide 9: Vision -->
+<div class="slide">
+    <h2>Vision: Specialized Agent Teams</h2>
+    <h3>Why One Agent Has Limitations</h3>
+    <p>A single agent can't master everything. But a <strong>team of specialists</strong> working alongside developers can tackle complex problems.</p>
+
+    <div style="margin: 30px 0;">
+        <div class="developer-box">
+            <h4>👤 DEVELOPER (Human)</h4>
+            <p>Architecture • Design • Complex Logic</p>
+        </div>
+
+        <div class="collab-arrow">↓ Collaborates with ↓</div>
+
+        <div class="agent-grid">
+            <div class="agent-card highlight-card">
+                <h4>🔧 DevOps Agent</h4>
+                <p>Routine bug fixes</p>
+            </div>
+            <div class="agent-card">
+                <h4>🔒 Security Agent</h4>
+                <p>Vulns & CVEs</p>
+            </div>
+            <div class="agent-card">
+                <h4>🧪 Testing Agent</h4>
+                <p>Write tests</p>
+            </div>
+            <div class="agent-card">
+                <h4>⚡ Perf Agent</h4>
+                <p>Profile & tune</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-col">
+        <div>
+            <h3>Today: DevOps Agent</h3>
+            <ul>
+                <li>Routine bug fixes</li>
+                <li>Single specialty</li>
+                <li>Proven, working now</li>
+            </ul>
+        </div>
+        <div>
+            <h3>Tomorrow: Agent Team</h3>
+            <ul>
+                <li>Each agent has narrow expertise</li>
+                <li>Together handle complex issues</li>
+                <li>Human stays in control</li>
+            </ul>
+        </div>
+    </div>
+
+    <p class="honest-note" style="margin-top: 20px;">Agents don't replace developers &mdash; they handle tedious work so humans can focus on what matters.</p>
+</div>
+
+<!-- Slide 10: Call to Action -->
+<div class="slide title-slide">
+    <h1>Try It Yourself</h1>
+
+    <div class="code-block" style="text-align: left; max-width: 600px;">
+        git clone https://github.com/keithdit4e/teotl<br>
+        cd teotl/examples/devops_agent<br>
+        python autonomous_mode.py --repo YOUR_REPO
+    </div>
+
+    <div style="margin-top: 40px;">
+        <p><strong>GitHub:</strong> keithdit4e/teotl</p>
+        <p><strong>Demo Repo:</strong> keithdit4e/devops-agent-test</p>
+    </div>
+
+    <h3 style="margin-top: 40px;">What We Built</h3>
+    <p>A practical tool for automating routine bug fixes.<br>
+    Not a silver bullet &mdash; a useful addition to the developer toolkit.</p>
+
+    <div style="margin-top: 40px;">
+        <span class="badge">Claude Sonnet 4</span>
+        <span class="badge">Model Context Protocol</span>
+        <span class="badge">Track 1</span>
+    </div>
+
+    <p style="margin-top: 40px; color: #666;">June 2026</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "level": "ci-cd",
+  "description": "Policy for CI/CD environments. No interactive confirmations, block dangerous operations.",
+  "default_risk": {
+    "safe": "allow",
+    "medium": "block",
+    "high": "block",
+    "critical": "block"
+  },
+  "filesystem": {
+    "allow": [
+      "./",
+      "/tmp/**",
+      "/workspace/**"
+    ],
+    "deny": [
+      "~/.ssh/**",
+      "~/.gnupg/**",
+      "/etc/**",
+      "/var/**",
+      "/usr/**",
+      "../**"
+    ]
+  },
+  "bash": {
+    "allow": ["read"],
+    "confirm": [],
+    "block": ["write", "destructive", "network", "install", "system_modification"]
+  },
+  "network": {
+    "allow_by_default": false,
+    "allow_hosts": [
+      "api.anthropic.com",
+      "api.openai.com"
+    ]
+  },
+  "trust": {
+    "auto_approve_after": 999,
+    "session_scoped": true
+  },
+  "notes": [
+    "No confirmations allowed in CI/CD (no UI available)",
+    "All medium+ risk actions are blocked",
+    "Only safe read operations allowed",
+    "Network access restricted to LLM APIs only"
+  ]
+}

@@ -1,0 +1,360 @@
+# Email Bot Security Policy
+
+# Security mode: How strictly to enforce policies
+# Options: allowlist (strict), denylist (permissive), permissive (minimal checks)
+mode: allowlist
+
+# Filesystem Policy
+filesystem:
+  # Mode for filesystem access
+  mode: allowlist
+
+  # Allowed directories for file operations
+  allowed_paths:
+    # Email attachments directory
+    - "~/.teotl/agents/email-bot/attachments"
+    # Email templates directory
+    - "~/.teotl/agents/email-bot/templates"
+    # Email drafts directory
+    - "~/.teotl/agents/email-bot/drafts"
+    # User's Downloads folder (for saving attachments)
+    - "~/Downloads"
+    # Temporary directory for processing
+    - "/tmp/forge-email-bot"
+
+  # Blocked paths (even if in allowed_paths)
+  blocked_paths:
+    # System directories
+    - "/etc"
+    - "/var"
+    - "/usr"
+    - "/bin"
+    - "/sbin"
+    # Home directory sensitive files
+    - "~/.ssh"
+    - "~/.aws"
+    - "~/.config"
+    # Credentials and secrets
+    - "**/*credential*"
+    - "**/*secret*"
+    - "**/*.key"
+    - "**/*.pem"
+
+  # Operations that require explicit user confirmation
+  require_confirmation:
+    - "delete"      # Deleting files
+    - "move"        # Moving files
+    - "write"       # Writing/modifying files outside templates
+
+# Network Policy
+network:
+  # Mode for network access
+  mode: allowlist
+
+  # Allowed domains and services
+  allowed_domains:
+    # Google services (Gmail, Calendar)
+    - "gmail.googleapis.com"
+    - "www.googleapis.com"
+    - "accounts.google.com"
+    - "oauth2.googleapis.com"
+
+    # Email-related services
+    - "*.google.com"
+    - "*.googleusercontent.com"
+
+    # Web search and research
+    - "*.wikipedia.org"
+    - "*.duckduckgo.com"
+    - "*.bing.com"
+
+    # Common business domains (for looking up sender info)
+    - "*.linkedin.com"
+    - "*.github.com"
+    - "*.stackoverflow.com"
+
+    # Allow HTTPS to any domain for link verification
+    # (Restricted to read-only operations)
+
+  # Blocked domains (security threats)
+  blocked_domains:
+    - "*.onion"           # Tor sites
+    - "*.bit"             # Namecoin sites
+    - "*.cn"              # High-risk TLD
+    - "*malware*"
+    - "*phishing*"
+
+  # Allowed protocols
+  allowed_protocols:
+    - "https"
+    - "http"   # For HTTP-only sites (read-only)
+
+  # Operations requiring confirmation
+  require_confirmation:
+    - "post"    # POST requests (sending data)
+    - "put"     # PUT requests (updating data)
+    - "delete"  # DELETE requests
+
+# Command Execution Policy
+bash:
+  # Mode for command execution
+  mode: denylist
+
+  # Explicitly allowed commands (for email processing)
+  allowed_commands:
+    - "cat"      # Read files
+    - "ls"       # List files
+    - "head"     # Preview files
+    - "tail"     # View end of files
+    - "wc"       # Count lines/words
+    - "grep"     # Search text
+    - "find"     # Find files
+    - "date"     # Get current date/time
+
+  # Blocked commands (security-sensitive)
+  blocked_commands:
+    - "rm"       # Delete files
+    - "dd"       # Disk operations
+    - "mkfs"     # Format operations
+    - "sudo"     # Privilege escalation
+    - "su"       # User switching
+    - "chmod"    # Permission changes
+    - "chown"    # Owner changes
+    - "curl"     # Network access (use web skill instead)
+    - "wget"     # Network access (use web skill instead)
+    - "ssh"      # Remote access
+    - "nc"       # Network tools
+    - "telnet"   # Remote access
+
+  # Require confirmation for these commands
+  require_confirmation:
+    - "mv"       # Move files
+    - "cp"       # Copy files
+    - "mkdir"    # Create directories
+
+# Email-Specific Security Rules
+email:
+  # Never send emails without user approval
+  require_send_approval: true
+
+  # Never delete emails without user approval
+  require_delete_approval: true
+
+  # Auto-archive is allowed (reversible)
+  allow_auto_archive: true
+
+  # Attachment handling
+  attachments:
+    # Scan attachments before saving
+    scan_before_save: true
+
+    # Blocked attachment extensions
+    blocked_extensions:
+      - ".exe"
+      - ".dll"
+      - ".com"
+      - ".bat"
+      - ".cmd"
+      - ".scr"
+      - ".vbs"
+      - ".js"
+      - ".jar"
+
+    # Max attachment size to save (MB)
+    max_size_mb: 25
+
+    # Require confirmation before saving
+    require_confirmation: true
+
+# Calendar-Specific Security Rules
+calendar:
+  # Never create events without user approval
+  require_create_approval: true
+
+  # Never delete events without user approval
+  require_delete_approval: true
+
+  # Never modify existing events without user approval
+  require_modify_approval: true
+
+  # Reading calendar is always allowed
+  allow_read: true
+
+# Data Privacy Rules
+privacy:
+  # Never log email content to disk
+  log_email_content: false
+
+  # Never log sensitive headers (auth tokens, etc)
+  log_sensitive_headers: false
+
+  # Allowed to store email metadata for analytics
+  store_metadata: true
+
+  # Encrypt stored data
+  encrypt_storage: true
+
+  # Data retention period (days)
+  retention_days: 90
+
+  # PII handling
+  pii:
+    # Redact email addresses in logs
+    redact_emails: true
+
+    # Redact phone numbers in logs
+    redact_phones: true
+
+    # Redact credit card numbers
+    redact_credit_cards: true
+
+# Rate Limiting
+rate_limits:
+  # Gmail API calls per minute
+  gmail_calls_per_minute: 100
+
+  # Calendar API calls per minute
+  calendar_calls_per_minute: 50
+
+  # Web searches per minute
+  web_searches_per_minute: 10
+
+  # Filesystem operations per minute
+  file_operations_per_minute: 50
+
+# Confirmation Requirements
+confirmations:
+  # Always require confirmation for these actions
+  always_confirm:
+    - "send_email"
+    - "delete_email"
+    - "create_calendar_event"
+    - "modify_calendar_event"
+    - "save_attachment"
+    - "unsubscribe_from_list"
+
+  # Batch operations require single confirmation
+  batch_confirmation: true
+
+  # Timeout for confirmations (seconds)
+  # If no response, default to deny
+  timeout_seconds: 300
+
+# Audit Logging
+audit:
+  # Enable audit logging
+  enabled: true
+
+  # Log location
+  log_path: "~/.teotl/agents/email-bot/audit.log"
+
+  # What to log
+  log_events:
+    - "email_read"
+    - "email_categorized"
+    - "draft_created"
+    - "confirmation_requested"
+    - "confirmation_response"
+    - "api_call"
+    - "security_violation"
+
+  # Rotate logs after this many days
+  rotate_days: 30
+
+# Security Violations
+violations:
+  # Action to take on security policy violation
+  # Options: block (deny and log), warn (allow but log), ignore
+  action: block
+
+  # Notify user of violations
+  notify_user: true
+
+  # Log violations
+  log_violations: true
+
+# Emergency Override
+emergency:
+  # Allow user to override security policy temporarily
+  allow_override: true
+
+  # Override requires explicit confirmation
+  require_explicit_confirmation: true
+
+  # Override duration (minutes)
+  override_duration_minutes: 60
+
+  # Log all override actions
+  log_overrides: true
+
+---
+
+# Security Policy Notes
+
+## Purpose
+This security policy ensures the email bot operates safely while providing useful functionality. The policy follows the principle of least privilege - only allowing necessary access.
+
+## Key Protections
+
+1. **Email Safety**
+   - Cannot send emails without approval
+   - Cannot delete emails without approval
+   - Auto-archive is safe (reversible)
+
+2. **Filesystem Safety**
+   - Access limited to specific directories
+   - Sensitive system files blocked
+   - Credentials and secrets protected
+
+3. **Network Safety**
+   - Only approved domains accessible
+   - Read-only by default
+   - POST/PUT/DELETE require confirmation
+
+4. **Privacy Protection**
+   - Email content not logged
+   - PII redacted from logs
+   - Encrypted storage
+   - Data retention limits
+
+## Customization
+
+You can adjust this policy based on your needs:
+
+**More Restrictive:**
+- Change `mode: allowlist` to be more specific
+- Add more blocked_paths or blocked_domains
+- Increase confirmation requirements
+
+**Less Restrictive:**
+- Change `mode: denylist` to only block specific items
+- Add more allowed_paths or allowed_domains
+- Remove some confirmation requirements
+
+**Important:** Always maintain these core protections:
+- Require approval before sending emails
+- Block access to credentials and secrets
+- Redact PII from logs
+- Enforce rate limits
+
+## Testing
+
+Test your security policy:
+```bash
+# Dry run to check policy
+forge chat --agent email-bot --dry-run
+
+# Check specific action
+forge security check --agent email-bot --action "send_email"
+```
+
+## Monitoring
+
+Monitor security events:
+```bash
+# View audit log
+tail -f ~/.teotl/agents/email-bot/audit.log
+
+# Check for violations
+grep "security_violation" ~/.teotl/agents/email-bot/audit.log
+```

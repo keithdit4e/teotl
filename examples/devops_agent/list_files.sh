@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "Files in devops_agent directory:"
+echo ""
+echo "Python Scripts:"
+ls -lh *.py 2>/dev/null || echo "  (none found in current directory)"
+echo ""
+echo "Documentation:"
+ls -lh *.md 2>/dev/null || echo "  (none found in current directory)"
+echo ""
+echo "Current directory: $(pwd)"
+echo ""
+echo "If you don't see test_mcp_agent.py, you may need to:"
+echo "  cd /Users/keithfoster/Documents/GitHub/forge-agent/examples/devops_agent"

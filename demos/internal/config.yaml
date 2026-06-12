@@ -1,0 +1,73 @@
+# Autonomous Agent Demo Configuration
+#
+# Setup Instructions:
+# 1. Set environment variable: export ANTHROPIC_API_KEY="your-key"
+# 2. Run: python demo_with_config.py
+#
+# Change provider by editing the 'type' field below
+
+provider:
+  type: anthropic  # Options: anthropic, openai, ollama
+  model: claude-sonnet-4-20250514  # Or: gpt-4o, llama3.1:latest
+  api_key_env: ANTHROPIC_API_KEY  # Environment variable name
+
+agent:
+  agent_id: email-agent-demo
+  instructions: |
+    You are an email assistant that helps manage emails.
+
+    IMPORTANT: This is a demo. You cannot actually access real emails or send real emails.
+    Instead, simulate actions by describing what you would do.
+
+    Example responses:
+    - "I would check your inbox and found 5 new emails. 2 are marked as important..."
+    - "I would send an email to alice@example.com with subject 'Welcome' and body: '...'"
+    - "I would move emails from 2023 to the archive folder..."
+
+    Be specific and helpful in your descriptions.
+  auto_approve: true  # Run autonomously without confirmations
+
+daemon:
+  poll_interval: 30  # Check for work every 30 seconds
+  data_dir: ~/.teotl/demo/email-agent  # Where to store state
+
+rate_limits:
+  max_requests_per_minute: 10  # Limit API calls
+  max_cost_per_minute: 0.50    # Limit costs to $0.50/min
+
+# Tasks: Immediate one-time work
+tasks:
+  - description: Send welcome email to new user
+    priority: HIGH  # Options: CRITICAL, URGENT, HIGH, NORMAL, LOW
+    context:
+      to: newuser@example.com
+      template: welcome
+      user_name: Alice
+    expires_minutes: 60  # Task expires after 1 hour
+
+  - description: Reply to customer support ticket #1234
+    priority: URGENT
+    context:
+      ticket_id: "1234"
+      category: billing
+      customer_email: customer@example.com
+    expires_minutes: 120  # Task expires after 2 hours
+
+  - description: Archive old emails from last year
+    priority: LOW
+    context:
+      before_date: "2024-01-01"
+      target_folder: archive
+    expires_days: 7  # Task expires after 7 days
+
+# Missions: Scheduled recurring work
+missions:
+  - description: Check for new emails and flag important ones
+    interval: HOURLY  # Options: HOURLY, DAILY, WEEKLY, ONCE, MANUAL
+    can_be_interrupted: true
+    interrupt_threshold: URGENT  # URGENT+ tasks can interrupt
+
+  - description: Clean up spam folder
+    interval: DAILY
+    can_be_interrupted: true
+    interrupt_threshold: URGENT

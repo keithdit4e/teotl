@@ -1,0 +1,38 @@
+{
+  "level": "development",
+  "description": "Permissive policy for development environments. Allows most operations with minimal friction.",
+  "default_risk": {
+    "safe": "allow",
+    "medium": "allow",
+    "high": "confirm",
+    "critical": "block"
+  },
+  "filesystem": {
+    "allow": [
+      "~/Documents/**",
+      "~/Desktop/**",
+      "~/Downloads/**",
+      "/tmp/**"
+    ],
+    "deny": [
+      "~/.ssh/**",
+      "~/.gnupg/**",
+      "/etc/**",
+      "/var/**",
+      "/usr/**"
+    ]
+  },
+  "bash": {
+    "allow": ["read", "write", "network"],
+    "confirm": ["destructive", "install"],
+    "block": ["system_modification"]
+  },
+  "network": {
+    "allow_by_default": true,
+    "deny_hosts": ["localhost:22", "127.0.0.1:22"]
+  },
+  "trust": {
+    "auto_approve_after": 2,
+    "session_scoped": true
+  }
+}

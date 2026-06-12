@@ -1,0 +1,29 @@
+{
+  "level": "minimal",
+  "filesystem": {
+    "deny": [
+      "~/.ssh/**",
+      "~/.aws/**"
+    ],
+    "confirm_write_outside_scope": false
+  },
+  "bash": {
+    "block": [
+      "rm -rf /"
+    ],
+    "confirm": [],
+    "allow": [
+      "*"
+    ]
+  },
+  "network": {
+    "allow_outbound": true
+  },
+  "limits": {
+    "max_files_per_turn": 100
+  },
+  "trust": {
+    "auto_approve_after": 1,
+    "session_scoped": true
+  }
+}

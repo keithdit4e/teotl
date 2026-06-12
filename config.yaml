@@ -1,0 +1,31 @@
+provider:
+  type: anthropic
+  model: claude-3-haiku-20240307
+  api_key_env: ANTHROPIC_API_KEY
+  max_tokens: 4096
+
+agent:
+  agent_id: demo-agent
+  instructions: You are an autonomous code quality agent that analyzes codebases and creates quality reports
+  auto_approve: true
+  work_types: [Goals]
+
+security:
+  preset: moderate
+  cost_limits:
+    max_per_hour: 5.0
+    max_per_day: 50.0
+    max_per_month: 500.0
+
+daemon:
+  poll_interval: 30
+  data_dir: ~/.teotl/agents/demo-agent
+
+rate_limits:
+  max_requests_per_minute: 10
+  max_cost_per_minute: 0.50
+
+# Initial task to demonstrate capabilities
+tasks:
+  - description: "Count how many Python files are in the forge/primitives directory"
+    priority: NORMAL

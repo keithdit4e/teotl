@@ -1,0 +1,542 @@
+# Coding Assistant Security Policy
+
+# Security mode: How strictly to enforce policies
+mode: allowlist
+
+# Filesystem Policy
+filesystem:
+  mode: allowlist
+
+  # Allowed directories for code operations
+  allowed_paths:
+    # Project directories (relative paths work)
+    - "./src"
+    - "./tests"
+    - "./lib"
+    - "./app"
+    - "./pkg"
+    - "./internal"
+    - "./api"
+    - "./services"
+    - "./models"
+    - "./controllers"
+    - "./components"
+    - "./utils"
+    - "./helpers"
+    - "./config"
+    - "./scripts"
+    - "./docs"
+    - "./examples"
+
+    # Configuration files (root level)
+    - "./package.json"
+    - "./tsconfig.json"
+    - "./pyproject.toml"
+    - "./setup.py"
+    - "./Cargo.toml"
+    - "./pom.xml"
+    - "./build.gradle"
+    - "./.eslintrc.*"
+    - "./.prettierrc.*"
+    - "./pytest.ini"
+    - "./setup.cfg"
+    - "./.gitignore"
+    - "./README.md"
+    - "./LICENSE"
+
+    # Build and dependency directories (read-only)
+    - "./node_modules"
+    - "./target"
+    - "./build"
+    - "./dist"
+    - "./.venv"
+    - "./venv"
+
+  # Blocked paths (security-sensitive)
+  blocked_paths:
+    # System directories
+    - "/etc"
+    - "/var"
+    - "/usr"
+    - "/bin"
+    - "/sbin"
+    - "/boot"
+    - "/sys"
+    - "/proc"
+
+    # User sensitive directories
+    - "~/.ssh"
+    - "~/.aws"
+    - "~/.config"
+    - "~/.gnupg"
+
+    # Credentials and secrets
+    - "**/*credentials*"
+    - "**/*secret*"
+    - "**/*password*"
+    - "**/*.key"
+    - "**/*.pem"
+    - "**/*.p12"
+    - "**/*.pfx"
+    - "**/.env"
+    - "**/.env.*"
+
+    # Build artifacts and caches
+    - "**/__pycache__"
+    - "**/*.pyc"
+    - "**/node_modules"
+    - "**/.next"
+    - "**/.cache"
+    - "**/dist"
+    - "**/build"
+
+  # Operations requiring confirmation
+  require_confirmation:
+    - "delete"        # Deleting files
+    - "move"          # Moving files
+    - "write"         # Creating/modifying files
+
+# Network Policy
+network:
+  mode: allowlist
+
+  # Allowed domains for documentation lookup
+  allowed_domains:
+    # Documentation sites
+    - "*.python.org"
+    - "docs.python.org"
+    - "pypi.org"
+    - "*.npmjs.com"
+    - "*.github.io"
+    - "developer.mozilla.org"
+    - "*.rust-lang.org"
+    - "*.oracle.com"
+    - "*.microsoft.com"
+
+    # Q&A and learning
+    - "stackoverflow.com"
+    - "stackexchange.com"
+    - "*.stackexchange.com"
+
+    # Repository hosting
+    - "github.com"
+    - "gitlab.com"
+    - "bitbucket.org"
+
+    # Package registries
+    - "registry.npmjs.org"
+    - "crates.io"
+    - "maven.org"
+    - "repo.maven.apache.org"
+
+    # Framework docs
+    - "*.djangoproject.com"
+    - "flask.palletsprojects.com"
+    - "fastapi.tiangolo.com"
+    - "reactjs.org"
+    - "*.react.dev"
+    - "*.vuejs.org"
+    - "*.angular.io"
+    - "*.spring.io"
+
+  # Blocked domains
+  blocked_domains:
+    - "*.onion"
+    - "*.bit"
+    - "*malware*"
+    - "*exploit*"
+
+  # Allowed protocols
+  allowed_protocols:
+    - "https"
+    - "http"
+
+  # Require confirmation for write operations
+  require_confirmation:
+    - "post"
+    - "put"
+    - "delete"
+
+# Command Execution Policy
+bash:
+  mode: allowlist
+
+  # Allowed commands for development
+  allowed_commands:
+    # File operations (read-only)
+    - "cat"
+    - "ls"
+    - "head"
+    - "tail"
+    - "wc"
+    - "grep"
+    - "find"
+    - "file"
+
+    # Python tools
+    - "python"
+    - "python3"
+    - "pytest"
+    - "pylint"
+    - "flake8"
+    - "black"
+    - "isort"
+    - "mypy"
+    - "coverage"
+    - "pip"          # (list only)
+
+    # JavaScript/TypeScript tools
+    - "node"
+    - "npm"
+    - "npx"
+    - "yarn"
+    - "tsc"
+    - "eslint"
+    - "prettier"
+    - "jest"
+
+    # Java tools
+    - "java"
+    - "javac"
+    - "mvn"
+    - "gradle"
+
+    # Rust tools
+    - "cargo"
+    - "rustc"
+    - "clippy"
+
+    # Git operations (read-only)
+    - "git"
+
+    # Build and test
+    - "make"
+    - "cmake"
+
+    # Utilities
+    - "echo"
+    - "which"
+    - "env"
+    - "printenv"
+
+  # Blocked commands (dangerous)
+  blocked_commands:
+    - "rm"           # Use filesystem tool for deletion
+    - "dd"
+    - "mkfs"
+    - "fdisk"
+    - "shutdown"
+    - "reboot"
+    - "sudo"
+    - "su"
+    - "chmod"        # Security risk
+    - "chown"        # Security risk
+    - "curl"         # Use web skill instead
+    - "wget"         # Use web skill instead
+    - "nc"
+    - "netcat"
+    - "telnet"
+    - "ssh"
+    - "scp"
+    - "ftp"
+
+  # Require confirmation
+  require_confirmation:
+    - "pip install"
+    - "npm install"
+    - "cargo add"
+    - "git commit"
+    - "git push"
+    - "git pull"
+    - "git merge"
+    - "make clean"
+    - "mvn clean"
+
+# Git-Specific Security Rules
+git:
+  # Read operations always allowed
+  allow_read: true
+
+  # Write operations require confirmation
+  require_commit_approval: true
+  require_push_approval: true
+  require_merge_approval: true
+  require_branch_create_approval: true
+
+  # Never force push
+  block_force_push: true
+
+  # Branches that require extra confirmation
+  protected_branches:
+    - "main"
+    - "master"
+    - "production"
+    - "release"
+
+# Code Review Security
+code_review:
+  # Check for common security issues
+  scan_for_vulnerabilities: true
+
+  # Security patterns to flag
+  vulnerability_patterns:
+    # SQL Injection
+    - pattern: "execute.*\\+.*"
+      language: "python"
+      severity: "critical"
+      message: "Possible SQL injection - use parameterized queries"
+
+    - pattern: "createStatement.*\\+.*"
+      language: "java"
+      severity: "critical"
+      message: "Possible SQL injection - use PreparedStatement"
+
+    # XSS
+    - pattern: "innerHTML.*=.*"
+      language: "javascript"
+      severity: "high"
+      message: "Possible XSS - avoid innerHTML with user input"
+
+    - pattern: "dangerouslySetInnerHTML"
+      language: "javascript"
+      severity: "high"
+      message: "Possible XSS - validate and sanitize content"
+
+    # Hardcoded secrets
+    - pattern: "(password|secret|api_key)\\s*=\\s*[\"'].*[\"']"
+      language: "*"
+      severity: "critical"
+      message: "Hardcoded secret - use environment variables"
+
+    # Command injection
+    - pattern: "exec.*input"
+      language: "*"
+      severity: "critical"
+      message: "Possible command injection - validate input"
+
+    # Path traversal
+    - pattern: "open.*\\.\\./.*"
+      language: "python"
+      severity: "high"
+      message: "Possible path traversal - validate paths"
+
+# Testing Requirements
+testing:
+  # Require tests for new code
+  require_tests: true
+
+  # Minimum coverage for new code
+  min_coverage_percent: 80
+
+  # Run tests before committing
+  run_tests_before_commit: true
+
+  # Block commits with failing tests
+  block_on_test_failure: true
+
+# Code Quality Requirements
+quality:
+  # Maximum function length (lines)
+  max_function_lines: 50
+
+  # Maximum cyclomatic complexity
+  max_complexity: 10
+
+  # Require type hints (Python)
+  require_type_hints: true
+
+  # Require docstrings for public API
+  require_docstrings: true
+
+  # Code style enforcement
+  enforce_style: true
+
+  # Linter compliance
+  require_linter_pass: false  # Warning only
+
+# Rate Limiting
+rate_limits:
+  # Filesystem operations per minute
+  file_operations_per_minute: 100
+
+  # Git operations per minute
+  git_operations_per_minute: 30
+
+  # Command executions per minute
+  command_executions_per_minute: 50
+
+  # Network requests per minute
+  network_requests_per_minute: 20
+
+# Confirmation Requirements
+confirmations:
+  # Always require confirmation for these actions
+  always_confirm:
+    - "commit_code"
+    - "push_code"
+    - "delete_files"
+    - "modify_config"
+    - "install_packages"
+
+  # Batch operations require single confirmation
+  batch_confirmation: true
+
+  # Timeout for confirmations (seconds)
+  timeout_seconds: 300  # 5 minutes
+
+# Audit Logging
+audit:
+  # Enable audit logging
+  enabled: true
+
+  # Log location
+  log_path: "~/.teotl/agents/coding-assistant/audit.log"
+
+  # What to log
+  log_events:
+    - "file_read"
+    - "file_write"
+    - "file_delete"
+    - "command_execution"
+    - "git_operation"
+    - "security_violation"
+    - "confirmation_requested"
+    - "confirmation_response"
+
+  # Rotate logs
+  rotate_days: 30
+
+# Security Violations
+violations:
+  # Action on violation
+  action: block  # block, warn, or ignore
+
+  # Notify user
+  notify_user: true
+
+  # Log violations
+  log_violations: true
+
+  # Common violation categories
+  categories:
+    - "credential_access"
+    - "system_modification"
+    - "unauthorized_network"
+    - "dangerous_command"
+    - "path_traversal"
+
+# Emergency Override
+emergency:
+  # Allow temporary security override
+  allow_override: true
+
+  # Require explicit confirmation
+  require_explicit_confirmation: true
+
+  # Override duration (minutes)
+  override_duration_minutes: 30
+
+  # Log all override actions
+  log_overrides: true
+
+---
+
+# Security Policy Notes
+
+## Purpose
+This security policy ensures the coding assistant operates safely while providing development assistance. It prevents accidental data loss, blocks dangerous operations, and protects sensitive information.
+
+## Key Protections
+
+### 1. Filesystem Safety
+- **Project scope:** Can only access current project files
+- **No system access:** Cannot modify system directories
+- **Credential protection:** Blocks access to SSH keys, AWS credentials, etc.
+- **Confirmation required:** Asks before modifying or deleting files
+
+### 2. Command Execution Safety
+- **Allowed tools only:** Can run linters, tests, build tools
+- **Blocked commands:** No rm, chmod, sudo, or network tools
+- **Confirmation required:** Asks before installing packages or git operations
+
+### 3. Git Safety
+- **Read operations allowed:** Can view commits, diffs, history
+- **Write operations confirmed:** Asks before commit, push, merge
+- **Protected branches:** Extra confirmation for main/master
+- **No force push:** Blocks dangerous force push operations
+
+### 4. Network Safety
+- **Documentation only:** Can access docs, Stack Overflow, GitHub
+- **No arbitrary access:** Blocked from unauthorized domains
+- **Read-only preferred:** POST/PUT/DELETE require confirmation
+
+### 5. Security Scanning
+- **Vulnerability detection:** Scans for SQL injection, XSS, hardcoded secrets
+- **Pattern matching:** Flags dangerous code patterns
+- **Severity levels:** Critical, high, medium, low
+
+## Customization
+
+### More Restrictive
+
+To tighten security:
+```yaml
+# Block more commands
+blocked_commands:
+  - "npm install"  # Prevent any package installation
+  - "pip"          # Block pip entirely
+
+# Reduce allowed domains
+allowed_domains:
+  - "docs.python.org"  # Only official docs
+```
+
+### Less Restrictive
+
+To relax security:
+```yaml
+# Allow more paths
+allowed_paths:
+  - "~/Projects"  # Access all projects
+
+# Change mode
+bash:
+  mode: denylist  # Only block specific commands
+```
+
+## Important
+
+**Always maintain these protections:**
+- Block access to credentials (~/.ssh, ~/.aws)
+- Require confirmation before git push
+- Block dangerous commands (rm, sudo)
+- Scan for security vulnerabilities
+- Log security violations
+
+## Testing
+
+Test your security policy:
+```bash
+# Check if action is allowed
+forge security check --agent coding-assistant --action "read_file:src/app.py"
+
+# Check if command is allowed
+forge security check --agent coding-assistant --action "bash:pytest"
+
+# View audit log
+tail -f ~/.teotl/agents/coding-assistant/audit.log
+```
+
+## Monitoring
+
+Monitor security events:
+```bash
+# View violations
+grep "security_violation" ~/.teotl/agents/coding-assistant/audit.log
+
+# Check confirmations
+grep "confirmation" ~/.teotl/agents/coding-assistant/audit.log
+
+# View all git operations
+grep "git_operation" ~/.teotl/agents/coding-assistant/audit.log
+```

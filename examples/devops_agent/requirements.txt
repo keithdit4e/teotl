@@ -1,0 +1,23 @@
+# DevOps Agent Dependencies
+
+# Core Teotl framework
+teotl>=0.1.0
+
+# LLM Provider (Anthropic Claude - recommended)
+anthropic>=0.40
+
+# Model Context Protocol (MCP)
+mcp>=1.0.0
+
+# CLI and UI
+click>=8.0
+rich>=13.0
+
+# System Requirements (non-Python)
+# - Node.js v18+ must be installed: brew install node
+# - GitHub MCP Server: npm install -g @modelcontextprotocol/server-github
+# - GitHub token must be set: export GITHUB_TOKEN="ghp_..."
+
+# Optional: Other providers
+# openai>=1.50  # For OpenAI GPT models
+# ollama>=0.4   # For local Ollama models

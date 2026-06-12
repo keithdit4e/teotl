@@ -1,0 +1,136 @@
+# Mission: Investigate and Fix GitHub Issue
+#
+# This mission autonomously investigates a GitHub issue and creates a fix.
+
+name: investigate_and_fix_issue
+objective: "Investigate GitHub issue, reproduce bug, create fix, and submit pull request"
+
+# Use planner-worker architecture for cost optimization
+execution_pattern: planner_worker
+
+planner_worker:
+  planner:
+    provider: claude-sonnet-4-20250514
+    instructions: |
+      You are the strategic planner for a DevOps automation agent.
+      
+      Your role:
+      - Analyze GitHub issues to understand the problem
+      - Break down investigation into clear steps
+      - Plan the approach for reproducing and fixing bugs
+      - Delegate execution tasks to the worker
+      - Review worker's results and adjust strategy
+      
+      Guidelines:
+      - Start with understanding the issue thoroughly
+      - Plan minimal, targeted fixes (no over-engineering)
+      - Always include test coverage for fixes
+      - Verify the fix before creating PR
+    
+  worker:
+    provider: claude-haiku-4-20250514
+    skills:
+      - git
+      - filesystem
+      - bash
+      - github
+    
+    instructions: |
+      You are the execution worker for a DevOps automation agent.
+      
+      Your role:
+      - Execute tasks delegated by the planner
+      - Reproduce bugs by running code and tests
+      - Investigate code to find root causes
+      - Create minimal, targeted fixes
+      - Write regression tests
+      - Run test suites to verify fixes
+      
+      Guidelines:
+      - Follow planner's instructions precisely
+      - Make minimal changes (only fix the specific issue)
+      - Always add tests for bug fixes
+      - Report results clearly to planner
+
+# Security and budget limits
+guardrails:
+  policy: standard
+  
+budget:
+  max_cost_usd: 5.00
+  max_duration_seconds: 3600
+  max_api_calls: 100
+
+# Mission workflow (conceptual - actual implementation in agent)
+workflow:
+  steps:
+    - name: fetch_issue
+      description: "Fetch issue details from GitHub"
+      
+    - name: analyze_issue
+      description: "Analyze issue description, comments, and context"
+      
+    - name: clone_repository
+      description: "Clone repository to local workspace"
+      
+    - name: reproduce_bug
+      description: "Attempt to reproduce the reported bug"
+      
+    - name: investigate_code
+      description: "Read relevant code files to understand root cause"
+      
+    - name: create_fix
+      description: "Create minimal, targeted fix for the issue"
+      
+    - name: add_tests
+      description: "Add regression test to prevent future occurrences"
+      
+    - name: verify_fix
+      description: "Run test suite to verify fix works"
+      
+    - name: create_branch
+      description: "Create feature branch for the fix"
+      
+    - name: commit_changes
+      description: "Commit changes with semantic message"
+      
+    - name: create_pull_request
+      description: "Create PR with detailed description"
+
+# Context variables (provided at runtime)
+context_schema:
+  repository:
+    type: string
+    required: true
+    description: "GitHub repository (owner/repo)"
+    
+  issue_number:
+    type: integer
+    required: true
+    description: "Issue number to investigate"
+    
+  github_token:
+    type: string
+    required: true
+    description: "GitHub personal access token"
+    
+  workspace_dir:
+    type: string
+    required: false
+    default: "/tmp/devops-agent-workspace"
+    description: "Working directory for cloning repo"
+
+# Success criteria
+success_criteria:
+  - "Bug reproduced successfully"
+  - "Root cause identified"
+  - "Fix implemented with minimal changes"
+  - "Regression test added"
+  - "All tests passing"
+  - "Pull request created"
+
+# Failure recovery
+on_failure:
+  max_retries: 2
+  retry_strategy: "exponential_backoff"
+  notify: true

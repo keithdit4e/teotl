@@ -1,0 +1,60 @@
+{
+  "level": "standard",
+  "filesystem": {
+    "allow": [
+      "~/projects/**",
+      "~/Documents/**",
+      "/tmp/**"
+    ],
+    "deny": [
+      "~/.ssh/**",
+      "~/.aws/**",
+      "~/.forge/auth/**"
+    ],
+    "confirm_write_outside_scope": true
+  },
+  "bash": {
+    "block": [
+      "rm -rf /",
+      "curl * | bash",
+      "wget * | bash"
+    ],
+    "confirm": [
+      "rm",
+      "git push",
+      "sudo",
+      "docker",
+      "pip install"
+    ],
+    "allow": [
+      "ls",
+      "cat",
+      "grep",
+      "find",
+      "echo",
+      "pwd",
+      "head",
+      "tail",
+      "wc",
+      "python",
+      "pytest"
+    ]
+  },
+  "network": {
+    "allow_outbound": false,
+    "allowed_hosts": [
+      "api.github.com",
+      "pypi.org"
+    ],
+    "confirm_new_hosts": true
+  },
+  "limits": {
+    "max_files_per_turn": 20,
+    "cost_limit_session": 5.0,
+    "cost_limit_daily": 25.0
+  },
+  "trust": {
+    "auto_approve_after": 3,
+    "session_scoped": true
+  }
+}

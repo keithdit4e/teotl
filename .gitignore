@@ -1,0 +1,79 @@
+# Internal docs (development reference, not for public)
+docs/internal/
+
+# Comparison testing (internal benchmarks)
+comparison/
+
+# Secrets and Credentials (CRITICAL - NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.secret
+secrets/
+credentials/
+*_key.txt
+*_token.txt
+api_keys.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.code-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+.hypothesis/
+
+# OS
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+._*
+
+# Forge/teotl local data (never commit user data)
+.forge/
+.teotl/
+*.db
+*.db-journal
+audit.jsonl
+costs.json
+
+# Logs
+*.log
+logs/
+
+# MCP Server Node Modules
+mcp-server/node_modules/
+examples/devops_agent/mcp-server/node_modules/
+
+# Test and temporary data
+test-repos/
+tmp/
+temp/
+/tmp/devops-*

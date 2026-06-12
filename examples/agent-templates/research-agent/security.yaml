@@ -1,0 +1,333 @@
+# Research Agent Security Policy
+
+mode: allowlist
+
+# Filesystem Policy
+filesystem:
+  mode: allowlist
+
+  allowed_paths:
+    # Research directories
+    - "~/Research"
+    - "~/Documents/Research"
+    - "~/Desktop/Research"
+
+    # Agent workspace
+    - "~/.teotl/agents/research-agent"
+
+    # Common document locations
+    - "~/Documents"
+    - "~/Desktop"
+    - "~/Downloads"
+
+  blocked_paths:
+    # System directories
+    - "/etc"
+    - "/var"
+    - "/usr"
+    - "/bin"
+    - "/sbin"
+
+    # Sensitive user directories
+    - "~/.ssh"
+    - "~/.aws"
+    - "~/.config"
+
+    # Credentials
+    - "**/*credential*"
+    - "**/*secret*"
+    - "**/*.key"
+    - "**/*.pem"
+
+  require_confirmation:
+    - "delete"
+    - "move"
+
+# Network Policy
+network:
+  mode: allowlist
+
+  allowed_domains:
+    # Search engines
+    - "*.google.com"
+    - "*.bing.com"
+    - "*.duckduckgo.com"
+
+    # Academic and research
+    - "scholar.google.com"
+    - "arxiv.org"
+    - "*.arxiv.org"
+    - "researchgate.net"
+    - "*.researchgate.net"
+    - "academia.edu"
+    - "*.acm.org"
+    - "*.ieee.org"
+    - "*.nature.com"
+    - "*.science.org"
+    - "pubmed.ncbi.nlm.nih.gov"
+
+    # News and media
+    - "*.nytimes.com"
+    - "*.wsj.com"
+    - "*.reuters.com"
+    - "*.bbc.com"
+    - "*.theguardian.com"
+    - "techcrunch.com"
+    - "theverge.com"
+    - "arstechnica.com"
+    - "wired.com"
+
+    # Business and industry
+    - "*.forbes.com"
+    - "*.bloomberg.com"
+    - "hbr.org"
+    - "*.mckinsey.com"
+    - "*.gartner.com"
+    - "*.forrester.com"
+
+    # Data and statistics
+    - "*.statista.com"
+    - "data.worldbank.org"
+    - "*.oecd.org"
+    - "ourworldindata.org"
+    - "*.pewresearch.org"
+    - "*.census.gov"
+
+    # Documentation and reference
+    - "wikipedia.org"
+    - "*.wikipedia.org"
+    - "*.github.io"
+    - "*.readthedocs.io"
+    - "docs.*.com"
+
+    # Company and product research
+    - "*.crunchbase.com"
+    - "*.linkedin.com"
+    - "*.glassdoor.com"
+    - "*.trustpilot.com"
+    - "*.g2.com"
+    - "*.capterra.com"
+
+    # General web (HTTPS only)
+    - "*"  # Allow any HTTPS site (restrictprotocol to https)
+
+  blocked_domains:
+    - "*.onion"
+    - "*.bit"
+    - "*malware*"
+    - "*phishing*"
+
+  allowed_protocols:
+    - "https"
+    - "http"  # Some academic sites still use HTTP
+
+  require_confirmation:
+    - "post"
+    - "put"
+    - "delete"
+
+# Command Execution Policy
+bash:
+  mode: denylist  # Only block dangerous commands
+
+  blocked_commands:
+    - "rm"
+    - "dd"
+    - "mkfs"
+    - "shutdown"
+    - "reboot"
+    - "sudo"
+    - "su"
+    - "chmod"
+    - "chown"
+    - "ssh"
+    - "scp"
+
+  require_confirmation:
+    - "curl"  # Prefer web skill
+    - "wget"  # Prefer web skill
+
+# Research-Specific Rules
+research:
+  # Track research sessions
+  log_research_sessions: true
+
+  # Save research metadata
+  save_metadata: true
+
+  # Citation requirements
+  citations:
+    format: "apa"  # APA 7th edition
+    require_citations: true
+    require_urls: true
+    require_access_dates: true
+
+  # Source quality tracking
+  source_evaluation:
+    track_source_quality: true
+    flag_low_quality: true
+    require_multiple_sources: true
+    min_sources_for_fact: 2
+
+  # Content restrictions
+  content:
+    block_explicit: true
+    block_illegal: true
+    flag_controversial: true
+
+# Privacy and Data Handling
+privacy:
+  # Don't log research queries externally
+  log_queries_externally: false
+
+  # Don't store personal user data in reports
+  redact_personal_info: true
+
+  # Encrypt saved research
+  encrypt_storage: false  # Local files, up to user
+
+  # Data retention
+  retention_days: 365  # Keep for 1 year
+
+  # Audit logging
+  audit:
+    enabled: true
+    log_path: "~/.teotl/agents/research-agent/audit.log"
+    log_events:
+      - "research_started"
+      - "sources_accessed"
+      - "report_created"
+      - "security_violation"
+    rotate_days: 90
+
+# Rate Limiting
+rate_limits:
+  # Web requests per minute
+  web_requests_per_minute: 60
+
+  # File operations per minute
+  file_operations_per_minute: 30
+
+# Quality Assurance
+quality:
+  # Minimum source requirements
+  min_sources: 3
+
+  # Require diverse sources
+  require_diverse_sources: true
+
+  # Flag potential issues
+  flag_single_source_claims: true
+  flag_outdated_info: true
+  flag_contradictions: true
+
+  # Outdated threshold (years)
+  outdated_threshold_years: 5
+
+# Confirmations
+confirmations:
+  always_confirm:
+    - "save_report"
+    - "delete_research"
+
+  batch_confirmation: true
+  timeout_seconds: 300
+
+# Security Violations
+violations:
+  action: block
+  notify_user: true
+  log_violations: true
+
+# Emergency Override
+emergency:
+  allow_override: true
+  require_explicit_confirmation: true
+  override_duration_minutes: 30
+  log_overrides: true
+
+---
+
+# Security Policy Notes
+
+## Purpose
+This policy ensures the research agent operates safely while accessing public web resources and saving research reports locally.
+
+## Key Protections
+
+### 1. Filesystem Safety
+- **Research directories only:** Can save to designated research folders
+- **No system access:** Cannot modify system directories
+- **Credential protection:** Blocks access to SSH keys, AWS credentials
+
+### 2. Network Safety
+- **Public web only:** Can access publicly available websites
+- **No dark web:** Blocks .onion and other anonymous networks
+- **HTTPS preferred:** Prioritizes secure connections
+- **Reputable sources:** Allows access to academic, news, business sites
+
+### 3. Research Quality
+- **Multiple sources required:** Minimum 3 sources for facts
+- **Citation tracking:** Requires proper attribution
+- **Source evaluation:** Tracks source quality and credibility
+- **Flags issues:** Notes contradictions, outdated info, single-source claims
+
+### 4. Privacy Protection
+- **No external logging:** Research queries stay local
+- **Data retention:** 1-year retention policy
+- **Personal info redaction:** Removes personal data from reports
+- **Audit logging:** Tracks research sessions locally
+
+## Customization
+
+### More Restrictive
+
+Block specific domains:
+```yaml
+blocked_domains:
+  - "*.example.com"  # Block specific sites
+  - "*social-media.com"  # Block social media
+```
+
+Require more sources:
+```yaml
+quality:
+  min_sources: 5  # Require 5+ sources instead of 3
+```
+
+### Less Restrictive
+
+Allow all HTTPS sites:
+```yaml
+network:
+  allowed_domains:
+    - "*"  # Allow any HTTPS site
+```
+
+Remove file confirmations:
+```yaml
+filesystem:
+  require_confirmation: []  # No confirmations needed
+```
+
+## Important
+
+**Always maintain:**
+- Block access to credentials
+- Require multiple sources for facts
+- Log research sessions
+- Protect privacy (no external logging)
+
+## Monitoring
+
+View research activity:
+```bash
+# Check audit log
+tail -f ~/.teotl/agents/research-agent/audit.log
+
+# Count research sessions
+grep "research_started" ~/.teotl/agents/research-agent/audit.log | wc -l
+
+# View sources accessed
+grep "sources_accessed" ~/.teotl/agents/research-agent/audit.log
+```

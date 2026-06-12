@@ -1,0 +1,43 @@
+{
+  "level": "production",
+  "description": "Strict policy for production environments. Requires explicit approval for most operations.",
+  "default_risk": {
+    "safe": "confirm",
+    "medium": "confirm",
+    "high": "block",
+    "critical": "block"
+  },
+  "filesystem": {
+    "allow": [
+      "/app/data/**",
+      "/tmp/app-scratch/**"
+    ],
+    "deny": [
+      "~/.ssh/**",
+      "~/.gnupg/**",
+      "/etc/**",
+      "/var/**",
+      "/usr/**",
+      "/home/**",
+      "/root/**"
+    ]
+  },
+  "bash": {
+    "allow": [],
+    "confirm": ["read"],
+    "block": ["write", "destructive", "network", "install", "system_modification"]
+  },
+  "network": {
+    "allow_by_default": false,
+    "allow_hosts": [
+      "api.anthropic.com",
+      "api.openai.com",
+      "*.mycompany.com"
+    ]
+  },
+  "trust": {
+    "auto_approve_after": 10,
+    "session_scoped": false,
+    "persist_patterns": true
+  }
+}

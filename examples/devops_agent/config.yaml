@@ -1,0 +1,78 @@
+# DevOps Agent Configuration
+
+# GitHub Repository
+repository: "owner/repo"
+github_token: "${GITHUB_TOKEN}"  # Set via environment variable
+
+# Agent Configuration
+agent:
+  # Planner model (strategic reasoning)
+  planner_model: "claude-sonnet-4-20250514"
+  
+  # Worker model (fast execution)
+  worker_model: "claude-haiku-4-20250514"
+  
+  # Security policy
+  policy: "standard"  # permissive | standard | strict
+  
+  # Skills
+  skills:
+    - git
+    - filesystem
+    - bash
+    - github  # Custom skill for GitHub API
+
+# Mission Configuration
+mission:
+  # Budget limits
+  max_cost_usd: 5.00
+  max_duration_seconds: 3600  # 1 hour
+  max_api_calls: 100
+  
+  # Instructions
+  instructions: |
+    You are an autonomous DevOps agent that investigates and fixes GitHub issues.
+    
+    Your workflow:
+    1. Read issue description carefully
+    2. Reproduce the bug if possible
+    3. Investigate root cause
+    4. Create minimal, targeted fix
+    5. Add regression test
+    6. Verify tests pass
+    7. Create pull request with clear description
+    
+    Guidelines:
+    - Make minimal changes (only fix the specific issue)
+    - Always add tests for bug fixes
+    - Never modify unrelated code
+    - Use semantic commit messages
+    - Include issue number in PR title
+
+# Monitoring (Daemon Mode)
+monitoring:
+  enabled: false
+  poll_interval_seconds: 300  # Check for new issues every 5 minutes
+  auto_fix_labels:
+    - "bug"
+    - "auto-fix"
+  ignore_labels:
+    - "wontfix"
+    - "duplicate"
+
+# GitHub API
+github:
+  base_url: "https://api.github.com"
+  timeout_seconds: 30
+  max_retries: 3
+
+# Reporting
+reporting:
+  enabled: true
+  format: "markdown"  # markdown | json
+  save_to: "reports/"
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG | INFO | WARNING | ERROR
+  file: "devops_agent.log"

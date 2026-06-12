@@ -1,0 +1,97 @@
+# Custom Guardrail Policy Example
+#
+# This policy demonstrates how to create a custom guardrail configuration
+# tailored to your specific use case.
+
+level: custom
+description: |
+  Custom policy for a coding assistant that can read/write code files
+  but cannot modify system files or make network requests.
+
+# Default decisions based on risk level
+default_risk:
+  safe: allow      # Read-only operations, no user confirmation
+  medium: confirm  # Write operations, ask user first
+  high: confirm    # Potentially dangerous, always confirm
+  critical: block  # Never allow, even with confirmation
+
+# Filesystem access rules
+filesystem:
+  # Allowed directories (supports glob patterns)
+  allow:
+    - "~/code/**"           # User's code directory
+    - "~/projects/**"       # Projects directory
+    - "/tmp/**"             # Temp files
+    - "./**"                # Current directory
+
+  # Denied directories (takes priority over allow)
+  deny:
+    - "~/.ssh/**"           # SSH keys
+    - "~/.gnupg/**"         # GPG keys
+    - "~/.aws/**"           # AWS credentials
+    - "/etc/**"             # System configuration
+    - "/var/**"             # System data
+    - "/usr/**"             # System binaries
+    - "node_modules/**"     # Don't modify dependencies
+    - ".git/**"             # Don't mess with git internals
+
+# Bash command rules
+bash:
+  # Commands allowed without confirmation
+  allow:
+    - read    # ls, cat, grep, find, etc.
+
+  # Commands that require confirmation
+  confirm:
+    - write   # echo >, cp, mv, etc.
+
+  # Commands that are always blocked
+  block:
+    - destructive          # rm -rf, etc.
+    - network             # curl, wget, ssh, etc.
+    - install             # apt, brew, npm install, etc.
+    - system_modification # systemctl, service, etc.
+
+# Network access rules
+network:
+  allow_by_default: false  # Block all network by default
+
+  # Specific hosts to allow (supports wildcards)
+  allow_hosts:
+    - api.anthropic.com
+    - api.openai.com
+
+  # Hosts to explicitly block (even if matched by allow)
+  deny_hosts:
+    - localhost:22    # No SSH
+    - 127.0.0.1:22    # No SSH
+
+# Trust building settings
+trust:
+  # Auto-approve after N successful confirmations
+  auto_approve_after: 3
+
+  # Reset trust at end of session (vs persist across sessions)
+  session_scoped: true
+
+  # Remember specific patterns (e.g., "write to README.md")
+  persist_patterns: false
+
+# Integration-specific rules (optional)
+integrations:
+  github:
+    allow: ["read_repos", "read_issues"]
+    confirm: ["create_issue", "create_pr"]
+    block: ["delete_repo", "push_force"]
+
+  gmail:
+    allow: ["read_email"]
+    confirm: ["send_email"]
+    block: ["delete_email"]
+
+# Custom notes/documentation
+notes:
+  - "This policy is designed for a coding assistant"
+  - "Network access is blocked to prevent data exfiltration"
+  - "System files are protected"
+  - "Trust builds after 3 successful confirmations"

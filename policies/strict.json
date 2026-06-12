@@ -1,0 +1,45 @@
+{
+  "level": "strict",
+  "filesystem": {
+    "allow": [],
+    "deny": [
+      "~/.ssh/**",
+      "~/.aws/**",
+      "~/.forge/auth/**"
+    ],
+    "confirm_write_outside_scope": true
+  },
+  "bash": {
+    "block": [
+      "rm -rf /",
+      "curl * | bash",
+      "sudo",
+      "docker"
+    ],
+    "confirm": [
+      "*"
+    ],
+    "allow": [
+      "ls",
+      "cat",
+      "head",
+      "tail",
+      "wc",
+      "pwd"
+    ]
+  },
+  "network": {
+    "allow_outbound": false,
+    "allowed_hosts": [],
+    "confirm_new_hosts": true
+  },
+  "limits": {
+    "max_files_per_turn": 10,
+    "cost_limit_session": 2.0,
+    "cost_limit_daily": 10.0
+  },
+  "trust": {
+    "auto_approve_after": 5,
+    "session_scoped": true
+  }
+}

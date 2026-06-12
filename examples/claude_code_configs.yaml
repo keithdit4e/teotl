@@ -1,0 +1,390 @@
+# Example configurations for Claude Code skill
+
+# ==============================================================================
+# 1. SIMPLE CODING AGENT
+# ==============================================================================
+# Use case: Personal coding assistant for daily development tasks
+# Cost: ~$0.10/day for moderate use
+
+provider:
+  type: anthropic
+  model: claude-haiku-4  # Cheap model for worker tasks
+
+agent:
+  agent_id: dev-assistant
+  instructions: "You are a personal coding assistant for software development"
+
+  skills:
+    - filesystem    # Read/write code files
+    - git          # Commit changes
+    - claude_code  # AI coding assistance
+
+  memory:
+    enabled: true  # Remember past conversations
+
+  harness:
+    cost_tracking: true  # Track spending
+
+daemon:
+  poll_interval: 60  # Check for tasks every minute
+  data_dir: ~/.teotl/dev-assistant
+
+---
+
+# ==============================================================================
+# 2. PLANNER-WORKER CODING AGENT
+# ==============================================================================
+# Use case: Complex multi-step refactoring and feature development
+# Cost: ~$0.20 per complex task (90% savings vs full Sonnet)
+
+provider:
+  type: anthropic
+  model: claude-sonnet-4  # Planner uses expensive model
+
+planner_worker:
+  enabled: true
+
+  planner:
+    provider: claude-sonnet-4  # Smart planning
+    instructions: |
+      Create detailed execution plans for coding projects.
+      Break down into atomic steps.
+      Identify which steps require coding assistance (use claude_code).
+
+  worker:
+    provider: claude-haiku-4  # Cheap execution
+    skills:
+      - filesystem
+      - git
+      - claude_code  # ← Worker can delegate coding to Claude Code
+    instructions: |
+      Execute plan steps systematically.
+      For coding tasks, use claude_code skill.
+      Always verify with tests before committing.
+
+  harness:
+    enable_cost_tracking: true
+    enable_checkpoints: true
+    enable_state: true
+
+---
+
+# ==============================================================================
+# 3. AUTONOMOUS CODE REVIEWER
+# ==============================================================================
+# Use case: Automated PR reviews and code quality checks
+# Cost: ~$0.05/PR review
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+agent:
+  agent_id: code-reviewer
+  instructions: |
+    You are a code reviewer focused on quality, security, and best practices.
+    Review code changes and provide detailed feedback.
+
+  skills:
+    - filesystem
+    - git
+    - claude_code  # Use read-only mode for reviews
+
+  work_types:
+    - Tasks  # Process review tasks
+
+daemon:
+  poll_interval: 300  # Check every 5 minutes
+
+# Example task to create:
+# Task: "Review the changes in PR #123 for security vulnerabilities"
+# Agent will: claude-code "Review PR #123 for security issues" --read-only
+
+---
+
+# ==============================================================================
+# 4. BUG-FIX SPECIALIST
+# ==============================================================================
+# Use case: Dedicated agent for fixing reported bugs
+# Cost: ~$0.05-0.15 per bug fix
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+agent:
+  agent_id: bug-fixer
+  instructions: |
+    You are a bug-fixing specialist.
+    Analyze error reports, identify root cause, implement fix, write regression test.
+
+  skills:
+    - filesystem
+    - git
+    - claude_code  # Excellent for bug fixes
+
+  work_types:
+    - Tasks  # High-priority bug tasks
+
+  harness:
+    cost_tracking: true
+    heartbeat: true  # Monitor for stuck bugs
+
+daemon:
+  poll_interval: 120  # Check every 2 minutes
+
+# Example task:
+# Task: "Fix TypeError in checkout.js line 45: Cannot read property 'id' of undefined"
+# Priority: URGENT
+
+---
+
+# ==============================================================================
+# 5. TEST AUTOMATION AGENT
+# ==============================================================================
+# Use case: Automatically write tests for new/changed code
+# Cost: ~$0.08 per test suite
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+agent:
+  agent_id: test-writer
+  instructions: |
+    You write comprehensive test suites for code.
+    Include unit tests, integration tests, and edge cases.
+    Aim for 80%+ code coverage.
+
+  skills:
+    - filesystem
+    - git
+    - claude_code  # Excellent at test generation
+
+  work_types:
+    - Tasks
+
+daemon:
+  poll_interval: 300
+
+# Example task:
+# Task: "Write comprehensive tests for src/services/PaymentService.ts"
+
+---
+
+# ==============================================================================
+# 6. REFACTORING SPECIALIST
+# ==============================================================================
+# Use case: Ongoing code quality improvements and tech debt reduction
+# Cost: ~$0.15-0.30 per refactoring
+
+provider:
+  type: anthropic
+  model: claude-sonnet-4  # Use better model for complex refactoring
+
+agent:
+  agent_id: refactoring-specialist
+  instructions: |
+    You are a refactoring expert.
+    Improve code quality, apply design patterns, reduce duplication.
+    Always maintain backward compatibility unless explicitly told otherwise.
+
+  skills:
+    - filesystem
+    - git
+    - claude_code  # Core capability
+
+  work_types:
+    - Missions  # Scheduled refactoring missions
+
+missions:
+  - description: "Weekly code quality review and refactoring"
+    interval: WEEKLY
+    can_be_interrupted: false
+
+daemon:
+  poll_interval: 3600  # Once per hour
+
+# Example mission:
+# Mission: "Review src/api/ for code smells and refactor top 3 issues"
+# Interval: WEEKLY
+
+---
+
+# ==============================================================================
+# 7. MULTI-AGENT TEAM WITH CLAUDE CODE
+# ==============================================================================
+# Use case: Team of specialized coding agents
+# Cost: Variable based on workload
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+# Agent 1: Feature implementer
+agents:
+  feature-dev:
+    instructions: "Implement new features with tests and documentation"
+    skills: [filesystem, git, claude_code]
+    work_types: [Tasks]
+    capabilities: [feature-implementation]
+
+  # Agent 2: Bug fixer
+  bug-fixer:
+    instructions: "Fix bugs quickly and write regression tests"
+    skills: [filesystem, git, claude_code]
+    work_types: [Tasks]
+    capabilities: [bug-fixing]
+
+  # Agent 3: Code reviewer
+  code-reviewer:
+    instructions: "Review PRs for quality and security"
+    skills: [filesystem, git, claude_code]
+    work_types: [Tasks]
+    capabilities: [code-review]
+
+  # Agent 4: Test specialist
+  test-writer:
+    instructions: "Write comprehensive test suites"
+    skills: [filesystem, git, claude_code]
+    work_types: [Tasks]
+    capabilities: [testing]
+
+daemon:
+  poll_interval: 60
+
+# Tasks automatically routed based on capabilities
+
+---
+
+# ==============================================================================
+# 8. MINIMAL CONFIGURATION
+# ==============================================================================
+# Use case: Simplest possible setup with Claude Code
+# Cost: Pay-as-you-go
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+agent:
+  agent_id: coder
+  skills: [claude_code]  # Just Claude Code, nothing else
+
+daemon:
+  poll_interval: 60
+
+---
+
+# ==============================================================================
+# 9. COST-OPTIMIZED CONFIGURATION
+# ==============================================================================
+# Use case: Minimize costs while maintaining functionality
+# Cost: ~$0.05-0.10 per task
+
+provider:
+  type: anthropic
+  model: claude-haiku-4  # Cheapest model
+
+agent:
+  agent_id: budget-coder
+  instructions: "Efficient coding assistant, minimize token usage"
+
+  skills:
+    - filesystem
+    - git
+    - claude_code
+
+  # Janitor to compact context aggressively
+  janitor:
+    enabled: true
+    compact_every: 10  # More frequent compaction
+    max_context_tokens: 50000  # Lower limit
+
+  harness:
+    cost_tracking: true  # Monitor spending
+
+daemon:
+  poll_interval: 300  # Less frequent polling
+
+---
+
+# ==============================================================================
+# 10. PRODUCTION-GRADE CONFIGURATION
+# ==============================================================================
+# Use case: Production deployment with all safety features
+# Cost: ~$0.20-0.40 per task (includes overhead for safety)
+
+provider:
+  type: anthropic
+  model: claude-sonnet-4  # Better model for production
+
+agent:
+  agent_id: prod-coder
+  instructions: |
+    Production coding assistant with strict safety requirements.
+    Always review security implications.
+    Never commit without tests passing.
+
+  skills:
+    - filesystem
+    - git
+    - claude_code
+
+  memory:
+    enabled: true
+
+  janitor:
+    enabled: true
+    compact_every: 15
+
+  # ALL harness features enabled
+  harness:
+    cost_tracking: true      # Budget limits
+    checkpoints: true        # Recovery from failures
+    heartbeat: true          # Stuck detection
+    state: true             # Persistent state
+    audit: true             # Audit logging
+
+daemon:
+  poll_interval: 120
+  data_dir: /var/forge/prod-coder
+
+# Production features:
+# - Cost limits prevent runaway spending
+# - Checkpoints allow recovery from crashes
+# - Heartbeat detects infinite loops
+# - State tracks progress across restarts
+# - Audit logs all actions for compliance
+
+---
+
+# ==============================================================================
+# HOW TO USE THESE CONFIGURATIONS
+# ==============================================================================
+
+# 1. Copy the configuration you want to config.yaml
+# 2. Update paths and settings for your environment
+# 3. Set API key: export ANTHROPIC_API_KEY=your-key
+# 4. Start daemon: python3 -m forge.daemon.run --config config.yaml
+# 5. Create tasks via API or CLI
+
+# Example: Start simple coding agent
+# $ cp examples/claude_code_configs.yaml config.yaml
+# $ export ANTHROPIC_API_KEY=sk-ant-...
+# $ python3 -m forge.daemon.run --config config.yaml
+
+# Then create tasks:
+# python3 -c "
+# from forge.primitives.tasks import Task, Priority
+# import asyncio
+#
+# async def create_task():
+#     task = Task(
+#         description='Refactor auth to use JWT',
+#         priority=Priority.NORMAL
+#     )
+#     await task_store.create(task)
+#
+# asyncio.run(create_task())
+# "

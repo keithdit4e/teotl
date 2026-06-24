@@ -33,13 +33,13 @@ async def test_forget(memory):
     memory_id = await memory.remember("Temporary fact")
     assert await memory.count() == 1
 
-    deleted = await memory.teotlt(memory_id)
+    deleted = await memory.forget(memory_id)
     assert deleted is True
     assert await memory.count() == 0
 
 
 async def test_forget_nonexistent(memory):
-    deleted = await memory.teotlt("nonexistent_id")
+    deleted = await memory.forget("nonexistent_id")
     assert deleted is False
 
 

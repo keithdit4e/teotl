@@ -1,0 +1,369 @@
+# =============================================================================
+# TEOTL FULL CONFIGURATION REFERENCE
+# =============================================================================
+# This file documents ALL available YAML configuration options for Teotl agents.
+# Copy and modify sections as needed for your use case.
+#
+# Usage:
+#   from teotl.config import create_agent_from_yaml
+#   agent = create_agent_from_yaml("config.yaml")
+#   response = await agent.run("Hello!")
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# PROVIDER CONFIGURATION (Required)
+# -----------------------------------------------------------------------------
+# LLM provider settings - supports Anthropic, OpenAI, and Ollama
+
+provider:
+  type: anthropic              # "anthropic", "openai", or "ollama"
+  model: claude-sonnet-4-20250514
+  api_key_env: ANTHROPIC_API_KEY  # Environment variable containing API key
+  base_url: null               # Optional: custom API endpoint (for proxies)
+
+  # Model-specific parameters (optional)
+  parameters:
+    temperature: 0.7           # 0.0-1.0, lower = more deterministic
+    max_tokens: 4096           # Maximum tokens in response
+    top_p: 0.9                 # Nucleus sampling parameter
+    top_k: 40                  # Top-k sampling (Anthropic)
+    stop_sequences: []         # Custom stop sequences
+
+
+# -----------------------------------------------------------------------------
+# AGENT CONFIGURATION (Required)
+# -----------------------------------------------------------------------------
+# Single agent format (use 'agents:' for multiple agents)
+
+agent:
+  agent_id: my-agent           # Unique identifier for this agent
+  instructions: |
+    You are a helpful coding assistant.
+    Focus on writing clean, maintainable code.
+    Always include tests for new functionality.
+
+  # Working directory for agent operations
+  workspace: ~/projects/my-project
+
+  # Skills to enable (loaded on-demand)
+  skills:
+    - filesystem               # File read/write operations
+    - git                      # Git operations
+    - bash                     # Shell command execution
+    - claude_code              # AI coding assistance
+
+  # Execution settings
+  auto_approve: true           # Auto-approve tool calls without prompts
+  max_turns: 50                # Maximum turns per run
+  enable_injection_defense: true  # Protect against prompt injection
+
+  # Work types this agent handles (for daemon routing)
+  work_types:
+    - Tasks
+    - Missions
+
+  # Capabilities for intelligent routing
+  capabilities:
+    - feature-implementation
+    - bug-fixing
+    - code-review
+
+  # ---------------------------------------------------------------------------
+  # MEMORY CONFIGURATION
+  # ---------------------------------------------------------------------------
+  # Cross-session memory persistence
+
+  memory:
+    enabled: true              # Enable memory system
+    backend: local             # "local" (SQLite) or "encrypted"
+    path: null                 # Custom path (default: ~/.teotl/agents/{id}/memory.db)
+    auto_cleanup: true         # Auto-cleanup expired memories
+    max_memories: 10000        # Maximum memories to retain
+    # For encrypted backend:
+    # encryption_key_env: MEMORY_ENCRYPTION_KEY
+
+  # ---------------------------------------------------------------------------
+  # CONTEXT MANAGEMENT (JANITOR)
+  # ---------------------------------------------------------------------------
+  # Automatic context compaction to manage token limits
+
+  janitor:
+    enabled: true              # Enable context management
+    compact_every: 15          # Compact every N turns
+    max_context_tokens: null   # Auto-detect from model if null
+
+  # ---------------------------------------------------------------------------
+  # HARNESS CONFIGURATION
+  # ---------------------------------------------------------------------------
+  # Production safety features
+
+  harness:
+    # Cost Tracking - Monitor and limit spending
+    cost_tracking:
+      enabled: true
+      max_per_hour: 5.0        # USD limit per hour
+      max_per_day: 50.0        # USD limit per day
+      max_per_month: 500.0     # USD limit per month
+      currency: USD
+      log_file_name: COST_LOG.jsonl
+
+    # Heartbeat Monitoring - Detect stuck agents
+    heartbeat:
+      enabled: true
+      check_interval_turns: 5  # Check every N turns
+      max_turns_without_progress: 10
+      max_consecutive_errors: 5
+      min_completion_per_hour: 5.0  # Minimum progress rate
+      # Escalation settings
+      notify_on_critical: true
+      notify_on_warning: false
+      # Cleanup settings
+      archive_logs_older_than_days: 7
+      max_archived_plans: 10
+
+    # Checkpoints - Git-based rollback capability
+    checkpoints:
+      enabled: true
+      auto_checkpoint: true    # Auto-checkpoint before risky operations
+      checkpoint_prefix: teotl-checkpoint
+
+    # State Management - Persistent state across restarts
+    state:
+      enabled: true
+      enable_validation: true  # Validate state schema
+
+    # Audit Logging - Comprehensive execution logs
+    audit:
+      enabled: true
+      log_file_name: AUDIT_LOG.jsonl
+      redact_pii: true         # Redact PII from logs
+      max_prompt_length: 5000
+      max_response_length: 10000
+
+  # ---------------------------------------------------------------------------
+  # SECURITY CONFIGURATION
+  # ---------------------------------------------------------------------------
+  # Security policies and access control
+
+  security:
+    # Use a preset: "strict", "moderate", "permissive", "autonomous-dev"
+    preset: moderate
+
+    # Or load from file:
+    # policy_file: ./security.yaml
+
+    # Inline overrides (applied on top of preset)
+    log_level: standard        # "minimal", "standard", "detailed", "paranoid"
+    cost_limits:
+      max_per_hour: 5.0
+      max_per_day: 50.0
+    allowed_domains:
+      - "*.anthropic.com"
+      - "*.github.com"
+    blocked_paths:
+      - "~/.ssh/**"
+      - "~/.aws/**"
+
+  # ---------------------------------------------------------------------------
+  # PLANNER-WORKER ARCHITECTURE (Optional)
+  # ---------------------------------------------------------------------------
+  # Use separate models for planning vs execution
+
+  planner_worker:
+    enabled: false             # Set to true to enable
+
+    planner:
+      provider: claude-sonnet-4  # Use capable model for planning
+      instructions: |
+        Create detailed execution plans.
+        Break tasks into atomic, verifiable steps.
+
+    worker:
+      provider: claude-haiku-4   # Use cheaper model for execution
+      skills:
+        - filesystem
+        - git
+        - bash
+      instructions: |
+        Execute plan steps precisely.
+        Report progress after each step.
+      max_turns: 50
+
+    harness:
+      cost_tracking: true
+      checkpoints: true
+      state: true
+
+
+# -----------------------------------------------------------------------------
+# DAEMON CONFIGURATION (Optional)
+# -----------------------------------------------------------------------------
+# Settings for running agent as background daemon
+
+daemon:
+  poll_interval: 30            # Seconds between work checks
+  data_dir: ~/.teotl/agents/my-agent
+
+
+# -----------------------------------------------------------------------------
+# RATE LIMITS (Optional)
+# -----------------------------------------------------------------------------
+# API rate limiting
+
+rate_limits:
+  max_requests_per_minute: 10
+  max_cost_per_minute: 0.50
+
+
+# -----------------------------------------------------------------------------
+# TASKS (Optional)
+# -----------------------------------------------------------------------------
+# Pre-defined tasks for daemon to execute
+
+tasks:
+  - description: "Review and fix any failing tests"
+    priority: HIGH             # CRITICAL, URGENT, HIGH, NORMAL, LOW
+    expires_minutes: null
+    expires_days: 7
+    context:
+      test_command: "pytest"
+      target_coverage: 80
+
+
+# -----------------------------------------------------------------------------
+# MISSIONS (Optional)
+# -----------------------------------------------------------------------------
+# Recurring scheduled work
+
+missions:
+  - description: "Weekly code quality review"
+    interval: WEEKLY           # HOURLY, DAILY, WEEKLY
+    can_be_interrupted: true
+    interrupt_threshold: URGENT
+
+---
+
+# =============================================================================
+# MULTI-AGENT CONFIGURATION EXAMPLE
+# =============================================================================
+# Use 'agents:' (plural) for multiple agents sharing a provider
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+agents:
+  # Agent 1: Feature Developer
+  feature-dev:
+    agent_id: feature-dev
+    instructions: "Implement new features with tests and documentation"
+    skills: [filesystem, git, bash]
+    work_types: [Tasks]
+    capabilities: [feature-implementation]
+    memory:
+      enabled: true
+    harness:
+      cost_tracking: true
+      audit: true
+
+  # Agent 2: Bug Fixer
+  bug-fixer:
+    agent_id: bug-fixer
+    instructions: "Fix bugs quickly and write regression tests"
+    skills: [filesystem, git, bash]
+    work_types: [Tasks]
+    capabilities: [bug-fixing]
+    harness:
+      heartbeat: true
+
+  # Agent 3: Code Reviewer
+  code-reviewer:
+    agent_id: code-reviewer
+    instructions: "Review code for quality and security issues"
+    skills: [filesystem, git]
+    work_types: [Tasks]
+    capabilities: [code-review]
+
+daemon:
+  poll_interval: 60
+
+---
+
+# =============================================================================
+# MINIMAL CONFIGURATION EXAMPLE
+# =============================================================================
+# Simplest possible configuration
+
+provider:
+  type: anthropic
+  model: claude-haiku-4
+
+agent:
+  agent_id: simple-agent
+  instructions: "You are a helpful assistant."
+  skills: [filesystem]
+
+---
+
+# =============================================================================
+# PRODUCTION CONFIGURATION EXAMPLE
+# =============================================================================
+# Full production setup with all safety features
+
+provider:
+  type: anthropic
+  model: claude-sonnet-4-20250514
+  parameters:
+    temperature: 0.3           # Lower temperature for consistency
+
+agent:
+  agent_id: production-agent
+  instructions: |
+    You are a production coding assistant.
+    Always prioritize safety and correctness.
+    Never make changes without running tests.
+
+  skills:
+    - filesystem
+    - git
+    - bash
+
+  memory:
+    enabled: true
+    max_memories: 50000        # Higher limit for production
+
+  janitor:
+    enabled: true
+    compact_every: 10          # More frequent compaction
+
+  harness:
+    cost_tracking:
+      enabled: true
+      max_per_hour: 10.0
+      max_per_day: 100.0
+      max_per_month: 1000.0
+
+    heartbeat:
+      enabled: true
+      check_interval_turns: 3
+      max_turns_without_progress: 5
+      notify_on_critical: true
+      notify_on_warning: true
+
+    checkpoints:
+      enabled: true
+
+    state:
+      enabled: true
+
+    audit:
+      enabled: true
+      redact_pii: true
+
+  security:
+    preset: moderate
+    log_level: detailed
+
+daemon:
+  poll_interval: 120
+  data_dir: /var/teotl/production-agent

@@ -80,13 +80,13 @@ class EncryptedMemory(LocalMemory):
 
             # Try to load existing key
             try:
-                key_data = store.load_credential("_forge_memory_encryption")
+                key_data = store.load_credential("_teotl_memory_encryption")
                 return key_data["key"].encode()
             except ValueError:
                 # Key doesn't exist, create new one
                 key = self._fernet.generate_key()
                 store.save_credential(
-                    "_forge_memory_encryption",
+                    "_teotl_memory_encryption",
                     {
                         "auth_type": "encryption_key",
                         "key": key.decode(),

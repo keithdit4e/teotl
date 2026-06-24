@@ -324,7 +324,7 @@ class AWSSecretsBackend(CredentialBackend):
             ) from e
 
     def save(self, service: str, data: dict[str, Any]) -> None:
-        secret_name = f"forge/{service}"
+        secret_name = f"teotl/{service}"
         secret_value = json.dumps(data)
 
         try:
@@ -336,12 +336,12 @@ class AWSSecretsBackend(CredentialBackend):
             self.client.create_secret(
                 Name=secret_name,
                 SecretString=secret_value,
-                Description=f"Forge credential for {service}",
+                Description=f"Teotl credential for {service}",
             )
             logger.info(f"Created secret {secret_name} in AWS Secrets Manager")
 
     def load(self, service: str) -> dict[str, Any]:
-        secret_name = f"forge/{service}"
+        secret_name = f"teotl/{service}"
 
         try:
             response = self.client.get_secret_value(SecretId=secret_name)
@@ -350,7 +350,7 @@ class AWSSecretsBackend(CredentialBackend):
             raise ValueError(f"No credential found for service: {service}")
 
     def delete(self, service: str) -> bool:
-        secret_name = f"forge/{service}"
+        secret_name = f"teotl/{service}"
 
         try:
             self.client.delete_secret(
@@ -371,8 +371,8 @@ class AWSSecretsBackend(CredentialBackend):
             for page in paginator.paginate():
                 for secret in page.get("SecretList", []):
                     name = secret["Name"]
-                    if name.startswith("forge/"):
-                        service = name.replace("forge/", "")
+                    if name.startswith("teotl/"):
+                        service = name.replace("teotl/", "")
                         services.append(service)
 
             return services

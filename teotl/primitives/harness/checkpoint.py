@@ -72,7 +72,7 @@ class CheckpointManager:
         self,
         workspace_dir: Path,
         auto_checkpoint_enabled: bool = True,
-        checkpoint_prefix: str = "forge-checkpoint",
+        checkpoint_prefix: str = "teotl-checkpoint",
     ):
         """Initialize checkpoint manager.
 

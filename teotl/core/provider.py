@@ -66,7 +66,7 @@ class AnthropicProvider(Provider):
 
     def __init__(
         self,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "claude-sonnet-4-6-20260301",
         api_key: str | None = None,
         max_tokens: int = 8192,
     ) -> None:
@@ -74,7 +74,7 @@ class AnthropicProvider(Provider):
             import anthropic
         except ImportError:
             raise ImportError(
-                "anthropic package required. Install with: pip install forge-agent[anthropic]"
+                "anthropic package required. Install with: pip install teotl[anthropic]"
             )
 
         self.model = model
@@ -140,11 +140,16 @@ class AnthropicProvider(Provider):
     @property
     def context_window(self) -> int:
         windows = {
+            # Claude 4.x series (2026) - 1M context
+            "claude-opus-4-8-20260528": 1_000_000,
+            "claude-opus-4-7-20260416": 1_000_000,
+            "claude-sonnet-4-6-20260301": 1_000_000,
+            "claude-haiku-4-5-20260115": 1_000_000,
+            # Legacy models
             "claude-opus-4-20250514": 200_000,
             "claude-sonnet-4-20250514": 200_000,
-            "claude-haiku-4-20250514": 200_000,
         }
-        return windows.get(self.model, 200_000)
+        return windows.get(self.model, 1_000_000)
 
     @property
     def model_name(self) -> str:
@@ -156,20 +161,21 @@ class OpenAIProvider(Provider):
 
     def __init__(
         self,
-        model: str = "gpt-4o",
+        model: str = "gpt-5.4",
         api_key: str | None = None,
-        max_tokens: int = 4096,
+        base_url: str | None = None,
+        max_tokens: int = 8192,
     ) -> None:
         try:
             import openai
         except ImportError:
             raise ImportError(
-                "openai package required. Install with: pip install forge-agent[openai]"
+                "openai package required. Install with: pip install teotl[openai]"
             )
 
         self.model = model
         self.max_tokens = max_tokens
-        self.client = openai.AsyncOpenAI(api_key=api_key)
+        self.client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     async def complete(
         self,
@@ -235,11 +241,21 @@ class OpenAIProvider(Provider):
     @property
     def context_window(self) -> int:
         windows = {
+            # GPT-5.x series - 1M context
+            "gpt-5.5": 1_000_000,
+            "gpt-5.5-pro": 1_000_000,
+            "gpt-5.4": 1_000_000,
+            # GPT-4.x series
+            "gpt-4.1": 1_000_000,
+            "gpt-4.1-nano": 128_000,
             "gpt-4o": 128_000,
             "gpt-4o-mini": 128_000,
-            "gpt-4-turbo": 128_000,
+            # O-series reasoning models
+            "o3": 200_000,
+            "o3-pro": 200_000,
+            "o4-mini": 200_000,
         }
-        return windows.get(self.model, 128_000)
+        return windows.get(self.model, 1_000_000)
 
     @property
     def model_name(self) -> str:
@@ -265,7 +281,7 @@ class OllamaProvider(Provider):
             import ollama
         except ImportError:
             raise ImportError(
-                "ollama package required. Install with: pip install forge-agent[ollama]"
+                "ollama package required. Install with: pip install teotl[ollama]"
             )
 
         api_messages = []
@@ -294,3 +310,174 @@ class OllamaProvider(Provider):
     @property
     def model_name(self) -> str:
         return f"ollama/{self.model}"
+
+
+class GeminiProvider(Provider):
+    """Google Gemini via Google Generative AI API."""
+
+    def __init__(
+        self,
+        model: str = "gemini-2.5-flash",
+        api_key: str | None = None,
+        max_tokens: int = 8192,
+    ) -> None:
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            raise ImportError(
+                "google-generativeai package required. Install with: pip install teotl[google]"
+            )
+
+        self.model = model
+        self.max_tokens = max_tokens
+        self._genai = genai
+
+        # Configure the API key
+        if api_key:
+            genai.configure(api_key=api_key)
+
+        # Create the model client
+        self.client = genai.GenerativeModel(model)
+
+    async def complete(
+        self,
+        *,
+        system: str = "",
+        messages: list[dict[str, Any]],
+        tools: list[ToolDefinition] | None = None,
+        max_tokens: int | None = None,
+    ) -> CompletionResult:
+        import asyncio
+
+        # Convert messages to Gemini format
+        # Gemini uses "user" and "model" roles (not "assistant")
+        gemini_messages = []
+        for msg in messages:
+            role = msg["role"]
+            if role == "assistant":
+                role = "model"
+
+            content = msg.get("content", "")
+
+            # Handle tool results - Gemini expects function responses
+            if role == "user" and "tool_result" in msg:
+                # This is a tool result message
+                from google.generativeai.types import content_types
+
+                gemini_messages.append(
+                    content_types.ContentDict(
+                        role="user",
+                        parts=[
+                            {
+                                "function_response": {
+                                    "name": msg.get("tool_name", "unknown"),
+                                    "response": {"result": msg["tool_result"]},
+                                }
+                            }
+                        ],
+                    )
+                )
+            elif content:
+                gemini_messages.append({"role": role, "parts": [content]})
+
+        # Build generation config
+        generation_config = {
+            "max_output_tokens": max_tokens if max_tokens is not None else self.max_tokens,
+        }
+
+        # Build tool config if tools provided
+        gemini_tools = None
+        if tools:
+            gemini_tools = self._convert_tools(tools)
+
+        # Create model with system instruction if provided
+        model = self.client
+        if system:
+            model = self._genai.GenerativeModel(
+                self.model,
+                system_instruction=system,
+            )
+
+        # Run sync API in thread pool (Gemini SDK is synchronous)
+        def _sync_generate():
+            kwargs: dict[str, Any] = {
+                "contents": gemini_messages,
+                "generation_config": generation_config,
+            }
+            if gemini_tools:
+                kwargs["tools"] = gemini_tools
+
+            return model.generate_content(**kwargs)
+
+        response = await asyncio.to_thread(_sync_generate)
+
+        # Parse response
+        content = ""
+        tool_calls = []
+
+        # Handle response parts
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, "text") and part.text:
+                    content += part.text
+                elif hasattr(part, "function_call"):
+                    fc = part.function_call
+                    tool_calls.append(
+                        ToolCall(
+                            id=f"call_{fc.name}_{len(tool_calls)}",
+                            name=fc.name,
+                            args=dict(fc.args) if fc.args else {},
+                        )
+                    )
+
+        # Extract usage metadata
+        usage = {}
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = {
+                "input_tokens": response.usage_metadata.prompt_token_count or 0,
+                "output_tokens": response.usage_metadata.candidates_token_count or 0,
+            }
+
+        return CompletionResult(
+            content=content,
+            tool_calls=tool_calls,
+            done=len(tool_calls) == 0,
+            usage=usage,
+            raw=response,
+        )
+
+    def _convert_tools(self, tools: list[ToolDefinition]) -> list[Any]:
+        """Convert ToolDefinition to Gemini function declarations."""
+        from google.generativeai.types import content_types
+
+        declarations = []
+        for tool in tools:
+            # Convert JSON schema to Gemini format
+            declarations.append(
+                content_types.FunctionDeclaration(
+                    name=tool.name,
+                    description=tool.description,
+                    parameters=tool.parameters,
+                )
+            )
+
+        return [content_types.Tool(function_declarations=declarations)]
+
+    @property
+    def context_window(self) -> int:
+        windows = {
+            # Gemini 3.x series
+            "gemini-3.5-flash": 1_000_000,
+            "gemini-3.1-flash-lite": 1_000_000,
+            "gemini-3.1-pro-preview": 2_000_000,
+            "gemini-3-flash-preview": 1_000_000,
+            # Gemini 2.5 series
+            "gemini-2.5-pro": 2_000_000,
+            "gemini-2.5-flash": 1_000_000,
+            "gemini-2.5-flash-lite": 1_000_000,
+        }
+        return windows.get(self.model, 1_000_000)
+
+    @property
+    def model_name(self) -> str:
+        return self.model

@@ -58,8 +58,11 @@ security = [
 web = [
     "aiohttp>=3.9",
 ]
+browser = [
+    "browser-use>=0.1",
+]
 all = [
-    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web]",
+    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,browser]",
 ]
 dev = [
     "pytest>=8.0",

@@ -18,7 +18,7 @@ maintainers = [
 keywords = [
     "ai", "agent", "llm", "autonomous", "framework",
     "guardrails", "memory", "planner-worker", "cost-optimization",
-    "production", "claude", "openai", "anthropic"
+    "production", "claude", "openai", "anthropic", "gemini", "google"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -45,6 +45,7 @@ dependencies = [
 anthropic = ["anthropic>=0.40"]
 openai = ["openai>=1.50"]
 ollama = ["ollama>=0.4"]
+google = ["google-generativeai>=0.8"]
 litellm = ["litellm>=1.50"]
 memory = [
     "sentence-transformers>=3.0",
@@ -58,7 +59,7 @@ web = [
     "aiohttp>=3.9",
 ]
 all = [
-    "teotl[anthropic,openai,ollama,litellm,memory,security,web]",
+    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web]",
 ]
 dev = [
     "pytest>=8.0",

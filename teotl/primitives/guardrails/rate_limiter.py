@@ -279,17 +279,44 @@ def estimate_cost(
     Returns:
         Estimated cost in USD
     """
-    # Pricing as of March 2026 (update as needed)
+    # Pricing per 1K tokens (input, output) - June 2026
     pricing = {
         "anthropic": {
-            "claude-opus-4-20250514": (0.015, 0.075),  # per 1K tokens
+            # Claude 4.x series
+            "claude-opus-4-8-20260528": (0.005, 0.025),
+            "claude-opus-4-7-20260416": (0.005, 0.025),
+            "claude-sonnet-4-6-20260301": (0.003, 0.015),
+            "claude-haiku-4-5-20260115": (0.001, 0.005),
+            # Legacy models (still supported)
+            "claude-opus-4-20250514": (0.015, 0.075),
             "claude-sonnet-4-20250514": (0.003, 0.015),
             "claude-haiku-4-20250514": (0.00025, 0.00125),
         },
         "openai": {
+            # GPT-5.x series
+            "gpt-5.5": (0.005, 0.030),
+            "gpt-5.5-pro": (0.030, 0.180),
+            "gpt-5.4": (0.0025, 0.015),
+            # GPT-4.x series
+            "gpt-4.1": (0.002, 0.008),
+            "gpt-4.1-nano": (0.0001, 0.0004),
             "gpt-4o": (0.005, 0.015),
             "gpt-4o-mini": (0.00015, 0.0006),
-            "gpt-4-turbo": (0.01, 0.03),
+            # O-series reasoning models
+            "o3": (0.002, 0.008),
+            "o3-pro": (0.150, 0.600),
+            "o4-mini": (0.0011, 0.0044),
+        },
+        "google": {
+            # Gemini 3.x series
+            "gemini-3.5-flash": (0.0015, 0.009),
+            "gemini-3.1-flash-lite": (0.00025, 0.0015),
+            "gemini-3.1-pro-preview": (0.002, 0.012),
+            "gemini-3-flash-preview": (0.0005, 0.003),
+            # Gemini 2.5 series
+            "gemini-2.5-pro": (0.00125, 0.01),
+            "gemini-2.5-flash": (0.0003, 0.0025),
+            "gemini-2.5-flash-lite": (0.0001, 0.0004),
         },
     }
 

@@ -281,7 +281,7 @@ class TestEncryptedMemory:
 
         # Store and then forget
         memory_id = await memory.remember("Secret to delete")
-        deleted = await memory.teotlt(memory_id)
+        deleted = await memory.forget(memory_id)
 
         assert deleted is True
 

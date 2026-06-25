@@ -160,9 +160,18 @@ class BashAnalyzer:
     def _check_sensitive_paths(cls, tokens: list[str]) -> bool:
         """Check if any tokens reference sensitive paths."""
         for token in tokens:
-            expanded = str(Path(token).expanduser()) if token.startswith("~") else token
+            try:
+                expanded = str(Path(token).expanduser()) if token.startswith("~") else token
+            except RuntimeError:
+                # HOME not set - use token as-is
+                expanded = token
+
             for sensitive in SENSITIVE_PATHS:
-                sensitive_expanded = str(Path(sensitive).expanduser())
+                try:
+                    sensitive_expanded = str(Path(sensitive).expanduser())
+                except RuntimeError:
+                    sensitive_expanded = sensitive
+
                 if expanded.startswith(sensitive_expanded) or token.startswith(sensitive):
                     return True
         return False

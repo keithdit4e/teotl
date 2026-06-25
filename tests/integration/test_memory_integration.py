@@ -190,7 +190,7 @@ class TestMemoryIntegration:
         assert len(memories) == 1
 
         # Delete it
-        deleted = await agent.teotlt(memory_id)
+        deleted = await agent.forget(memory_id)
         assert deleted is True
 
         # Verify it's gone
@@ -198,7 +198,7 @@ class TestMemoryIntegration:
         assert len(memories) == 0
 
         # Try to delete again (should return False)
-        deleted = await agent.teotlt(memory_id)
+        deleted = await agent.forget(memory_id)
         assert deleted is False
 
     @pytest.mark.asyncio
@@ -242,7 +242,7 @@ class TestMemoryIntegration:
             await agent.recall("Test")
 
         with pytest.raises(ValueError, match="Memory system not initialized"):
-            await agent.teotlt("test-id")
+            await agent.forget("test-id")
 
         with pytest.raises(ValueError, match="Memory system not initialized"):
             await agent.list_memories()

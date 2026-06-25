@@ -137,7 +137,7 @@ class BashTool:
             suspicious_chars = ["$(", "`", "${"]
             for char in suspicious_chars:
                 if char in command:
-                    logger.warning(f"Command contains potentially dangerous sequence: {char}")
+                    logger.debug(f"Command contains shell expansion sequence: {char}")
 
         return True, ""
 

@@ -153,10 +153,20 @@ def _keyring_available():
         return False
 
 
+def _keyring_backend_usable():
+    """Check if an OS keyring backend is actually available (not on headless CI)."""
+    if not _keyring_available():
+        return False
+    import keyring
+    from keyring.backends.fail import Keyring as FailKeyring
+
+    return not isinstance(keyring.get_keyring(), FailKeyring)
+
+
 class TestLocalKeyringBackend:
     """Test OS keyring-based credential storage."""
 
-    @pytest.mark.skipif(not _keyring_available(), reason="Keyring dependencies not available")
+    @pytest.mark.skipif(not _keyring_backend_usable(), reason="No usable OS keyring backend")
     def test_save_and_load(self):
         """Integration test with real keyring (if available)."""
         backend = LocalKeyringBackend()

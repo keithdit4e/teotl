@@ -176,7 +176,7 @@ class TestAuditLogger:
         audit.log_planning(
             prompt="Create execution plan",
             response="Step 1: Do something",
-            model="claude-sonnet-4",
+            model="claude-sonnet-5-5",
             cost=0.15,
             cycle=1,
             success=True,
@@ -192,7 +192,7 @@ class TestAuditLogger:
         assert entry["event_type"] == "planning"
         assert entry["agent_id"] == "test-agent"
         assert entry["cycle"] == 1
-        assert entry["model"] == "claude-sonnet-4"
+        assert entry["model"] == "claude-sonnet-5-5"
         assert entry["cost"] == 0.15
         assert entry["success"] is True
 
@@ -204,7 +204,7 @@ class TestAuditLogger:
             step=5,
             prompt="Execute step 5",
             response="Step complete",
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
             cost=0.05,
             tool_calls=[
                 {"tool": "write_file", "args": {"path": "test.py"}},

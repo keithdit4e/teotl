@@ -140,6 +140,9 @@ class CompletionResult:
     done: bool = True  # False if tool calls need processing
     usage: dict[str, int] = field(default_factory=dict)
     raw: Any = None  # Provider-specific raw response
+    # Provider-native assistant blocks to send back verbatim in tool loops
+    # (e.g. Claude thinking blocks, which the API requires unchanged)
+    assistant_content: list[dict[str, Any]] | None = None
 
 
 # ---------------------------------------------------------------------------

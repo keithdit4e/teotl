@@ -6,6 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+from teotl.core.models import CLAUDE_MODELS, DEFAULT_CONTEXT_WINDOW, DEFAULT_MODEL
 from teotl.core.types import CompletionResult, ToolCall, ToolDefinition
 
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ class AnthropicProvider(Provider):
 
     def __init__(
         self,
-        model: str = "claude-sonnet-4-6-20260301",
+        model: str = DEFAULT_MODEL,
         api_key: str | None = None,
         max_tokens: int = 8192,
     ) -> None:
@@ -135,21 +136,14 @@ class AnthropicProvider(Provider):
                 "output_tokens": response.usage.output_tokens,
             },
             raw=response,
+            # Echo blocks back unchanged: thinking blocks must not be dropped or edited
+            assistant_content=[block.to_dict() for block in response.content],
         )
 
     @property
     def context_window(self) -> int:
-        windows = {
-            # Claude 4.x series (2026) - 1M context
-            "claude-opus-4-8-20260528": 1_000_000,
-            "claude-opus-4-7-20260416": 1_000_000,
-            "claude-sonnet-4-6-20260301": 1_000_000,
-            "claude-haiku-4-5-20260115": 1_000_000,
-            # Legacy models
-            "claude-opus-4-20250514": 200_000,
-            "claude-sonnet-4-20250514": 200_000,
-        }
-        return windows.get(self.model, 1_000_000)
+        info = CLAUDE_MODELS.get(self.model)
+        return info.context_window if info else DEFAULT_CONTEXT_WINDOW
 
     @property
     def model_name(self) -> str:

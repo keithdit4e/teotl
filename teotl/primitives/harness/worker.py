@@ -61,7 +61,7 @@ class Worker:
     Usage:
         worker = Worker(
             agent_id="coding-assistant",
-            provider=AnthropicProvider(model="claude-3-haiku-20240307"),
+            provider=AnthropicProvider(model="claude-haiku-4-5"),
             workspace_dir=agent_dir,
             skills=["filesystem", "git"]
         )

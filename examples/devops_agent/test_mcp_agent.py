@@ -49,7 +49,7 @@ async def test_mcp_tools_registration():
 
         # Create agent with MCP tools
         console.print("\n[yellow]Creating agent with MCP tools...[/yellow]")
-        provider = AnthropicProvider(model="claude-sonnet-4-20250514", api_key=api_key)
+        provider = AnthropicProvider(model="claude-sonnet-5-5", api_key=api_key)
 
         agent = Agent(
             provider=provider,

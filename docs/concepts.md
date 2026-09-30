@@ -78,14 +78,14 @@ The **Planner-Worker** pattern is Teotl's key cost optimization strategy, achiev
 └───────────────┬──────────────────────────────┘
                 │
         ┌───────▼────────┐
-        │    PLANNER     │  Claude Sonnet 4 (Expensive)
+        │    PLANNER     │  Claude Sonnet 5.5 (Capable)
         │  (Strategic)   │  
         └───────┬────────┘  • Analyze problem
                 │           • Break into steps
                 │           • Choose approach
                 │           • Delegate to worker
         ┌───────▼────────┐
-        │     WORKER     │  Claude Haiku 4 (Cheap)
+        │     WORKER     │  Claude Haiku 4.5 (Cheap)
         │  (Execution)   │
         └───────┬────────┘  • Execute steps
                 │           • Use tools/skills
@@ -155,15 +155,15 @@ A **Provider** is the interface to an LLM (Large Language Model). Teotl supports
 from teotl.core.provider import AnthropicProvider
 
 provider = AnthropicProvider(
-    model="claude-sonnet-4-20250514",
+    model="claude-sonnet-5-5",
     api_key="sk-ant-...",  # Or set ANTHROPIC_API_KEY
 )
 ```
 
 **Models:**
-- `claude-sonnet-4-20250514` - Balanced (recommended)
-- `claude-opus-4-20250514` - Most capable (expensive)
-- `claude-haiku-4-20250514` - Fastest, cheapest
+- `claude-sonnet-5-5` - Balanced (recommended)
+- `claude-opus-5-5` - Most capable (expensive)
+- `claude-haiku-4-5` - Fastest, cheapest
 
 #### OpenAI
 
@@ -323,10 +323,10 @@ execution_pattern: planner_worker
 
 planner_worker:
   planner:
-    provider: claude-sonnet-4
+    provider: claude-sonnet-5-5
     
   worker:
-    provider: claude-haiku-4
+    provider: claude-haiku-4-5
     skills:
       - filesystem
       - git
@@ -656,8 +656,8 @@ async def main():
     api_key = await store.load_credential("anthropic_api_key")
     
     # Setup providers (planner-worker)
-    planner = AnthropicProvider(model="claude-sonnet-4-20250514", api_key=api_key)
-    worker = AnthropicProvider(model="claude-haiku-4-20250514", api_key=api_key)
+    planner = AnthropicProvider(model="claude-sonnet-5-5", api_key=api_key)
+    worker = AnthropicProvider(model="claude-haiku-4-5", api_key=api_key)
     
     # Setup skills
     registry = SkillRegistry()

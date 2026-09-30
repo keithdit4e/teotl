@@ -132,10 +132,10 @@ class TestProviderConfig:
         """Test basic provider configuration."""
         config = ProviderConfig(
             type="anthropic",
-            model="claude-sonnet-4",
+            model="claude-sonnet-5-5",
         )
         assert config.type == "anthropic"
-        assert config.model == "claude-sonnet-4"
+        assert config.model == "claude-sonnet-5-5"
         assert config.api_key_env is None
 
     def test_with_parameters(self):
@@ -212,8 +212,8 @@ class TestAgentConfig:
             agent_id="pw-agent",
             planner_worker=PlannerWorkerConfig(
                 enabled=True,
-                planner={"provider": "claude-sonnet-4"},
-                worker={"provider": "claude-haiku-4", "skills": ["filesystem"]},
+                planner={"provider": "claude-sonnet-5-5"},
+                worker={"provider": "claude-haiku-4-5", "skills": ["filesystem"]},
             ),
         )
         assert config.planner_worker.enabled is True
@@ -231,7 +231,7 @@ class TestMultiAgentConfig:
                     instructions="Be helpful",
                 )
             },
-            provider=ProviderConfig(type="anthropic", model="claude-sonnet-4"),
+            provider=ProviderConfig(type="anthropic", model="claude-sonnet-5-5"),
         )
         assert config.is_multi_agent is False
         assert config.agent_ids == ["main"]
@@ -243,7 +243,7 @@ class TestMultiAgentConfig:
                 "dev": AgentConfig(agent_id="dev", instructions="Developer"),
                 "reviewer": AgentConfig(agent_id="reviewer", instructions="Reviewer"),
             },
-            provider=ProviderConfig(type="anthropic", model="claude-sonnet-4"),
+            provider=ProviderConfig(type="anthropic", model="claude-sonnet-5-5"),
         )
         assert config.is_multi_agent is True
         assert len(config.agent_ids) == 2
@@ -259,7 +259,7 @@ class TestLoadMultiAgentConfig:
         yaml_content = """
 provider:
   type: anthropic
-  model: claude-sonnet-4
+  model: claude-sonnet-5-5
 
 agent:
   agent_id: test-agent
@@ -283,7 +283,7 @@ agent:
         yaml_content = """
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agents:
   dev:
@@ -307,7 +307,7 @@ agents:
         yaml_content = """
 provider:
   type: anthropic
-  model: claude-sonnet-4
+  model: claude-sonnet-5-5
 
 agent:
   agent_id: full-agent
@@ -351,7 +351,7 @@ agent:
         yaml_content = """
 provider:
   type: anthropic
-  model: claude-sonnet-4
+  model: claude-sonnet-5-5
 
 agent:
   agent_id: secure-agent
@@ -429,7 +429,7 @@ agent:
         yaml_content = """
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agent:
   agent_id: daemon-agent

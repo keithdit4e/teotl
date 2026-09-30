@@ -197,7 +197,7 @@ agent:
 
 provider:
   type: anthropic
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-5-5
   api_key_env: ANTHROPIC_API_KEY
 
 daemon:

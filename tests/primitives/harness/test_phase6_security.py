@@ -232,10 +232,10 @@ class TestPlannerWorkerHarnessPhase6:
         from teotl.core.provider import Provider
 
         planner_provider = MagicMock(spec=Provider)
-        planner_provider.model = "claude-sonnet-4"
+        planner_provider.model = "claude-sonnet-5-5"
 
         worker_provider = MagicMock(spec=Provider)
-        worker_provider.model = "claude-3-haiku-20240307"
+        worker_provider.model = "claude-haiku-4-5"
 
         # Create policy with cost limits
         policy = SecurityPolicy.create_default("test-agent", preset="autonomous-dev")
@@ -259,10 +259,10 @@ class TestPlannerWorkerHarnessPhase6:
         from teotl.core.provider import Provider
 
         planner_provider = MagicMock(spec=Provider)
-        planner_provider.model = "claude-sonnet-4"
+        planner_provider.model = "claude-sonnet-5-5"
 
         worker_provider = MagicMock(spec=Provider)
-        worker_provider.model = "claude-3-haiku-20240307"
+        worker_provider.model = "claude-haiku-4-5"
 
         harness = PlannerWorkerHarness(
             agent_id="test-agent",
@@ -280,10 +280,10 @@ class TestPlannerWorkerHarnessPhase6:
         from teotl.core.provider import Provider
 
         planner_provider = MagicMock(spec=Provider)
-        planner_provider.model = "claude-sonnet-4"
+        planner_provider.model = "claude-sonnet-5-5"
 
         worker_provider = MagicMock(spec=Provider)
-        worker_provider.model = "claude-3-haiku-20240307"
+        worker_provider.model = "claude-haiku-4-5"
 
         harness = PlannerWorkerHarness(
             agent_id="test-agent",

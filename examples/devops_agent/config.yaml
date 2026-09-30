@@ -7,10 +7,10 @@ github_token: "${GITHUB_TOKEN}"  # Set via environment variable
 # Agent Configuration
 agent:
   # Planner model (strategic reasoning)
-  planner_model: "claude-sonnet-4-20250514"
+  planner_model: "claude-sonnet-5-5"
   
   # Worker model (fast execution)
-  worker_model: "claude-haiku-4-20250514"
+  worker_model: "claude-haiku-4-5"
   
   # Security policy
   policy: "standard"  # permissive | standard | strict

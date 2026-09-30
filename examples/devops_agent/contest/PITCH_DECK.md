@@ -357,7 +357,7 @@ result = mcp_execute("github", "get_file_contents", {...})
 
 ### Tech Stack:
 - **Language:** Python 3.11+
-- **AI:** Claude Sonnet 4 (claude-sonnet-4-20250514)
+- **AI:** Claude Sonnet 4 (claude-sonnet-5-5)
 - **MCP:** Model Context Protocol for GitHub
 - **Database:** SQLite (tasks, missions)
 - **CLI:** GitHub CLI for PR creation

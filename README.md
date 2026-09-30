@@ -92,7 +92,7 @@ async def main():
     harness = PlannerWorkerHarness(
         agent_id="code-quality",
         planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),        # plans once
-        worker_provider=AnthropicProvider(model="claude-haiku-4-5-20251001"),  # executes each step
+        worker_provider=AnthropicProvider(model="claude-haiku-4-5"),  # executes each step
         workspace_dir=Path(".teotl/code-quality"),
         worker_skills=["filesystem", "git"],
     )

@@ -249,12 +249,12 @@ async def investigate_issue(repo: str, issue_number: int, debug: bool, dry_run: 
         sys.exit(1)
 
     # Create provider (using Sonnet for now - worker pattern TBD)
-    provider = AnthropicProvider(model="claude-sonnet-4-20250514", api_key=anthropic_key)
+    provider = AnthropicProvider(model="claude-sonnet-5-5", api_key=anthropic_key)
 
     # Create skill registry with enabled skills
     registry = SkillRegistry(enabled=["git", "filesystem", "github"])
 
-    console.print("   [green]✓[/green] Provider: claude-sonnet-4")
+    console.print("   [green]✓[/green] Provider: claude-sonnet-5-5")
     console.print("   [green]✓[/green] Skills: git, filesystem, github")
     console.print("   [green]✓[/green] MCP Tools: mcp_discover, mcp_execute")
 

@@ -35,14 +35,14 @@ class TestCreateProvider:
         pytest.importorskip("anthropic")  # Skip if anthropic not installed
         config = ProviderConfig(
             type="anthropic",
-            model="claude-sonnet-4",
+            model="claude-sonnet-5-5",
             api_key_env="ANTHROPIC_API_KEY",
         )
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             provider = create_provider(config)
 
         assert provider is not None
-        assert provider.model == "claude-sonnet-4"
+        assert provider.model == "claude-sonnet-5-5"
 
     def test_create_provider_with_parameters(self):
         """Test creating provider with model parameters."""
@@ -51,7 +51,7 @@ class TestCreateProvider:
 
         config = ProviderConfig(
             type="anthropic",
-            model="claude-sonnet-4",
+            model="claude-sonnet-5-5",
             parameters=ModelParametersConfig(max_tokens=2048),
         )
         provider = create_provider(config)
@@ -184,7 +184,7 @@ class TestCreateAgentFromConfig:
             instructions="Be helpful",
         )
         provider = MagicMock()
-        provider.model = "claude-sonnet-4"
+        provider.model = "claude-sonnet-5-5"
 
         agent = create_agent_from_config(config, provider)
 
@@ -201,7 +201,7 @@ class TestCreateAgentFromConfig:
                 memory=MemoryConfig(enabled=True),
             )
             provider = MagicMock()
-            provider.model = "claude-sonnet-4"
+            provider.model = "claude-sonnet-5-5"
 
             agent = create_agent_from_config(config, provider)
 
@@ -220,7 +220,7 @@ class TestCreateAgentFromConfig:
                 ),
             )
             provider = MagicMock()
-            provider.model = "claude-sonnet-4"
+            provider.model = "claude-sonnet-5-5"
 
             agent = create_agent_from_config(config, provider)
 
@@ -240,7 +240,7 @@ class TestCreateAgentFromConfig:
             memory=MemoryConfig(enabled=True),  # Janitor requires memory
         )
         provider = MagicMock()
-        provider.model = "claude-sonnet-4"
+        provider.model = "claude-sonnet-5-5"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             agent = create_agent_from_config(
@@ -258,7 +258,7 @@ class TestCreateAgentFromConfig:
             security=SecurityConfig(preset="strict"),
         )
         provider = MagicMock()
-        provider.model = "claude-sonnet-4"
+        provider.model = "claude-sonnet-5-5"
 
         agent = create_agent_from_config(config, provider)
 
@@ -275,7 +275,7 @@ class TestCreateAgentFromConfig:
             skills=["filesystem", "git"],
         )
         provider = MagicMock()
-        provider.model = "claude-sonnet-4"
+        provider.model = "claude-sonnet-5-5"
 
         agent = create_agent_from_config(config, provider)
 
@@ -291,7 +291,7 @@ class TestCreateAgentFromConfig:
                 workspace=str(workspace),
             )
             provider = MagicMock()
-            provider.model = "claude-sonnet-4"
+            provider.model = "claude-sonnet-5-5"
 
             agent = create_agent_from_config(config, provider)
 

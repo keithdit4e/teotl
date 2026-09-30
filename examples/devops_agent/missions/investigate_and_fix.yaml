@@ -10,7 +10,7 @@ execution_pattern: planner_worker
 
 planner_worker:
   planner:
-    provider: claude-sonnet-4-20250514
+    provider: claude-sonnet-5-5
     instructions: |
       You are the strategic planner for a DevOps automation agent.
       
@@ -28,7 +28,7 @@ planner_worker:
       - Verify the fix before creating PR
     
   worker:
-    provider: claude-haiku-4-20250514
+    provider: claude-haiku-4-5
     skills:
       - git
       - filesystem

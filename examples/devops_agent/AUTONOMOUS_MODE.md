@@ -137,7 +137,7 @@ The agent stores data in `~/.forge/devops-agent/<repo>/`:
   gh auth token   # Get token with correct scopes
   ```
 
-- **Anthropic API Key**: For Claude Sonnet 4
+- **Anthropic API Key**: For Claude Sonnet 5.5
   ```bash
   export ANTHROPIC_API_KEY="sk-ant-..."
   ```

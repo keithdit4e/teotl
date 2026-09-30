@@ -51,8 +51,8 @@ class PlannerWorkerHarness:
     Usage:
         harness = PlannerWorkerHarness(
             agent_id="coding-assistant",
-            planner_provider=AnthropicProvider(model="claude-sonnet-4"),
-            worker_provider=AnthropicProvider(model="claude-3-haiku-20240307"),
+            planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),
+            worker_provider=AnthropicProvider(model="claude-haiku-4-5"),
             workspace_dir=agent_dir,
             worker_skills=["filesystem", "git"]
         )

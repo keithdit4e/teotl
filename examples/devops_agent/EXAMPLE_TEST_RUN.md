@@ -107,7 +107,7 @@ The autonomous DevOps agent successfully ran for 42 minutes without human interv
 *Note: Some issues processed in parallel, actual wall time was 42 minutes*
 
 ### Cost Analysis
-- **Model:** Claude Sonnet 4 (claude-sonnet-4-20250514)
+- **Model:** Claude Sonnet 4 (claude-sonnet-5-5)
 - **Estimated Cost per Fix:** ~$0.30
 - **Total Estimated Cost:** 9 issues × $0.30 = **~$2.70**
 - **Cost per PR Created:** $2.70 / 5 = **~$0.54 per PR**

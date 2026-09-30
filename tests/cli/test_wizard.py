@@ -308,7 +308,7 @@ class TestWizardIntegration:
         mock_input.side_effect = [
             "1",  # Execution pattern: Daemon
             "1",  # Provider: Anthropic
-            "1",  # Model: claude-sonnet-4 (recommended)
+            "1",  # Model: claude-sonnet-5-5 (recommended)
             "1",  # Single agent
             "test-agent",  # Agent ID
             "Test agent instructions",  # Instructions

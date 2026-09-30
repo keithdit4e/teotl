@@ -146,8 +146,8 @@ from teotl.core.provider import AnthropicProvider
 # Initialize with full safety
 harness = PlannerWorkerHarness(
     agent_id="autonomous-developer",
-    planner_provider=AnthropicProvider("claude-sonnet-4"),
-    worker_provider=AnthropicProvider("claude-3-haiku-20240307"),
+    planner_provider=AnthropicProvider("claude-sonnet-5-5"),
+    worker_provider=AnthropicProvider("claude-haiku-4-5"),
 
     # Phase 6: Security
     enable_cost_tracking=True,

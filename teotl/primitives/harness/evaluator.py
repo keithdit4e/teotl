@@ -127,7 +127,7 @@ class Evaluator:
     Usage:
         evaluator = Evaluator(
             agent_id="coding-assistant",
-            provider=AnthropicProvider(model="claude-sonnet-4"),
+            provider=AnthropicProvider(model="claude-sonnet-5-5"),
             workspace_dir=agent_dir
         )
 

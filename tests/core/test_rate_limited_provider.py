@@ -89,7 +89,7 @@ class TestRateLimitedProvider:
     @pytest.mark.asyncio
     async def test_cost_tracking(self):
         """Test that costs are tracked correctly."""
-        base_provider = MockProvider(model="claude-sonnet-4-20250514")
+        base_provider = MockProvider(model="claude-sonnet-4-6")
         limiter = RateLimiter()
         provider = RateLimitedProvider(base_provider, limiter)
 
@@ -105,7 +105,7 @@ class TestRateLimitedProvider:
     @pytest.mark.asyncio
     async def test_cost_limit_enforcement(self):
         """Test that cost limits are enforced."""
-        base_provider = MockProvider(model="claude-sonnet-4-20250514")
+        base_provider = MockProvider(model="claude-sonnet-4-6")
         limiter = RateLimiter(max_cost_per_hour=0.002)
         provider = RateLimitedProvider(base_provider, limiter)
 

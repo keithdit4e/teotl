@@ -20,6 +20,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any
 
+from teotl.core.models import CLAUDE_MODELS
+
 logger = logging.getLogger(__name__)
 
 
@@ -279,18 +281,12 @@ def estimate_cost(
     Returns:
         Estimated cost in USD
     """
-    # Pricing per 1K tokens (input, output) - June 2026
+    # Pricing per 1K tokens (input, output). Claude prices come from teotl.core.models;
+    # OpenAI and Google prices were last updated June 2026.
     pricing = {
         "anthropic": {
-            # Claude 4.x series
-            "claude-opus-4-8-20260528": (0.005, 0.025),
-            "claude-opus-4-7-20260416": (0.005, 0.025),
-            "claude-sonnet-4-6-20260301": (0.003, 0.015),
-            "claude-haiku-4-5-20260115": (0.001, 0.005),
-            # Legacy models (still supported)
-            "claude-opus-4-20250514": (0.015, 0.075),
-            "claude-sonnet-4-20250514": (0.003, 0.015),
-            "claude-haiku-4-20250514": (0.00025, 0.00125),
+            model_id: (info.input_per_mtok / 1000, info.output_per_mtok / 1000)
+            for model_id, info in CLAUDE_MODELS.items()
         },
         "openai": {
             # GPT-5.x series

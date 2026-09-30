@@ -71,7 +71,7 @@ network:
 filesystem:
   mode: "restricted"  # restricted (alias for allowlist), allowlist, denylist, permissive
   allowed_paths:
-    - "~/.forge/agents/my-agent/**"
+    - "~/.teotl/agents/my-agent/**"
     - "/tmp/**"
   readonly_paths:
     - "~/Documents/**"
@@ -116,7 +116,7 @@ compliance:
 sandbox:             # OS-level sandbox settings
   enabled: true
   allowed_paths:
-    - "~/.forge/agents/my-agent/**"
+    - "~/.teotl/agents/my-agent/**"
     - "/tmp/**"
   allowed_domains:
     - "*.anthropic.com"
@@ -329,8 +329,8 @@ from pathlib import Path
 
 from teotl.core.security import SecurityEnforcer, SecurityError, SecurityPolicy
 
-policy = SecurityPolicy.from_file(Path("~/.forge/my-agent/security.yaml").expanduser())
-enforcer = SecurityEnforcer(policy, workspace_dir=Path("~/.forge/my-agent").expanduser())
+policy = SecurityPolicy.from_file(Path("~/.teotl/my-agent/security.yaml").expanduser())
+enforcer = SecurityEnforcer(policy, workspace_dir=Path("~/.teotl/my-agent").expanduser())
 
 
 async def execute_tool(tool_name: str, args: dict, run_tool):
@@ -359,11 +359,11 @@ and sets cost limits of $5/hour and $50/day.
 ## Management Tools
 
 The `teotl security` command reads the audit logs and policy in an agent workspace
-(default `~/.forge/my-agent`; override with `--workspace/-w`):
+(default `~/.teotl/my-agent`; override with `--workspace/-w`):
 
 ```bash
 # View recent audit logs
-teotl security logs --workspace ~/.forge/my-agent --days 1
+teotl security logs --workspace ~/.teotl/my-agent --days 1
 
 # Show only violations
 teotl security logs --violations-only
@@ -402,7 +402,7 @@ teotl/
 └── cli/
     └── security.py             # `teotl security logs|report|status`
 
-~/.forge/my-agent/              # agent workspace (multi-agent: ~/.forge/agents/<id>/)
+~/.teotl/my-agent/              # agent workspace (multi-agent: ~/.teotl/agents/<id>/)
 ├── security.yaml               # Security policy
 ├── audit/
 │   ├── 2026-03.jsonl           # Monthly audit logs

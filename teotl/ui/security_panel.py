@@ -42,7 +42,7 @@ class SecurityPanel:
             self.console.print(
                 Panel(
                     "[yellow]Security not enabled for this agent.[/yellow]\n"
-                    "Run the wizard to configure security: forge onboard",
+                    "Run the wizard to configure security: teotl onboard",
                     title="[bold red]Security Status[/bold red]",
                     border_style="red",
                 )

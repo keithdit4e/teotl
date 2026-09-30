@@ -155,6 +155,7 @@ class TestEncryptedMemory:
         cred_path = tmp_path / "creds"
 
         # Set up credential store to use file backend with our tmp_path
+        monkeypatch.delenv("TEOTL_ALLOW_ENV_AUTH", raising=False)
         monkeypatch.delenv("FORGE_ALLOW_ENV_AUTH", raising=False)
         monkeypatch.delenv("AWS_REGION", raising=False)
         monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
@@ -327,6 +328,8 @@ class TestEncryptedMemoryKeyManagement:
         """Test that encryption key is persisted in credential store."""
         db_path = tmp_path / "test.db"
         cred_path = tmp_path / "creds"
+
+        monkeypatch.delenv("TEOTL_ALLOW_ENV_AUTH", raising=False)
 
         monkeypatch.delenv("FORGE_ALLOW_ENV_AUTH", raising=False)
 

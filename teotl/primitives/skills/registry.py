@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from teotl.core.paths import teotl_home
 from teotl.primitives.skills.loader import SkillLoader
 
 if TYPE_CHECKING:
@@ -43,7 +44,7 @@ class SkillRegistry:
     def _discover(self, enabled: list[str] | None) -> None:
         """Scan skill directories for SKILL.md files."""
         search_paths = [
-            Path.home() / ".forge" / "skills",  # User skills
+            teotl_home() / "skills",  # User skills (~/.teotl/skills, or legacy ~/.forge/skills)
             Path(__file__).parent.parent.parent / "skills",  # Bundled skills (teotl/skills/)
         ]
 

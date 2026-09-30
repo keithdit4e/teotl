@@ -29,7 +29,7 @@ PRESETS: dict[str, dict] = {
         "level": "standard",
         "filesystem": {
             "allow": ["~/projects/**", "~/Documents/**", "/tmp/**"],
-            "deny": ["~/.ssh/**", "~/.aws/**", "~/.forge/auth/**", "~/.gnupg/**"],
+            "deny": ["~/.ssh/**", "~/.aws/**", "~/.teotl/auth/**", "~/.forge/auth/**", "~/.gnupg/**"],
             "confirm_write_outside_scope": True,
         },
         "bash": {
@@ -104,7 +104,7 @@ PRESETS: dict[str, dict] = {
         "level": "strict",
         "filesystem": {
             "allow": [],
-            "deny": ["~/.ssh/**", "~/.aws/**", "~/.forge/auth/**", "~/.gnupg/**"],
+            "deny": ["~/.ssh/**", "~/.aws/**", "~/.teotl/auth/**", "~/.forge/auth/**", "~/.gnupg/**"],
             "confirm_write_outside_scope": True,
         },
         "bash": {

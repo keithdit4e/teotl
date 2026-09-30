@@ -40,11 +40,11 @@ The wizard will ask you to:
 ### After Setup
 
 Your agent workspace will contain a `security.yaml` file. The workspace is
-`~/.forge/my-agent/` for a single agent (configurable via `daemon.data_dir`) or
-`~/.forge/agents/<agent-id>/` for multi-agent setups:
+`~/.teotl/my-agent/` for a single agent (configurable via `daemon.data_dir`) or
+`~/.teotl/agents/<agent-id>/` for multi-agent setups:
 
 ```
-~/.forge/agents/my-agent/
+~/.teotl/agents/my-agent/
 ├── security.yaml          # Security policy
 ├── audit/                 # Audit logs (JSONL)
 │   └── 2026-03.jsonl
@@ -145,7 +145,7 @@ network:
 filesystem:
   mode: "restricted"
   allowed_paths:
-    - "~/.forge/agents/my-agent/**"
+    - "~/.teotl/agents/my-agent/**"
     - "/tmp/**"
   readonly_paths:
     - "~/Documents/**"
@@ -259,7 +259,7 @@ filesystem:
 
   # Read and write access
   allowed_paths:
-    - "~/.forge/agents/my-agent/**"
+    - "~/.teotl/agents/my-agent/**"
     - "/tmp/**"
     - "~/projects/**"
 
@@ -382,7 +382,7 @@ sandbox:
 
   # Paths accessible by the agent (OS-level enforcement)
   allowed_paths:
-    - "~/.forge/agents/my-agent/**"
+    - "~/.teotl/agents/my-agent/**"
     - "/tmp/**"
     - "~/Documents/**"
 
@@ -501,7 +501,7 @@ from pathlib import Path
 from teotl.core.security import SecurityEnforcer, SecurityPolicy
 
 # Build `sandbox` as shown in Programmatic Enforcement below
-workspace_dir = Path("~/.forge/agents/my-agent").expanduser()
+workspace_dir = Path("~/.teotl/agents/my-agent").expanduser()
 policy = SecurityPolicy.from_file(workspace_dir / "security.yaml")
 enforcer = SecurityEnforcer(policy, workspace_dir, sandbox=sandbox)
 
@@ -549,7 +549,7 @@ sandbox:
 
   # Filesystem
   allowed_paths:
-    - "~/.forge/agents/my-agent/**"
+    - "~/.teotl/agents/my-agent/**"
     - "/tmp/**"
     - "~/Documents/**"
   max_file_size_mb: 100
@@ -611,7 +611,7 @@ Logs are stored as JSONL (one JSON object per line):
 ### Log Location
 
 ```
-~/.forge/agents/my-agent/audit/
+~/.teotl/agents/my-agent/audit/
 ├── 2026-01.jsonl    # January logs
 ├── 2026-02.jsonl    # February logs
 └── 2026-03.jsonl    # March logs
@@ -683,13 +683,13 @@ compliance:
 
 ## Management Tools
 
-All `teotl security` subcommands take `--workspace/-w` (default: `~/.forge/my-agent`).
+All `teotl security` subcommands take `--workspace/-w` (default: `~/.teotl/my-agent`).
 
 ### View Audit Logs
 
 ```bash
 # View recent logs
-teotl security logs --workspace ~/.forge/agents/my-agent
+teotl security logs --workspace ~/.teotl/agents/my-agent
 
 # Last 7 days
 teotl security logs --days 7
@@ -711,7 +711,7 @@ teotl security logs --type tool_call,policy_violation
 
 ```bash
 # Last 30 days (default)
-teotl security report --workspace ~/.forge/agents/my-agent
+teotl security report --workspace ~/.teotl/agents/my-agent
 
 # Last 7 days
 teotl security report --days 7
@@ -730,7 +730,7 @@ teotl security report --output report.json
 ### Check Security Status
 
 ```bash
-teotl security status --workspace ~/.forge/agents/my-agent
+teotl security status --workspace ~/.teotl/agents/my-agent
 ```
 
 **Shows:**
@@ -745,14 +745,14 @@ teotl security status --workspace ~/.forge/agents/my-agent
 from teotl.ui import show_security_status, show_security_logs
 
 # Show status in rich terminal UI
-show_security_status("~/.forge/agents/my-agent")
+show_security_status("~/.teotl/agents/my-agent")
 
 # Show recent logs
-show_security_logs("~/.forge/agents/my-agent", limit=20)
+show_security_logs("~/.teotl/agents/my-agent", limit=20)
 
 # Show summary
 from teotl.ui import show_security_summary
-show_security_summary("~/.forge/agents/my-agent", days=7)
+show_security_summary("~/.teotl/agents/my-agent", days=7)
 ```
 
 ## Best Practices
@@ -825,7 +825,7 @@ Before deploying, test your policy:
 
 ```bash
 # Backup audit logs
-tar -czf audit-backup-$(date +%Y%m%d).tar.gz ~/.forge/agents/*/audit/
+tar -czf audit-backup-$(date +%Y%m%d).tar.gz ~/.teotl/agents/*/audit/
 ```
 
 Store backups securely for compliance.
@@ -943,7 +943,7 @@ Verify sandbox blocks these operations.
 1. Check if `security.yaml` exists
 2. Verify agent has write permissions:
    ```bash
-   ls -la ~/.forge/agents/my-agent/
+   ls -la ~/.teotl/agents/my-agent/
    ```
 3. Check log level isn't `minimal` (might not log much)
 
@@ -969,7 +969,7 @@ Verify sandbox blocks these operations.
 **Solution:**
 1. Check file exists:
    ```bash
-   ls ~/.forge/agents/my-agent/security.yaml
+   ls ~/.teotl/agents/my-agent/security.yaml
    ```
 2. Verify YAML syntax:
    ```bash
@@ -1098,7 +1098,7 @@ policy.cost_limits.max_per_hour = 10.0
 policy.compliance.gdpr_enabled = True
 
 # Save
-workspace = Path("~/.forge/agents/my-agent").expanduser()
+workspace = Path("~/.teotl/agents/my-agent").expanduser()
 policy.to_yaml(workspace / "security.yaml")
 ```
 
@@ -1119,7 +1119,7 @@ from teotl.core.security import (
 )
 
 # Load policy
-workspace = Path("~/.forge/agents/my-agent").expanduser()
+workspace = Path("~/.teotl/agents/my-agent").expanduser()
 policy = SecurityPolicy.from_file(workspace / "security.yaml")
 
 # Build sandbox components
@@ -1173,15 +1173,15 @@ else:
 
 ```bash
 # Agent 1: Strict (handles sensitive data)
-~/.forge/agents/secure-agent/
+~/.teotl/agents/secure-agent/
 ├── security.yaml    # preset: strict
 
 # Agent 2: Permissive (development)
-~/.forge/agents/dev-agent/
+~/.teotl/agents/dev-agent/
 ├── security.yaml    # preset: permissive
 
 # Agent 3: Custom (specific requirements)
-~/.forge/agents/custom-agent/
+~/.teotl/agents/custom-agent/
 ├── security.yaml    # custom configuration
 ```
 

@@ -65,7 +65,7 @@ python autonomous_mode.py --repo keithdit4e/devops-agent-test
 **Show Output:**
 ```
 🚀 Initializing Autonomous DevOps Agent
-✓ Data directory: ~/.forge/devops-agent/...
+✓ Data directory: ~/.teotl/devops-agent/...
 ✓ DevOps executor created
 ✓ Heartbeat daemon initialized
 📅 Added scanning mission (every 3600s)

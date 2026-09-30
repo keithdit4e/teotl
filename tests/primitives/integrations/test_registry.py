@@ -70,8 +70,9 @@ class TestIntegrationRegistry:
         await registry.connect_api_key("github", "ghp_test123")
 
         env = registry.build_env("github")
-        assert "FORGE_GITHUB_API_KEY" in env
-        assert env["FORGE_GITHUB_API_KEY"] == "ghp_test123"
+        assert "TEOTL_GITHUB_API_KEY" in env
+        assert env["TEOTL_GITHUB_API_KEY"] == "ghp_test123"
+        assert env["FORGE_GITHUB_API_KEY"] == "ghp_test123"  # legacy name for older skill scripts
 
     def test_build_env_not_connected_raises(self, tmp_path):
         """Test build_env raises NotConnected for unconnected service."""
@@ -92,8 +93,8 @@ class TestIntegrationRegistry:
     @pytest.mark.asyncio
     async def test_environment_backend(self, monkeypatch):
         """Test using environment backend for credentials."""
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
-        monkeypatch.setenv("FORGE_GITHUB_API_KEY", "ghp_test123")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_GITHUB_API_KEY", "ghp_test123")
 
         registry = IntegrationRegistry(credential_backend="environment")
 

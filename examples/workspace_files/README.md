@@ -48,7 +48,7 @@ If you see this, workspace files are being loaded successfully!
 Edit your config.yaml and run with verbose logging:
 
 ```bash
-python -m forge.daemon.run --config config.yaml 2>&1 | grep -i "workspace\|instruction"
+python -m teotl.daemon.run --config config.yaml 2>&1 | grep -i "workspace\|instruction"
 ```
 
 You should see:
@@ -119,7 +119,7 @@ I am Jarvis, your personal AI assistant.
 
 ```bash
 # Start the daemon
-python -m forge.daemon.run --config config.yaml
+python -m teotl.daemon.run --config config.yaml
 
 # The agent will now use this personality!
 ```

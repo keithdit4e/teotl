@@ -66,13 +66,13 @@ teotl chat --agent email-bot --skills gmail,calendar,web
 
 ```bash
 # Run email bot in background
-python3 -m forge.daemon start --agent email-bot
+python3 -m teotl.daemon start --agent email-bot
 
 # Check status
-python3 -m forge.daemon status --agent email-bot
+python3 -m teotl.daemon status --agent email-bot
 
 # View in web dashboard
-python3 -m forge.web
+python3 -m teotl.web
 # Open: http://localhost:8080
 ```
 
@@ -301,7 +301,7 @@ The bot needs you for:
 Use the web dashboard to track:
 
 ```bash
-python3 -m forge.web --agents email-bot
+python3 -m teotl.web --agents email-bot
 ```
 
 - Response time trends

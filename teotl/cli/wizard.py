@@ -4,8 +4,8 @@ This wizard provides an OpenClaw-style conversational setup experience,
 guiding users through configuration without editing YAML files.
 
 Usage:
-    forge onboard
-    python -m forge.cli.wizard
+    teotl onboard
+    python -m teotl.cli.wizard
 """
 
 import os
@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
 from teotl.core.models import DEFAULT_PLANNER_MODEL, DEFAULT_WORKER_MODEL
+from teotl.core.paths import teotl_home_display
 from teotl.core.security import SecurityPolicy
 
 console = Console()
@@ -368,7 +369,7 @@ class OnboardingWizard:
         """Configure provider for daemon operations."""
         print_header("Step 2: Daemon Provider")
 
-        print("\nForge supports multiple LLM providers. Each has different costs and capabilities:")
+        print("\nTeotl supports multiple LLM providers. Each has different costs and capabilities:")
         print(f"{Color.CYAN}Anthropic{Color.END} - Claude models (recommended)")
         print("  • Cost: ~$0.60-1.50 per session")
         print("  • Best for: Complex reasoning, long conversations")
@@ -736,14 +737,14 @@ class OnboardingWizard:
                     "personal": {
                         "agent_id": "personal",
                         "instructions": "You are my personal assistant. Help with personal tasks, emails, and scheduling.",
-                        "workspace": "~/.forge/agents/personal",
+                        "workspace": f"{teotl_home_display()}/agents/personal",
                         "auto_approve": True,
                         "port": base_port,
                     },
                     "work": {
                         "agent_id": "work",
                         "instructions": "You are my work assistant. Help with work tasks, meetings, and professional communications.",
-                        "workspace": "~/.forge/agents/work",
+                        "workspace": f"{teotl_home_display()}/agents/work",
                         "auto_approve": True,
                         "port": base_port + 1,
                     },
@@ -753,7 +754,7 @@ class OnboardingWizard:
                     "personal": {
                         "agent_id": "personal",
                         "instructions": "You are my personal assistant. Help with personal tasks and scheduling.",
-                        "workspace": "~/.forge/agents/personal",
+                        "workspace": f"{teotl_home_display()}/agents/personal",
                         "auto_approve": True,
                         "port": base_port,
                         "work_types": ["Tasks"],  # Personal assistant uses tasks
@@ -761,7 +762,7 @@ class OnboardingWizard:
                     "work": {
                         "agent_id": "work",
                         "instructions": "You are my work assistant. Help with work tasks and professional communications.",
-                        "workspace": "~/.forge/agents/work",
+                        "workspace": f"{teotl_home_display()}/agents/work",
                         "auto_approve": True,
                         "port": base_port + 1,
                         "work_types": [
@@ -772,7 +773,7 @@ class OnboardingWizard:
                     "research": {
                         "agent_id": "research",
                         "instructions": "You are my research assistant. Help gather information, summarize findings, and analyze data.",
-                        "workspace": "~/.forge/agents/research",
+                        "workspace": f"{teotl_home_display()}/agents/research",
                         "auto_approve": True,
                         "port": base_port + 2,
                         "work_types": ["Goals"],  # Research uses continuous goals
@@ -827,7 +828,7 @@ class OnboardingWizard:
 
             workspace = ask_question(
                 "Workspace directory",
-                default=f"~/.forge/agents/{agent_id}",
+                default=f"{teotl_home_display()}/agents/{agent_id}",
             )
 
             agents[agent_id] = {
@@ -852,7 +853,7 @@ class OnboardingWizard:
             agents["main"] = {
                 "agent_id": "main",
                 "instructions": "You are a helpful AI assistant",
-                "workspace": "~/.forge/agents/main",
+                "workspace": f"{teotl_home_display()}/agents/main",
                 "auto_approve": True,
                 "port": base_port,
                 "work_types": ["Goals"],  # Default to Goals
@@ -1119,7 +1120,7 @@ class OnboardingWizard:
         """Configure security policy."""
         print_header("Step 6: Security & Compliance")
 
-        print("\nForge provides defense-in-depth security with:")
+        print("\nTeotl provides defense-in-depth security with:")
         print(f"  {Color.BOLD}Policy Layer{Color.END} - Access control and intent validation")
         print(f"  {Color.BOLD}Sandbox Layer{Color.END} - OS-level isolation and enforcement")
         print(f"  {Color.BOLD}Compliance{Color.END} - GDPR, SOC2, HIPAA support")
@@ -1231,7 +1232,7 @@ class OnboardingWizard:
 
         # Data directory (only for single agent)
         if "agent" in self.config:
-            default_dir = f"~/.forge/{self.config['agent']['agent_id']}"
+            default_dir = f"{teotl_home_display()}/{self.config['agent']['agent_id']}"
             data_dir = ask_question("\nWhere should data be stored?", default=default_dir)
             self.config["daemon"] = {"poll_interval": interval, "data_dir": data_dir}
         else:
@@ -1830,7 +1831,7 @@ Context management:
         if "agent" in self.config:
             # Single agent
             workspace_dir = Path(
-                self.config.get("daemon", {}).get("data_dir", "~/.forge/my-agent")
+                self.config.get("daemon", {}).get("data_dir", f"{teotl_home_display()}/my-agent")
             ).expanduser()
             agent_config = self.config["agent"]
             workspaces.append((agent_config["agent_id"], workspace_dir, agent_config))
@@ -1838,7 +1839,7 @@ Context management:
             # Multi-agent
             for agent_id, agent_config in self.config["agents"].items():
                 workspace_dir = Path(
-                    agent_config.get("workspace", f"~/.forge/agents/{agent_id}")
+                    agent_config.get("workspace", f"{teotl_home_display()}/agents/{agent_id}")
                 ).expanduser()
                 workspaces.append((agent_id, workspace_dir, agent_config))
 
@@ -2240,7 +2241,7 @@ Context management:
 
         # Determine workspace
         if "agent" in self.config:
-            workspace_dir = self.config.get("daemon", {}).get("data_dir", "~/.forge/my-agent")
+            workspace_dir = self.config.get("daemon", {}).get("data_dir", f"{teotl_home_display()}/my-agent")
             agent_id = self.config["agent"]["agent_id"]
         else:
             workspace_dir = "~/workspace"
@@ -2615,7 +2616,7 @@ if __name__ == "__main__":
         # Determine workspace directory
         if "agent" in self.config:
             workspace_dir = Path(
-                self.config.get("daemon", {}).get("data_dir", "~/.forge/my-agent")
+                self.config.get("daemon", {}).get("data_dir", f"{teotl_home_display()}/my-agent")
             ).expanduser()
         else:
             workspace_dir = Path("~/workspace").expanduser()
@@ -3495,12 +3496,12 @@ If you discover a security vulnerability:
             config_dir = Path(output_path).parent
             if config_dir.name and str(config_dir) != ".":
                 print(f"   cd {config_dir}")
-            print("   forge start                    # Start all agents")
-            print("   forge status                   # Check agent status")
+            print("   teotl start                    # Start all agents")
+            print("   teotl status                   # Check agent status")
             print()
             print(f"   {Color.CYAN}Or start individual agents:{Color.END}")
             for agent_id in list(self.config["agents"].keys())[:3]:  # Show first 3
-                print(f"   forge start {agent_id}")
+                print(f"   teotl start {agent_id}")
             if len(self.config["agents"]) > 3:
                 print("   ...")
             print()
@@ -3517,7 +3518,7 @@ If you discover a security vulnerability:
         # Show workspace locations
         if "agent" in self.config:
             workspace = Path(
-                self.config.get("daemon", {}).get("data_dir", "~/.forge/my-agent")
+                self.config.get("daemon", {}).get("data_dir", f"{teotl_home_display()}/my-agent")
             ).expanduser()
             work_types = self.config.get("agent", {}).get("work_types", [])
 
@@ -3538,7 +3539,7 @@ If you discover a security vulnerability:
             print("  • Agent workspaces:")
             for agent_id, agent_config in list(self.config["agents"].items())[:3]:
                 workspace = Path(
-                    agent_config.get("workspace", f"~/.forge/agents/{agent_id}")
+                    agent_config.get("workspace", f"{teotl_home_display()}/agents/{agent_id}")
                 ).expanduser()
                 print(f"    - {agent_id}: {workspace}/")
             if len(self.config["agents"]) > 3:

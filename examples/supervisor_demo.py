@@ -20,6 +20,7 @@ from pathlib import Path
 
 from teotl.core.provider import AnthropicProvider
 from teotl.primitives.harness import PlannerWorkerHarness
+from teotl.core.paths import teotl_home
 
 
 async def main():
@@ -37,7 +38,7 @@ async def main():
 
     # Setup
     agent_id = "supervisor-demo"
-    workspace = Path.home() / ".forge" / "agents" / agent_id
+    workspace = teotl_home() / "agents" / agent_id
     workspace.mkdir(parents=True, exist_ok=True)
 
     print(f"📂 Workspace: {workspace}")

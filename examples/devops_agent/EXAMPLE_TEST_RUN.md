@@ -324,7 +324,7 @@ async def __call__(self, description: str, context: dict | None = None) -> dict:
 **Startup:**
 ```
 2026-05-26 08:29:14,594 - 🚀 Initializing Autonomous DevOps Agent
-2026-05-26 08:29:16,321 - ✓ Data directory: ~/.forge/devops-agent/keithdit4e-devops-agent-test
+2026-05-26 08:29:16,321 - ✓ Data directory: ~/.teotl/devops-agent/keithdit4e-devops-agent-test
 2026-05-26 08:29:16,321 - ✓ DevOps executor created
 2026-05-26 08:29:16,321 - ✓ Heartbeat daemon initialized
 2026-05-26 08:29:16,321 - 📅 Added scanning mission (every 3600s)

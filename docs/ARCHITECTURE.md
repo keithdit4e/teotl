@@ -341,7 +341,7 @@ class GuardrailEngine:
   "level": "standard",
   "filesystem": {
     "allow": ["~/projects/**", "~/Documents/**", "/tmp/**"],
-    "deny": ["~/.ssh/**", "~/.aws/**", "~/.forge/auth/**"],
+    "deny": ["~/.ssh/**", "~/.aws/**", "~/.teotl/auth/**"],
     "confirm_write_outside_scope": true
   },
   "bash": {
@@ -535,7 +535,7 @@ class SkillRegistry:
     def _discover(self, enabled: list[str] | None) -> None:
         """Scan skill directories for SKILL.md files."""
         search_paths = [
-            Path.home() / ".forge" / "skills",      # User skills
+            Path.home() / ".teotl" / "skills",      # User skills
             Path(__file__).parent.parent / "skills",  # Built-in skills
         ]
         # Plus any directories listed in TEOTL_SKILLS_PATH (colon-separated)
@@ -1014,7 +1014,7 @@ teotl security report                      # Compliance report
 teotl security status                      # Security status
 ```
 
-Installing a skill means copying its folder (containing `SKILL.md`) into `~/.forge/skills/`
+Installing a skill means copying its folder (containing `SKILL.md`) into `~/.teotl/skills/`
 or a directory listed in `TEOTL_SKILLS_PATH`.
 
 ### Web dashboard
@@ -1078,7 +1078,7 @@ print(response.text)
 - [ ] Description injection (always-in-context)
 - [ ] On-demand activation
 - [ ] Built-in skills: filesystem, git, web
-- [ ] `teotl skills` CLI (planned, not yet available; install skills by copying folders into `~/.forge/skills/`)
+- [ ] `teotl skills` CLI (planned, not yet available; install skills by copying folders into `~/.teotl/skills/`)
 
 ### Phase 3: Memory (Weeks 13-16)
 - [ ] SQLite memory store

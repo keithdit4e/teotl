@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from teotl.core.paths import teotl_home
+
 if TYPE_CHECKING:
     from teotl.core.types import EventResult
 
@@ -25,7 +27,7 @@ class AuditExtension:
     version = "1.0.0"
 
     def __init__(self, path: Path | None = None) -> None:
-        self.path = path or Path.home() / ".forge" / "audit.jsonl"
+        self.path = path or teotl_home() / "audit.jsonl"
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def activate(self, agent: Any) -> None:

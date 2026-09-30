@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from teotl.core.paths import teotl_home
 from teotl.primitives.missions import Mission, MissionInterval, MissionStore
 from teotl.primitives.tasks import Priority, Task, TaskState, TaskStore
 
@@ -65,7 +66,7 @@ class AgentDaemon:
             task_store: Task storage (default: creates new)
             resolution_service: Optional resolution service
             poll_interval: Seconds between execution cycles
-            data_dir: Data directory for stores (default: ~/.forge/{agent_id}/)
+            data_dir: Data directory for stores (default: ~/.teotl/{agent_id}/)
         """
         self.agent_id = agent_id
         self.agent_executor = agent_executor
@@ -74,7 +75,7 @@ class AgentDaemon:
 
         # Setup data directory
         if data_dir is None:
-            data_dir = Path.home() / ".forge" / agent_id
+            data_dir = teotl_home() / agent_id
         data_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir = data_dir
 

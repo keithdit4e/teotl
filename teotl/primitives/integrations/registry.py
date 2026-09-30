@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from teotl.core.paths import teotl_home
 from teotl.primitives.integrations.credential_store import CredentialStore
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class IntegrationRegistry:
         """
         # For file backend, use storage_path if provided
         if credential_backend == "file" or (credential_backend is None and storage_path):
-            backend_kwargs["storage_path"] = storage_path or Path.home() / ".forge" / "auth"
+            backend_kwargs["storage_path"] = storage_path or teotl_home() / "auth"
 
         self.store = CredentialStore.create(backend=credential_backend, **backend_kwargs)
         self.connected: dict[str, AuthCredential] = {}
@@ -124,15 +125,19 @@ class IntegrationRegistry:
         """
         cred = self.connected.get(service)
         if not cred:
-            raise NotConnected(f"Service '{service}' is not connected. Run: forge auth {service}")
+            raise NotConnected(
+                f"Service '{service}' is not connected. Save a credential for it with "
+                f"CredentialStore.save_credential('{service}', ...)"
+            )
 
         env = os.environ.copy()
-        prefix = f"FORGE_{service.upper()}"
 
-        if cred.auth_type == "api_key":
-            env[f"{prefix}_API_KEY"] = cred.api_key
-        elif cred.auth_type == "oauth2":
-            env[f"{prefix}_TOKEN"] = cred.access_token
+        # TEOTL_<SERVICE>_*; the legacy FORGE_ prefix is also set for older skill scripts
+        for prefix in (f"TEOTL_{service.upper()}", f"FORGE_{service.upper()}"):
+            if cred.auth_type == "api_key":
+                env[f"{prefix}_API_KEY"] = cred.api_key
+            elif cred.auth_type == "oauth2":
+                env[f"{prefix}_TOKEN"] = cred.access_token
 
         return env
 

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import ulid
 
+from teotl.core.paths import teotl_home
 from teotl.core.types import Memory, MemoryMeta
 
 logger = logging.getLogger(__name__)
@@ -40,11 +41,11 @@ class LocalMemory:
         Initialize local memory store.
 
         Args:
-            path: Path to SQLite database file (default: ~/.forge/memory.db)
+            path: Path to SQLite database file (default: ~/.teotl/memory.db)
             auto_cleanup: Run cleanup on initialization (default: True)
             max_memories: Maximum number of memories to keep (default: 10,000)
         """
-        self.path = Path(path) if path else Path.home() / ".forge" / "memory.db"
+        self.path = Path(path) if path else teotl_home() / "memory.db"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(str(self.path))
         self.db.row_factory = sqlite3.Row

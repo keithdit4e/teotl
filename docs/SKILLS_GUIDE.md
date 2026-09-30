@@ -117,7 +117,7 @@ print(agent.list_active_skills())
 ### Directory Structure
 
 ```
-~/.forge/skills/my-skill/
+~/.teotl/skills/my-skill/
 ├── SKILL.md          # Required: Frontmatter + instructions
 └── scripts/          # Optional: helper scripts your instructions reference
     ├── action.sh
@@ -230,7 +230,7 @@ Skills are discovered from these locations, scanned in this order (if two skills
 name, the one found last wins):
 
 1. **User skills** (custom)
-   - Location: `~/.forge/skills/`
+   - Location: `~/.teotl/skills/`
    - Your custom skills
 
 2. **Package skills** (built-in)
@@ -238,7 +238,7 @@ name, the one found last wins):
    - Includes: filesystem, git, github, web, claude_code, spec_kit, social-media
 
 3. **Environment path**
-   - Set `TEOTL_SKILLS_PATH=/path1:/path2` (legacy `FORGE_SKILLS_PATH` also works)
+   - Set `TEOTL_SKILLS_PATH=/path1:/path2` (legacy `TEOTL_SKILLS_PATH` also works)
    - Additional skill directories
 
 ### Discovery Process
@@ -350,7 +350,7 @@ Don't create a skill for:
 
 # Check if skill exists
 from pathlib import Path
-skill_path = Path.home() / ".forge" / "skills" / "my-skill" / "SKILL.md"
+skill_path = Path.home() / ".teotl" / "skills" / "my-skill" / "SKILL.md"
 print(f"Exists: {skill_path.exists()}")
 
 # List all discovered skills
@@ -396,7 +396,7 @@ section of the agent's config (see [SECURITY_GUIDE.md](SECURITY_GUIDE.md)).
 ## Planned: Skills Marketplace (not yet available)
 
 A marketplace for discovering, installing, and updating skills is planned. Until then,
-install a skill by copying its folder into `~/.forge/skills/` or a directory on
+install a skill by copying its folder into `~/.teotl/skills/` or a directory on
 `TEOTL_SKILLS_PATH`. See [SKILLS_ECOSYSTEM.md](SKILLS_ECOSYSTEM.md).
 
 ## See Also

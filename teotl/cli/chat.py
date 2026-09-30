@@ -13,6 +13,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 
 from teotl.core.agent import Agent
+from teotl.core.paths import teotl_home
 from teotl.core.provider import AnthropicProvider
 from teotl.core.types import UI
 
@@ -68,13 +69,13 @@ class ChatSession:
         self.use_memory = use_memory
 
         # Determine workspace and session directories
-        forge_dir = Path.home() / ".forge"
+        data_dir = teotl_home()
         if agent_id:
-            self.workspace_dir = forge_dir / "agents" / agent_id
+            self.workspace_dir = data_dir / "agents" / agent_id
             self.session_dir = session_dir or self.workspace_dir / "sessions"
         else:
             self.workspace_dir = None
-            self.session_dir = session_dir or forge_dir / "chat-sessions"
+            self.session_dir = session_dir or data_dir / "chat-sessions"
 
         self.session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -211,7 +212,7 @@ Welcome! You're now chatting with a Teotl agent.
                 try:
                     from teotl.primitives.memory.local import LocalMemory
 
-                    memory_dir = self.workspace_dir or (Path.home() / ".forge" / "chat-memory")
+                    memory_dir = self.workspace_dir or (teotl_home() / "chat-memory")
                     memory = LocalMemory(str(memory_dir))
                 except Exception as e:
                     logger.warning(f"Failed to initialize memory: {e}")

@@ -518,10 +518,10 @@ bash:
 Test your security policy:
 ```bash
 # Check if action is allowed
-forge security check --agent coding-assistant --action "read_file:src/app.py"
+teotl security check --agent coding-assistant --action "read_file:src/app.py"
 
 # Check if command is allowed
-forge security check --agent coding-assistant --action "bash:pytest"
+teotl security check --agent coding-assistant --action "bash:pytest"
 
 # View audit log
 tail -f ~/.teotl/agents/coding-assistant/audit.log

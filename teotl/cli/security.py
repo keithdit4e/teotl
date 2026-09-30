@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from teotl.core.paths import teotl_home_display
 from teotl.core.security.audit import AuditLogger
 from teotl.core.security.policy import SecurityPolicy
 
@@ -444,8 +445,8 @@ def main(argv: list[str] | None = None) -> None:
     logs_parser.add_argument(
         "--workspace",
         "-w",
-        default="~/.forge/my-agent",
-        help="Agent workspace directory (default: ~/.forge/my-agent)",
+        default=f"{teotl_home_display()}/my-agent",
+        help=f"Agent workspace directory (default: {teotl_home_display()}/my-agent)",
     )
     logs_parser.add_argument(
         "--days",
@@ -490,8 +491,8 @@ def main(argv: list[str] | None = None) -> None:
     report_parser.add_argument(
         "--workspace",
         "-w",
-        default="~/.forge/my-agent",
-        help="Agent workspace directory (default: ~/.forge/my-agent)",
+        default=f"{teotl_home_display()}/my-agent",
+        help=f"Agent workspace directory (default: {teotl_home_display()}/my-agent)",
     )
     report_parser.add_argument(
         "--days",
@@ -511,8 +512,8 @@ def main(argv: list[str] | None = None) -> None:
     status_parser.add_argument(
         "--workspace",
         "-w",
-        default="~/.forge/my-agent",
-        help="Agent workspace directory (default: ~/.forge/my-agent)",
+        default=f"{teotl_home_display()}/my-agent",
+        help=f"Agent workspace directory (default: {teotl_home_display()}/my-agent)",
     )
 
     args = parser.parse_args(argv)

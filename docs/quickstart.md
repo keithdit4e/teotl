@@ -107,7 +107,7 @@ asyncio.run(main())
 - `spec_kit` - Structured specifications for planning
 - `social-media` - Cross-post content (LinkedIn, X, Medium, Substack)
 
-Skills are folders containing a `SKILL.md` file. Teotl looks for them in its bundled skills, `~/.forge/skills/`, and any directories listed in `TEOTL_SKILLS_PATH`. See [Custom Skills](CUSTOM_SKILLS_QUICKSTART.md) to write your own.
+Skills are folders containing a `SKILL.md` file. Teotl looks for them in its bundled skills, `~/.teotl/skills/`, and any directories listed in `TEOTL_SKILLS_PATH`. See [Custom Skills](CUSTOM_SKILLS_QUICKSTART.md) to write your own.
 
 ## Adding Security (Guardrails)
 
@@ -341,7 +341,7 @@ pip install --upgrade "teotl[anthropic]"
 
 ### Issue: Agent doesn't use skills
 
-**Solution:** pass skill names as a list, and check the names match a bundled skill or a folder in `~/.forge/skills/`:
+**Solution:** pass skill names as a list, and check the names match a bundled skill or a folder in `~/.teotl/skills/`:
 
 ```python
 agent = Agent(provider=provider, skills=["filesystem"])

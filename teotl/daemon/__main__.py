@@ -1,4 +1,4 @@
-"""Entry point for running forge.daemon as a module."""
+"""Entry point for running teotl.daemon as a module."""
 
 from teotl.daemon.run import main
 

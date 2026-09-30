@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,6 +15,43 @@ from teotl.core.paths import teotl_home
 from teotl.core.types import Memory, MemoryMeta
 
 logger = logging.getLogger(__name__)
+
+
+# Words too common to help find a memory. Dropped from recall queries so that
+# "Which region do I prefer?" searches for "region" and "prefer".
+_STOPWORDS = frozenset(
+    """a about above after again all also am an and any are as at be because been before
+    being below between both but by can could did do does doing done down during each else
+    ever few for from further get got had has have having he her here hers him his how i if
+    in into is it its itself just know let like me more most my myself no nor not now of off
+    on once only or other our ours out over own please remember same say she should so some
+    such tell than that the their theirs them then there these they this those through to
+    too under until up us very want was we were what when where which while who whom why
+    will with would you your yours""".split()  # noqa: SIM905 (a word list reads better this way)
+)
+
+
+def _keywords(text: str) -> list[str]:
+    """Distinct lowercase words of 2+ characters (keeping inner - . _), minus stopwords."""
+    words = re.findall(r"[\w][\w.\-]*[\w]|[\w]", text.lower())
+    seen: dict[str, None] = {}
+    for word in words:
+        if len(word) > 1 and word not in _STOPWORDS and word not in seen:
+            seen[word] = None
+    return list(seen) or [text.strip().lower()]
+
+
+def _fts_query(text: str) -> str:
+    """FTS5 MATCH expression: any of the query's keywords, each quoted as a phrase.
+
+    Words of 4+ characters also match as prefixes ("deploy" finds "deploys",
+    "deployment"), since the index has no stemming.
+    """
+    parts = []
+    for term in _keywords(text):
+        quoted = '"' + term.replace('"', '""') + '"'
+        parts.append(quoted + "*" if len(term) >= 4 else quoted)
+    return " OR ".join(parts)
 
 
 class LocalMemory:
@@ -200,10 +238,15 @@ class LocalMemory:
         Retrieve relevant memories using hybrid search.
 
         Combines:
-        1. Full-text search (BM25 ranking via FTS5)
+        1. Full-text search (BM25 ranking via FTS5) on the query's keywords,
+           matching memories that contain any of them
         2. Recency boost (newer memories rank higher)
         3. Importance weighting
         """
+        fts_query = _fts_query(query)
+        if not fts_query:
+            return []
+
         # FTS5 search with BM25 ranking
         try:
             rows = self.db.execute(
@@ -217,10 +260,11 @@ class LocalMemory:
                     (1.0 + 1.0 / (1.0 + julianday('now') - julianday(m.created)))
                 LIMIT ?
                 """,
-                (query, limit),
+                (fts_query, limit),
             ).fetchall()
         except sqlite3.OperationalError:
-            # FTS query syntax error — fall back to LIKE
+            # FTS unavailable or query rejected — fall back to LIKE on the first keyword
+            keyword = _keywords(query)[0]
             rows = self.db.execute(
                 """
                 SELECT * FROM memories
@@ -228,7 +272,7 @@ class LocalMemory:
                 ORDER BY importance DESC, created DESC
                 LIMIT ?
                 """,
-                (f"%{query}%", limit),
+                (f"%{keyword}%", limit),
             ).fetchall()
 
         memories = [self._row_to_memory(row) for row in rows]

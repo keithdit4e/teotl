@@ -396,6 +396,7 @@ class Agent:
 
         # Agent loop — may iterate if tool calls are made
         all_tool_calls: list[ToolCall] = []
+        all_tool_results: list[ToolResult] = []
         turns = 0
 
         while turns < self.max_turns:
@@ -478,6 +479,7 @@ class Agent:
             for tool_call in result.tool_calls:
                 all_tool_calls.append(tool_call)
                 tool_result = await self._handle_tool_call(tool_call, ui=ui)
+                all_tool_results.append(tool_result)
 
                 tool_result_content.append(
                     {
@@ -578,6 +580,7 @@ class Agent:
             text=result.content,
             tool_calls_made=all_tool_calls,
             tokens_used=result.usage.get("input_tokens", 0) + result.usage.get("output_tokens", 0),
+            tool_results=all_tool_results,
         )
 
     def register_tool(

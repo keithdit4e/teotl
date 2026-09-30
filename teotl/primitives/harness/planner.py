@@ -53,6 +53,7 @@ class Planner:
         cost_tracker=None,
         audit_logger=None,
         state_manager=None,
+        max_steps: int = 8,
     ):
         """Initialize planner.
 
@@ -64,6 +65,7 @@ class Planner:
         """
         self.agent_id = agent_id
         self.provider = provider
+        self.max_steps = max_steps
 
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
@@ -104,14 +106,24 @@ Read the GOALS provided by the user and create a detailed execution plan.
 
 ## Plan Format
 
-Create a plan with 10-20 atomic steps. Each step MUST follow this format:
+Use as few steps as the goals need: usually 1-5, never more than the maximum
+you're given. Each step MUST follow this format:
 
 ## Step N: [Brief description]
 
 **File:** `path/to/file.py`
 **Target:** function_name or line number or section
 **Change:** Specific change to make
-**Verify:** How to verify success
+**Verify:** `a shell command that checks the change`
+
+- **File** must be one real path (relative to the working directory, or absolute).
+  Omit the File line if the step has no single target file. Never write
+  placeholders like `<dir>/file.py` or `N/A`.
+- **Verify** should be a runnable shell command in backticks (e.g. `pytest -q tests/test_x.py`,
+  `python -c "from calc import add; assert add(2, 3) == 5"`).
+- Every step must change something. Don't add steps that only inspect, check the
+  environment, or back up files; the worker checks those as part of real steps.
+- If the user asks for a specific number of steps, follow it.
 
 ## Guidelines
 
@@ -208,6 +220,12 @@ Just output the steps directly.
 
         # Parse steps from response
         steps = self._parse_steps(response.text)
+        if len(steps) > self.max_steps:
+            logger.warning(
+                f"Planner returned {len(steps)} steps; keeping the first {self.max_steps} "
+                "(max_steps)"
+            )
+            steps = steps[: self.max_steps]
 
         logger.info(f"Plan created with {len(steps)} steps")
 
@@ -243,8 +261,9 @@ Just output the steps directly.
 {context}
 """
 
-        prompt += """
-Create a detailed execution plan with 10-20 atomic steps following the format in your instructions.
+        prompt += f"""
+Create an execution plan with as few steps as needed, at most {self.max_steps}, following the
+format in your instructions.
 
 Output ONLY the steps in markdown format. Start directly with:
 ## Step 1: ...

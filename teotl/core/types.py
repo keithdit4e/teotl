@@ -124,6 +124,8 @@ class Response:
     tool_calls_made: list[ToolCall] = field(default_factory=list)
     tokens_used: int = 0
     cost: float = 0.0
+    # Result of each tool call, in order (is_error=True when blocked or failed)
+    tool_results: list[ToolResult] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

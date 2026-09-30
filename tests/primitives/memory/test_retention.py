@@ -259,8 +259,9 @@ class TestMemoryRetention:
         # Store one with expiration in the past
         await memory.remember("Expired", MemoryMeta(importance=5), ttl_days=0)
 
-        # Access one memory to test access tracking
-        await memory.recall("Importance 10")
+        # Access one memory to test access tracking. Recall matches any keyword, so
+        # use a term only one memory contains ("importance" is in all of them)
+        await memory.recall("10")
 
         # Get stats
         stats = await memory.get_retention_stats()

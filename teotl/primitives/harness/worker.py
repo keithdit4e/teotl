@@ -12,7 +12,9 @@ Key responsibilities:
 """
 
 import logging
+import re
 from pathlib import Path
+from typing import Any
 
 from teotl.core.agent import Agent
 from teotl.core.paths import teotl_home
@@ -25,6 +27,36 @@ from teotl.primitives.harness.progress import ProgressTracker
 from teotl.primitives.harness.state import StateManager
 
 logger = logging.getLogger(__name__)
+
+
+_STATUS_RE = re.compile(r"STEP_STATUS:\s*(DONE|FAILED)\b", re.IGNORECASE)
+
+
+def _status_line(text: str) -> str | None:
+    """The last STEP_STATUS value in the worker's reply ("DONE"/"FAILED"), or None."""
+    matches = _STATUS_RE.findall(text or "")
+    return matches[-1].upper() if matches else None
+
+
+def _concrete_path(file_path: str | None) -> Path | None:
+    """The step's File field as a Path, or None when it isn't a real path.
+
+    Planner output is free text: skip placeholders ("<proj>/x.py"), notes
+    ("N/A (environment check)"), and multiple files ("a.py and b.py").
+    """
+    if not file_path:
+        return None
+    text = file_path.strip().strip("`").strip()
+    if not text or any(c in text for c in "<>*?`|\n") or " " in text:
+        return None
+    if text.lower() in ("n/a", "na", "none", "-"):
+        return None
+    return Path(text).expanduser().resolve()
+
+
+def _is_removal(step: PlanStep) -> bool:
+    words = f"{step.description} {step.change or ''}".lower()
+    return any(w in words for w in ("delete", "remove", "rename", "move "))
 
 
 class WorkerResult:
@@ -200,12 +232,15 @@ class Worker:
             # No policy to enforce
             return (True, None)
 
-        # Check file path access
-        if step.file_path:
-            path = Path(step.file_path).expanduser().resolve()
-
-            # Check if path is allowed for write operations
-            if not self.policy.filesystem.allows(str(path), write=True):
+        # Check the step's target file against the policy's denylist. Only concrete
+        # paths are checked: the planner's File field is free text and may hold
+        # placeholders ("<proj>/calc.py", "N/A"). The allowlist isn't applied here:
+        # projects can live anywhere, and actual tool calls are checked by the
+        # worker agent's guardrails.
+        path = _concrete_path(step.file_path)
+        if path is not None:
+            fs = self.policy.filesystem
+            if fs._matches_path(path, fs.blocked_paths) or fs._matches_path(path, fs.readonly_paths):
                 reason = f"File path blocked by security policy: {path}"
                 logger.error(reason)
                 return (False, reason)
@@ -292,13 +327,17 @@ Use these tools to execute the step.
 
 ## Response Format
 
-When complete, your response should clearly state:
-- ✅ What you did
-- ✅ What verification passed
-- ✅ That the step is complete
+Briefly state what you did and what verification you ran. Then end your reply
+with exactly one status line:
+
+STEP_STATUS: DONE
+    - only if you made the change and the verification passed
+STEP_STATUS: FAILED - <short reason>
+    - if you could not make the change or verification failed
 
 Example:
-"I added the type hint to parse_config() as specified. The function signature is now `def parse_config(data: dict[str, Any]) -> Config`. Tests pass (pytest passed 5/5). Step complete."
+"Added the type hint to parse_config(). Ran `pytest tests/test_utils.py`: 5 passed.
+STEP_STATUS: DONE"
 """
 
     async def execute_current_step(self) -> WorkerResult:
@@ -332,14 +371,23 @@ Example:
             )
 
         logger.info(f"Executing Step {current_step.number}: {current_step.description}")
+        return await self._run_step(current_step, plan)
 
+    async def _run_step(
+        self, step: PlanStep, plan: ExecutionPlan, feedback: str | None = None
+    ) -> WorkerResult:
+        """Validate, checkpoint, execute and verify one step.
+
+        The first attempt and every retry go through here, so safety checks and
+        rollback apply to both.
+        """
         # PRE-EXECUTION SAFETY VALIDATION
-        is_safe, error_message = self._validate_step_safety(current_step)
+        is_safe, error_message = self._validate_step_safety(step)
         if not is_safe:
-            logger.error(f"Step {current_step.number} blocked by security policy")
+            logger.error(f"Step {step.number} blocked by security policy")
             return WorkerResult(
                 success=False,
-                step=current_step,
+                step=step,
                 response="",
                 error=f"Security policy violation: {error_message}",
             )
@@ -348,21 +396,19 @@ Example:
         checkpoint = None
         if self.checkpoint_manager:
             checkpoint = await self.checkpoint_manager.create_checkpoint(
-                description=f"Before step {current_step.number}: {current_step.description}",
-                step_number=current_step.number,
+                description=f"Before step {step.number}: {step.description}",
+                step_number=step.number,
                 auto_stage=True,
             )
             if checkpoint:
-                logger.info(
-                    f"Created checkpoint {checkpoint.id[:8]} before step {current_step.number}"
-                )
+                logger.info(f"Created checkpoint {checkpoint.id[:8]} before step {step.number}")
 
         # Execute step
-        result = await self._execute_step(current_step, plan)
+        result = await self._execute_step(step, plan, feedback=feedback)
 
         # ROLLBACK on failure if checkpoint exists
         if not result.success and checkpoint and self.checkpoint_manager:
-            logger.warning(f"Step {current_step.number} failed, rolling back to checkpoint...")
+            logger.warning(f"Step {step.number} failed, rolling back to checkpoint...")
             rollback_success = await self.checkpoint_manager.rollback_to_checkpoint(
                 checkpoint_id=checkpoint.id,
                 hard=True,
@@ -378,22 +424,35 @@ Example:
 
         # Update progress if successful
         if result.success:
-            self._update_progress(plan, current_step)
+            self._update_progress(plan, step)
 
         return result
 
-    async def _execute_step(self, step: PlanStep, plan: ExecutionPlan) -> WorkerResult:
-        """Execute a single step.
+    async def _execute_step(
+        self, step: PlanStep, plan: ExecutionPlan, feedback: str | None = None
+    ) -> WorkerResult:
+        """Execute a single step and decide from evidence whether it succeeded.
 
         Args:
             step: Step to execute
             plan: Full execution plan
+            feedback: Why the previous attempt failed (for retries)
 
         Returns:
             WorkerResult
         """
         # Build execution prompt
         prompt = self._build_execution_prompt(step, plan)
+        if feedback:
+            prompt += f"""
+
+## Retry Feedback
+
+The previous attempt did not succeed:
+{feedback}
+
+Fix the problem and try again.
+"""
 
         # Update state
         self.state.save(
@@ -407,8 +466,8 @@ Example:
             logger.info("Invoking worker model...")
             response = await self.agent.run(prompt)
 
-            # Check for success indicators
-            success = self._check_success(response.text)
+            # Decide success from evidence: status line, tool results, target file
+            success, reason = self._evaluate_step(step, response)
 
             # Count tools used
             tools_used = (
@@ -420,13 +479,14 @@ Example:
             if success:
                 logger.info(f"Step {step.number} completed successfully")
             else:
-                logger.warning(f"Step {step.number} may not have completed (no success indicators)")
+                logger.warning(f"Step {step.number} did not complete: {reason}")
 
             return WorkerResult(
                 success=success,
                 step=step,
                 response=response.text,
                 tools_used=tools_used,
+                error=None if success else reason,
             )
 
         except Exception as e:
@@ -474,16 +534,51 @@ Remaining: {len(plan.remaining_steps)}
 
 Execute this step ONLY. Do not work on other steps.
 
-1. Make the specified change
-2. Verify your work (run tests, check file, etc.)
-3. Report completion clearly
+1. Make the specified change using your tools
+2. Run the verification
+3. End with `STEP_STATUS: DONE` or `STEP_STATUS: FAILED - <reason>`
 
 Begin execution now.
 """
 
         return prompt
 
+    def _evaluate_step(self, step: PlanStep, response: Any) -> tuple[bool, str | None]:
+        """Decide whether a step succeeded, from evidence rather than wording.
+
+        Requires all of:
+        - the worker's final status line is `STEP_STATUS: DONE`
+        - no tool call was blocked by guardrails or failed
+        - at least one tool call ran (a step always changes or checks something)
+        - the step's target file exists, when the plan names a concrete file
+
+        Returns:
+            (success, reason for failure or None)
+        """
+        text = response.text or ""
+        status = _status_line(text)
+        if status is None:
+            return (False, "Worker did not report STEP_STATUS: DONE or FAILED")
+        if status != "DONE":
+            return (False, f"Worker reported {status}")
+
+        results = getattr(response, "tool_results", None) or []
+        calls = getattr(response, "tool_calls_made", None) or []
+        failed = [r for r in results if r.is_error]
+        if failed:
+            first = (failed[0].error or failed[0].output or "").strip().splitlines()[0][:200]
+            return (False, f"{len(failed)} tool call(s) were blocked or failed: {first}")
+        if not calls:
+            return (False, "Worker reported DONE without using any tools")
+
+        path = _concrete_path(step.file_path)
+        if path is not None and not path.exists() and not _is_removal(step):
+            return (False, f"Target file {path} does not exist after the step")
+
+        return (True, None)
+
     def _check_success(self, response: str) -> bool:
+        """Legacy keyword check (kept for compatibility; not used for step results)."""
         """Check if response indicates success.
 
         Args:
@@ -560,66 +655,28 @@ Begin execution now.
         Returns:
             WorkerResult
         """
-        # Load plan
-        plan = self.plan_manager.load()
 
-        # Find step
-        step = None
-        for s in plan.steps:
-            if s.number == step_number:
-                step = s
-                break
-
-        if not step:
+        try:
+            plan = self.plan_manager.load()
+        except FileNotFoundError:
             return WorkerResult(
                 success=False,
-                step=PlanStep(number=step_number, description="Not found"),
+                step=PlanStep(number=step_number, description="No plan"),
+                response="",
+                error="No PLAN.md found. Run planner phase first.",
+            )
+
+        step = next((s for s in plan.steps if s.number == step_number), None)
+        if step is None:
+            return WorkerResult(
+                success=False,
+                step=PlanStep(number=step_number, description="Unknown step"),
                 response="",
                 error=f"Step {step_number} not found in plan",
             )
 
-        # Build prompt with feedback
-        prompt = self._build_execution_prompt(step, plan)
-
-        if feedback:
-            prompt += f"""
-
-## Retry Feedback
-
-Previous attempt had issues:
-{feedback}
-
-Please try again, addressing this feedback.
-"""
-
-        # Update state
         self.state.increment("retry_count")
         self.state.save(retrying_step=step_number)
 
-        try:
-            # Run worker
-            response = await self.agent.run(prompt)
-            success = self._check_success(response.text)
-            tools_used = (
-                len(response.tool_calls_made)
-                if hasattr(response, "tool_calls_made") and response.tool_calls_made
-                else 0
-            )
-
-            if success:
-                self._update_progress(plan, step)
-
-            return WorkerResult(
-                success=success,
-                step=step,
-                response=response.text,
-                tools_used=tools_used,
-            )
-
-        except Exception as e:
-            return WorkerResult(
-                success=False,
-                step=step,
-                response=str(e),
-                error=str(e),
-            )
+        # Same path as the first attempt: safety check, checkpoint, evidence-based result
+        return await self._run_step(step, plan, feedback=feedback)

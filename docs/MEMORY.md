@@ -331,7 +331,7 @@ async def recall(query: str, *, limit: int = 10) -> list[Memory]: ...
 ```
 
 **Parameters:**
-- `query`: Search query (full-text search)
+- `query`: Search query. A natural question works: common words are dropped, the remaining keywords are searched, and memories containing any of them are returned. Words of 4+ characters also match as prefixes ("deploy" finds "deploys"). Results are ranked by relevance, importance, and recency.
 - `limit`: Maximum results to return
 
 **Returns:** List of Memory objects

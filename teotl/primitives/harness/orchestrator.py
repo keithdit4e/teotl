@@ -87,6 +87,7 @@ class PlannerWorkerHarness:
         enable_cost_tracking: bool = True,
         cost_tracker: CostTracker | None = None,
         require_approval_for_continuation: bool = True,
+        max_plan_steps: int = 8,
         approval_callback: Callable[[CycleApprovalRequest], bool] | None = None,
         halt_on_critical_escalation: bool = True,
         enable_checkpoints: bool = True,
@@ -113,6 +114,7 @@ class PlannerWorkerHarness:
             enable_cost_tracking: Enable cost tracking and budget enforcement (default: True)
             cost_tracker: Optional CostTracker instance (creates default if None)
             require_approval_for_continuation: Require human approval to continue cycles (default: True)
+            max_plan_steps: Maximum steps the planner may create (default: 8)
             approval_callback: Optional callback for approval (uses CLI prompt if None)
             halt_on_critical_escalation: Halt execution on critical health issues (default: True)
             enable_checkpoints: Enable automatic git checkpoints before steps (default: True)
@@ -185,6 +187,7 @@ class PlannerWorkerHarness:
             cost_tracker=self.cost_tracker,
             audit_logger=None,  # Planner doesn't need audit (orchestrator logs it)
             state_manager=self.state,
+            max_steps=max_plan_steps,
         )
 
         # Initialize worker with harness support
@@ -366,13 +369,15 @@ class PlannerWorkerHarness:
                 if result.success:
                     logger.info(f"Step {result.step.number} succeeded on retry {attempt + 1}")
                     break
-            else:
-                logger.error(f"Step {result.step.number} failed after {max_retries} retries")
-                # Mark step as skipped in plan
-                self.worker.plan_manager.mark_skipped(
-                    result.step.number,
-                    reason=f"Failed after {max_retries} retries: {result.error}",
-                )
+
+        # Still failing after all retries (including max_retries=0): mark the step
+        # skipped so the plan moves on instead of re-running it forever
+        if not result.success and result.step.number > 0:
+            logger.error(f"Step {result.step.number} failed after {max_retries} retries")
+            self.worker.plan_manager.mark_skipped(
+                result.step.number,
+                reason=f"Failed after {max_retries} retries: {result.error}",
+            )
 
         # Update health metrics in state
         if result.success:

@@ -122,10 +122,12 @@ class Response:
     text: str
     messages: list[Message] = field(default_factory=list)
     tool_calls_made: list[ToolCall] = field(default_factory=list)
-    tokens_used: int = 0
-    cost: float = 0.0
+    tokens_used: int = 0  # input + output tokens across every model call in the run
+    cost: float = 0.0  # USD, priced from teotl.core.models (0.0 for unknown models)
     # Result of each tool call, in order (is_error=True when blocked or failed)
     tool_results: list[ToolResult] = field(default_factory=list)
+    input_tokens: int = 0  # across every model call in the run
+    output_tokens: int = 0
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-09-30
+
+### Fixed
+- **`Response.cost` was always 0.0.** Every model call is now priced from the model catalog, whether or not a cost tracker is attached. `Response.cost` is the run's total, and new `Response.input_tokens` / `output_tokens` fields hold the token totals.
+- **`Response.tokens_used` counted only the last model call.** It now covers the whole run.
+- **The agent's cost tracker priced every model at $3/$15** (old Sonnet 4 prices), and its budget check used a flat $0.01 estimate. It now records each call's real cost and estimates the next call from the previous one.
+- **Planner-worker harness costs were made up and double-counted.** Step costs were recorded as `tools_used × $0.25`, and planning/evaluation as fixed estimates, on top of the agents' own per-call records. Now only real per-call costs are recorded, by the planner's, worker's, evaluator's and janitor's agents, all sharing the harness's cost tracker. The evaluator and janitor weren't tracked at all before. `WorkerResult.cost` holds each step's cost. Live check: the harness total matched measured API usage ($0.0920).
+- **Heartbeat monitoring never ran inside an agent.** `Agent` called a nonexistent `heartbeat.check()`, and the error was logged and ignored. The agent now tracks its own health (model calls, progress, consecutive tool errors), runs the monitor every `check_interval_turns` calls during the run, emits `heartbeat_escalation` events, and stops the run with "Stopped by heartbeat monitor (…)" on a critical problem, for example repeated tool errors or no progress.
+- **The heartbeat would have run twice in the harness.** The harness passed its monitor to the worker's agent as well as running it per step. It now runs only at the harness level.
+- **`StuckDetectionCheck` was skipped without a harness `ProgressTracker`,** even though it only uses turn state. It now needs only state.
+
 ## [0.2.5] - 2026-09-30
 
 Found by live testing 0.2.4 against real Claude models: the planner-worker harness didn't do the work it reported as done, and memory recall didn't find stored facts.

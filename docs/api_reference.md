@@ -72,10 +72,10 @@ class Agent:
 - `session_dir` (Path | None): Directory for session persistence
 - `max_turns` (int): Maximum turns per run (default: 50)
 - `enable_injection_defense` (bool): Enable prompt injection detection (default: True)
-- `cost_tracker` (Any | None): Cost tracking system
+- `cost_tracker` (Any | None): A `CostTracker` that receives the real cost of every model call, priced from `teotl.core.models`. Its budget check runs before each call, estimated from the previous call's cost, and raises `BudgetExceededError` when a limit would be exceeded.
 - `audit_logger` (Any | None): Audit logging system
 - `checkpoint_manager` (Any | None): Checkpoint management
-- `heartbeat_monitor` (Any | None): Heartbeat monitoring
+- `heartbeat_monitor` (HeartbeatMonitor | None): Checks the agent's health during a run, every `check_interval_turns` model calls. The agent tracks model calls, progress (a successful tool call or a final answer) and consecutive tool errors. If a check reports a critical problem, for example too many consecutive tool errors (`ErrorThresholdCheck`) or no progress for too long (`StuckDetectionCheck`), the run stops and `Response.text` starts with "Stopped by heartbeat monitor". Every escalation is also emitted as a `heartbeat_escalation` event.
 - `state_manager` (Any | None): State management
 - `enable_auto_compact` (bool | None): Auto-compact context (default: auto-enabled with memory)
 - `compact_every` (int): Compact frequency in turns (default: 15)
@@ -410,9 +410,14 @@ class Response:
     text: str
     messages: list[Message] = field(default_factory=list)
     tool_calls_made: list[ToolCall] = field(default_factory=list)
-    tokens_used: int = 0
-    cost: float = 0.0
+    tokens_used: int = 0        # input + output tokens across every model call in the run
+    cost: float = 0.0           # USD, priced from teotl.core.models
+    tool_results: list[ToolResult] = field(default_factory=list)  # is_error=True if blocked/failed
+    input_tokens: int = 0
+    output_tokens: int = 0
 ```
+
+`cost` is filled for every run, whether or not a `cost_tracker` is attached. Models not in the catalog (`teotl.core.models`, e.g. local Ollama models) report `0.0`, with a single warning.
 
 ---
 

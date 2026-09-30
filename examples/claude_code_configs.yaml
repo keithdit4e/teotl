@@ -348,7 +348,7 @@ agent:
 
 daemon:
   poll_interval: 120
-  data_dir: /var/forge/prod-coder
+  data_dir: /var/teotl/prod-coder
 
 # Production features:
 # - Cost limits prevent runaway spending
@@ -366,17 +366,17 @@ daemon:
 # 1. Copy the configuration you want to config.yaml
 # 2. Update paths and settings for your environment
 # 3. Set API key: export ANTHROPIC_API_KEY=your-key
-# 4. Start daemon: python3 -m forge.daemon.run --config config.yaml
+# 4. Start daemon: python3 -m teotl.daemon.run --config config.yaml
 # 5. Create tasks via API or CLI
 
 # Example: Start simple coding agent
 # $ cp examples/claude_code_configs.yaml config.yaml
 # $ export ANTHROPIC_API_KEY=sk-ant-...
-# $ python3 -m forge.daemon.run --config config.yaml
+# $ python3 -m teotl.daemon.run --config config.yaml
 
 # Then create tasks:
 # python3 -c "
-# from forge.primitives.tasks import Task, Priority
+# from teotl.primitives.tasks import Task, Priority
 # import asyncio
 #
 # async def create_task():

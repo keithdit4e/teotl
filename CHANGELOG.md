@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `teotl memory` commands existed but weren't registered with the CLI; they now are
 - Remaining `forge.` imports and CLI usage strings renamed to `teotl`
 
+### Changed
+- **Finished the Forge → Teotl rename.** The data directory is now `~/.teotl` (override with `TEOTL_HOME`). Existing `~/.forge` directories keep working: Teotl uses `~/.forge` when `~/.teotl` doesn't exist and logs how to move it (`mv ~/.forge ~/.teotl`)
+- Environment variables are now `TEOTL_SKILLS_PATH`, `TEOTL_ALLOW_ENV_AUTH`, and `TEOTL_<SERVICE>_API_KEY` / `_TOKEN` / `_ACCESS_TOKEN`; the `FORGE_*` names are still accepted, and skill scripts receive both prefixes
+- OS keyring entries are stored under `teotl`; credentials saved under `forge` are still read, and the master key is copied the first time
+- Guardrail presets deny both `~/.teotl/auth/**` and `~/.forge/auth/**`
+- `ForgeCloud` renamed to `TeotlCloud` (old name kept as an alias); remaining "Forge"/`forge` names in CLI output, docstrings, docs, and examples renamed
+- Fixed `EnvironmentBackend.list_services()` reporting `<service>_access` for `*_ACCESS_TOKEN` variables
+- The test suite no longer writes to the real data directory (it previously appended to `~/.forge/audit.jsonl`)
+
 ### Documentation
 - Rewrote examples across the docs to use the real API. Removed `Agent.create_planner_worker`, `Mission.from_file`/`from_dict`/`run`, `SkillRegistry.register_builtin`, the `Skill` base class, `secure_store`, and CLI commands that don't exist (`teotl init`, `run`, `skills`, `auth`, `audit`, `policy`, `compliance`, `test-security`)
 - Planner-worker docs now use `PlannerWorkerHarness`; missions are documented as daemon-scheduled work defined in config YAML

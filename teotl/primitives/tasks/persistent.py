@@ -20,6 +20,8 @@ from typing import Any
 import ulid
 from pydantic import BaseModel, Field
 
+from teotl.core.paths import teotl_home
+
 logger = logging.getLogger(__name__)
 
 
@@ -145,9 +147,9 @@ class TaskStore:
         """Initialize task store.
 
         Args:
-            path: Path to SQLite database file (default: ~/.forge/tasks.db)
+            path: Path to SQLite database file (default: ~/.teotl/tasks.db)
         """
-        self.path = Path(path) if path else Path.home() / ".forge" / "tasks.db"
+        self.path = Path(path) if path else teotl_home() / "tasks.db"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(str(self.path))
         self.db.row_factory = sqlite3.Row

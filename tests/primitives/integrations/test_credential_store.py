@@ -88,13 +88,13 @@ class TestEnvironmentBackend:
     """Test environment variable-based credential storage."""
 
     def test_requires_explicit_enable(self):
-        """Environment backend requires FORGE_ALLOW_ENV_AUTH=true."""
-        with pytest.raises(RuntimeError, match="FORGE_ALLOW_ENV_AUTH"):
+        """Environment backend requires TEOTL_ALLOW_ENV_AUTH=true."""
+        with pytest.raises(RuntimeError, match="TEOTL_ALLOW_ENV_AUTH"):
             EnvironmentBackend()
 
     def test_load_api_key(self, monkeypatch):
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
-        monkeypatch.setenv("FORGE_GITHUB_API_KEY", "ghp_test123")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_GITHUB_API_KEY", "ghp_test123")
 
         backend = EnvironmentBackend()
         cred = backend.load("github")
@@ -103,8 +103,8 @@ class TestEnvironmentBackend:
         assert cred["api_key"] == "ghp_test123"
 
     def test_load_token(self, monkeypatch):
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
-        monkeypatch.setenv("FORGE_SLACK_TOKEN", "xoxb-test")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_SLACK_TOKEN", "xoxb-test")
 
         backend = EnvironmentBackend()
         cred = backend.load("slack")
@@ -113,7 +113,7 @@ class TestEnvironmentBackend:
         assert cred["token"] == "xoxb-test"
 
     def test_load_nonexistent(self, monkeypatch):
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
 
         backend = EnvironmentBackend()
 
@@ -121,7 +121,7 @@ class TestEnvironmentBackend:
             backend.load("nonexistent")
 
     def test_save_not_supported(self, monkeypatch):
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
 
         backend = EnvironmentBackend()
 
@@ -129,9 +129,9 @@ class TestEnvironmentBackend:
             backend.save("test", {"api_key": "key"})
 
     def test_list_services(self, monkeypatch):
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
-        monkeypatch.setenv("FORGE_GITHUB_API_KEY", "key1")
-        monkeypatch.setenv("FORGE_SLACK_TOKEN", "key2")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_GITHUB_API_KEY", "key1")
+        monkeypatch.setenv("TEOTL_SLACK_TOKEN", "key2")
         monkeypatch.setenv("OTHER_VAR", "value")
 
         backend = EnvironmentBackend()
@@ -292,8 +292,8 @@ class TestCredentialStore:
 
     def test_auto_detect_environment(self, monkeypatch):
         """Test auto-detection prefers environment when enabled."""
-        monkeypatch.setenv("FORGE_ALLOW_ENV_AUTH", "true")
-        monkeypatch.setenv("FORGE_TEST_API_KEY", "key")
+        monkeypatch.setenv("TEOTL_ALLOW_ENV_AUTH", "true")
+        monkeypatch.setenv("TEOTL_TEST_API_KEY", "key")
 
         store = CredentialStore.create()
         assert store.backend_name == "environment"
@@ -301,6 +301,7 @@ class TestCredentialStore:
     def test_auto_detect_fallback_file(self, monkeypatch):
         """Test auto-detection falls back to file when others unavailable."""
         # Disable environment
+        monkeypatch.delenv("TEOTL_ALLOW_ENV_AUTH", raising=False)
         monkeypatch.delenv("FORGE_ALLOW_ENV_AUTH", raising=False)
         monkeypatch.delenv("AWS_REGION", raising=False)
         monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
@@ -351,6 +352,7 @@ class TestCredentialStore:
 
     def test_no_backend_available_error(self, monkeypatch, tmp_path):
         """Test error when no backend can be initialized."""
+        monkeypatch.delenv("TEOTL_ALLOW_ENV_AUTH", raising=False)
         monkeypatch.delenv("FORGE_ALLOW_ENV_AUTH", raising=False)
         monkeypatch.delenv("AWS_REGION", raising=False)
         monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)

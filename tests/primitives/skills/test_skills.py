@@ -84,20 +84,20 @@ class TestSkillLoader:
 
 class TestSkillRegistry:
     def test_discover_skills(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry()
         assert registry.registered_count >= 2
         assert "test_skill" in registry.skills
         assert "other_skill" in registry.skills
 
     def test_discover_with_filter(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry(enabled=["test_skill"])
         assert "test_skill" in registry.skills
         assert "other_skill" not in registry.skills
 
     def test_get_descriptions(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry()
         desc = registry.get_descriptions()
         assert "test_skill" in desc
@@ -109,20 +109,20 @@ class TestSkillRegistry:
         assert registry.get_descriptions() == ""
 
     async def test_activate(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry()
         instructions = await registry.activate("test_skill")
         assert "pytest" in instructions
         assert registry.is_active("test_skill")
 
     async def test_activate_not_found(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry()
         with pytest.raises(SkillNotFound):
             await registry.activate("nonexistent")
 
     async def test_deactivate(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry()
         await registry.activate("test_skill")
         assert registry.is_active("test_skill")
@@ -131,7 +131,7 @@ class TestSkillRegistry:
         assert not registry.is_active("test_skill")
 
     async def test_activate_idempotent(self, skill_dir, monkeypatch):
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
         registry = SkillRegistry()
         inst1 = await registry.activate("test_skill")
         inst2 = await registry.activate("test_skill")

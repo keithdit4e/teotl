@@ -80,7 +80,7 @@ pytest
     @pytest.mark.asyncio
     async def test_skill_descriptions_in_context(self, skill_dir, monkeypatch):
         """Test that skill descriptions are always in context."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(["I can help with that."])
         agent = Agent(provider=provider, skills=["test_skill"])
@@ -97,7 +97,7 @@ pytest
     @pytest.mark.asyncio
     async def test_auto_activate_skill_by_name(self, skill_dir, monkeypatch):
         """Test that mentioning a skill name auto-activates it."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(
             ["I'll use the test_skill capability for that.", "Here's the result."]
@@ -114,7 +114,7 @@ pytest
     @pytest.mark.asyncio
     async def test_auto_activate_skill_by_trigger(self, skill_dir, monkeypatch):
         """Test that mentioning a trigger keyword auto-activates the skill."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(["I can help with testing your code.", "Running tests now."])
         agent = Agent(provider=provider, skills=["test_skill"])
@@ -128,7 +128,7 @@ pytest
     @pytest.mark.asyncio
     async def test_active_instructions_injected(self, skill_dir, monkeypatch):
         """Test that active skill instructions are injected into system prompt."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(["Using test_skill now."])
         agent = Agent(provider=provider, skills=["test_skill"])
@@ -149,7 +149,7 @@ pytest
     @pytest.mark.asyncio
     async def test_manual_skill_activation(self, skill_dir, monkeypatch):
         """Test manual skill activation and deactivation."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(["OK"])
         agent = Agent(provider=provider, skills=["test_skill"])
@@ -172,7 +172,7 @@ pytest
     @pytest.mark.asyncio
     async def test_list_skills(self, skill_dir, monkeypatch):
         """Test listing registered skills."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(["OK"])
         agent = Agent(provider=provider, skills=["test_skill"])
@@ -201,7 +201,7 @@ pytest
     @pytest.mark.asyncio
     async def test_activate_nonexistent_skill(self, skill_dir, monkeypatch):
         """Test activating a skill that doesn't exist."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(["OK"])
         agent = Agent(provider=provider, skills=["test_skill"])
@@ -215,7 +215,7 @@ pytest
     @pytest.mark.asyncio
     async def test_idempotent_activation(self, skill_dir, monkeypatch):
         """Test that activating the same skill multiple times is idempotent."""
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         provider = MockProvider(
             ["Using testing features.", "Still using testing.", "Done testing."]
@@ -259,7 +259,7 @@ triggers: ["second"]
 # Skill Two
 """)
 
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(tmp_path))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(tmp_path))
 
         provider = MockProvider(
             ["Using first skill.", "Now using second skill.", "Using both first and second."]
@@ -286,7 +286,7 @@ triggers: ["second"]
         3. Skill auto-activates
         4. Next turn includes skill instructions
         """
-        monkeypatch.setenv("FORGE_SKILLS_PATH", str(skill_dir))
+        monkeypatch.setenv("TEOTL_SKILLS_PATH", str(skill_dir))
 
         # Track system prompts to verify instructions are added
         system_prompts = []

@@ -12,6 +12,7 @@ import asyncio
 from pathlib import Path
 
 from teotl.daemon.executor import load_workspace_files
+from teotl.core.paths import teotl_home_display
 
 
 def test_load_workspace_files():
@@ -22,12 +23,12 @@ def test_load_workspace_files():
     print()
 
     # Test with a workspace that has files
-    workspace_dir = Path("~/.forge/agents/").expanduser()
+    workspace_dir = Path(f"{teotl_home_display()}/agents/").expanduser()
 
     # Find first agent workspace
     if not workspace_dir.exists():
         print(f"❌ No workspace directory found at {workspace_dir}")
-        print("   Run 'forge onboard' first to create an agent")
+        print("   Run 'teotl onboard' first to create an agent")
         return False
 
     # Find first agent subdirectory
@@ -35,7 +36,7 @@ def test_load_workspace_files():
 
     if not agent_dirs:
         print(f"❌ No agent directories found in {workspace_dir}")
-        print("   Run 'forge onboard' first to create an agent")
+        print("   Run 'teotl onboard' first to create an agent")
         return False
 
     test_dir = agent_dirs[0]
@@ -110,7 +111,7 @@ async def test_agent_executor_factory():
     print()
 
     # Find workspace
-    workspace_dir = Path("~/.forge/agents/").expanduser()
+    workspace_dir = Path(f"{teotl_home_display()}/agents/").expanduser()
     agent_dirs = [d for d in workspace_dir.iterdir() if d.is_dir()]
 
     if not agent_dirs:

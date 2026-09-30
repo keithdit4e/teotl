@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from teotl.core.paths import teotl_home
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +60,7 @@ class ContextJanitor:
 
         Args:
             agent_id: Agent identifier
-            workspace_dir: Optional workspace directory (defaults to ~/.forge/agents/{agent_id})
+            workspace_dir: Optional workspace directory (defaults to ~/.teotl/agents/{agent_id})
             compact_every: Compact context every N turns (default: 10)
             decision_extractor: Optional custom function to extract decisions from text
         """
@@ -70,7 +72,7 @@ class ContextJanitor:
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.decision_log_path = self.workspace_dir / "DECISION_LOG.md"
 

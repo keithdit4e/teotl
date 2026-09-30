@@ -6,7 +6,7 @@ A simple coding assistant that can read/write files and run commands.
 
 import asyncio
 
-from forge import Agent
+from teotl import Agent
 
 from teotl.core.provider import AnthropicProvider
 from teotl.extensions.builtin import AuditExtension, UndoExtension

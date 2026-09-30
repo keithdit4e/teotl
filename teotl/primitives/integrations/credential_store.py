@@ -29,7 +29,20 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from teotl.core import paths
+from teotl.core.paths import teotl_home
+
 logger = logging.getLogger(__name__)
+
+
+# OS keyring service name. Teotl was previously called Forge; entries saved
+# under the legacy name are still read.
+KEYRING_SERVICE = "teotl"
+LEGACY_KEYRING_SERVICE = "forge"
+
+
+def _env_auth_allowed() -> bool:
+    return paths.getenv("ALLOW_ENV_AUTH") == "true"
 
 
 class CredentialBackend(ABC):
@@ -93,32 +106,45 @@ class LocalKeyringBackend(CredentialBackend):
 
     def _get_or_create_cipher(self):
         """Get or create encryption cipher."""
-        key = self._keyring.get_password("forge", "master_key")
+        key = self._keyring.get_password(KEYRING_SERVICE, "master_key")
+        if not key:
+            # Credentials saved before the rename are encrypted with the legacy key;
+            # copy it (never move it) so they can still be decrypted.
+            key = self._keyring.get_password(LEGACY_KEYRING_SERVICE, "master_key")
+            if key:
+                self._keyring.set_password(KEYRING_SERVICE, "master_key", key)
+                logger.info("Copied master encryption key from legacy 'forge' keyring entry")
         if not key:
             key = self._fernet.generate_key().decode()
-            self._keyring.set_password("forge", "master_key", key)
+            self._keyring.set_password(KEYRING_SERVICE, "master_key", key)
             logger.info("Created new master encryption key in OS keyring")
         return self._fernet(key.encode())
 
     def save(self, service: str, data: dict[str, Any]) -> None:
         encrypted = self._cipher.encrypt(json.dumps(data).encode())
-        self._keyring.set_password("forge", f"cred_{service}", encrypted.decode())
+        self._keyring.set_password(KEYRING_SERVICE, f"cred_{service}", encrypted.decode())
         logger.info(f"Saved credential for {service} to OS keyring")
 
     def load(self, service: str) -> dict[str, Any]:
-        encrypted_str = self._keyring.get_password("forge", f"cred_{service}")
+        encrypted_str = self._keyring.get_password(KEYRING_SERVICE, f"cred_{service}")
+        if not encrypted_str:
+            encrypted_str = self._keyring.get_password(LEGACY_KEYRING_SERVICE, f"cred_{service}")
         if not encrypted_str:
             raise ValueError(f"No credential found for service: {service}")
         decrypted = self._cipher.decrypt(encrypted_str.encode())
         return json.loads(decrypted)
 
     def delete(self, service: str) -> bool:
-        try:
-            self._keyring.delete_password("forge", f"cred_{service}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to delete credential for {service}: {e}")
-            return False
+        deleted = False
+        for keyring_service in (KEYRING_SERVICE, LEGACY_KEYRING_SERVICE):
+            try:
+                self._keyring.delete_password(keyring_service, f"cred_{service}")
+                deleted = True
+            except Exception as e:
+                logger.debug(f"No {keyring_service} keyring entry for {service}: {e}")
+        if not deleted:
+            logger.error(f"Failed to delete credential for {service}: not found")
+        return deleted
 
     def list_services(self) -> list[str]:
         # Keyring doesn't provide list API - would need separate registry
@@ -135,7 +161,7 @@ class LocalKeyringBackend(CredentialBackend):
             import keyring
 
             # Test if keyring is functional
-            keyring.get_password("forge", "test")
+            keyring.get_password(KEYRING_SERVICE, "test")
             return True
         except Exception:
             return False
@@ -159,7 +185,7 @@ class FileBackend(CredentialBackend):
                 "FileBackend requires 'cryptography'. Install with: pip install cryptography"
             ) from e
 
-        self.storage_path = storage_path or Path.home() / ".forge" / "auth"
+        self.storage_path = storage_path or teotl_home() / "auth"
         self.storage_path.mkdir(parents=True, exist_ok=True)
         self.key_file = self.storage_path / ".key"
         self._cipher = self._get_or_create_cipher()
@@ -224,13 +250,14 @@ class EnvironmentBackend(CredentialBackend):
     For CI/CD, containers, and automated environments.
     NOT recommended for local development (insecure).
 
-    Requires FORGE_ALLOW_ENV_AUTH=true to enable.
+    Requires TEOTL_ALLOW_ENV_AUTH=true to enable (legacy FORGE_ALLOW_ENV_AUTH also works).
+    Reads TEOTL_<SERVICE>_API_KEY / _TOKEN / _ACCESS_TOKEN (or the legacy FORGE_ prefix).
     """
 
     def __init__(self):
-        if os.getenv("FORGE_ALLOW_ENV_AUTH") != "true":
+        if not _env_auth_allowed():
             raise RuntimeError(
-                "EnvironmentBackend requires FORGE_ALLOW_ENV_AUTH=true. "
+                "EnvironmentBackend requires TEOTL_ALLOW_ENV_AUTH=true. "
                 "This is intentionally restricted as environment variables "
                 "are less secure than keyring/file storage."
             )
@@ -245,12 +272,13 @@ class EnvironmentBackend(CredentialBackend):
         )
 
     def load(self, service: str) -> dict[str, Any]:
-        prefix = f"FORGE_{service.upper()}"
+        name = service.upper()
+        prefix = f"TEOTL_{name}"
 
-        # Look for common credential patterns
-        api_key = os.getenv(f"{prefix}_API_KEY")
-        token = os.getenv(f"{prefix}_TOKEN")
-        access_token = os.getenv(f"{prefix}_ACCESS_TOKEN")
+        # Look for common credential patterns (TEOTL_ first, then legacy FORGE_)
+        api_key = paths.getenv(f"{name}_API_KEY")
+        token = paths.getenv(f"{name}_TOKEN")
+        access_token = paths.getenv(f"{name}_ACCESS_TOKEN")
 
         if api_key:
             return {"auth_type": "api_key", "api_key": api_key}
@@ -270,26 +298,19 @@ class EnvironmentBackend(CredentialBackend):
         )
 
     def list_services(self) -> list[str]:
-        # Scan environment for FORGE_*_API_KEY or FORGE_*_TOKEN patterns
+        # Scan for TEOTL_* / FORGE_* variables ending in a credential suffix.
+        # _ACCESS_TOKEN is checked before _TOKEN, which it also ends with.
         services = set()
         for key in os.environ:
-            if key.startswith("FORGE_"):
-                # Extract service name (e.g., FORGE_GITHUB_API_KEY -> github)
-                if key.endswith("_API_KEY"):
-                    # Remove FORGE_ prefix and _API_KEY suffix
-                    service = key[6:-8].lower()
-                    if service:
-                        services.add(service)
-                elif key.endswith("_TOKEN"):
-                    # Remove FORGE_ prefix and _TOKEN suffix
-                    service = key[6:-6].lower()
-                    if service:
-                        services.add(service)
-                elif key.endswith("_ACCESS_TOKEN"):
-                    # Remove FORGE_ prefix and _ACCESS_TOKEN suffix
-                    service = key[6:-13].lower()
-                    if service:
-                        services.add(service)
+            for prefix in ("TEOTL_", "FORGE_"):
+                if not key.startswith(prefix):
+                    continue
+                for suffix in ("_API_KEY", "_ACCESS_TOKEN", "_TOKEN"):
+                    if key.endswith(suffix):
+                        service = key[len(prefix) : -len(suffix)].lower()
+                        if service and service != "allow_env_auth":
+                            services.add(service)
+                        break
         return list(services)
 
     @property
@@ -298,7 +319,7 @@ class EnvironmentBackend(CredentialBackend):
 
     @property
     def is_available(self) -> bool:
-        return os.getenv("FORGE_ALLOW_ENV_AUTH") == "true"
+        return _env_auth_allowed()
 
 
 class AWSSecretsBackend(CredentialBackend):
@@ -411,7 +432,7 @@ class CredentialStore:
     Credential storage with automatic backend selection.
 
     Auto-detects best available backend:
-    1. Environment variables (if FORGE_ALLOW_ENV_AUTH=true)
+    1. Environment variables (if TEOTL_ALLOW_ENV_AUTH=true)
     2. Cloud secrets (if in cloud environment)
     3. OS keyring (if available)
     4. Encrypted file (fallback)
@@ -450,7 +471,7 @@ class CredentialStore:
         # Priority: environment > cloud > keyring > file
 
         # 1. Check environment (CI/CD, containers)
-        if os.getenv("FORGE_ALLOW_ENV_AUTH") == "true":
+        if _env_auth_allowed():
             try:
                 backend_instance = EnvironmentBackend()
                 return cls(backend_instance)

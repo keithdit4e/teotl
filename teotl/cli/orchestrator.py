@@ -12,6 +12,7 @@ import asyncio
 import sys
 
 from teotl.config.multi_agent import load_multi_agent_config
+from teotl.core.paths import teotl_home_display
 from teotl.primitives.discovery import LocalDiscovery
 
 
@@ -52,7 +53,7 @@ async def start_agents(config_path: str = "config.yaml", agent_ids: list[str] | 
         config = load_multi_agent_config(config_path)
     except FileNotFoundError:
         print_error(f"Config file not found: {config_path}")
-        print_info("Run 'forge onboard' to create a configuration")
+        print_info("Run 'teotl onboard' to create a configuration")
         sys.exit(1)
     except ValueError as e:
         print_error(f"Invalid config: {e}")
@@ -82,7 +83,7 @@ async def start_agents(config_path: str = "config.yaml", agent_ids: list[str] | 
     for agent_id, agent_config in agents_to_start.items():
         print_success(f"Would start: {agent_id}")
         print(f"  Instructions: {agent_config.instructions[:60]}...")
-        print(f"  Workspace: {agent_config.workspace or f'~/.forge/{agent_id}'}")
+        print(f"  Workspace: {agent_config.workspace or f'{teotl_home_display()}/{agent_id}'}")
 
         if agent_config.skills:
             print(f"  Skills: {', '.join(agent_config.skills)}")
@@ -91,7 +92,7 @@ async def start_agents(config_path: str = "config.yaml", agent_ids: list[str] | 
 
     print_info(
         "Multi-agent orchestration is under development. "
-        "Use 'python -m forge.daemon.run' to start a single agent for now."
+        "Use 'python -m teotl.daemon.run' to start a single agent for now."
     )
 
 
@@ -191,7 +192,7 @@ def main_stop(args: list[str]):
 if __name__ == "__main__":
     # Simple CLI for testing
     if len(sys.argv) < 2:
-        print("Usage: forge [start|status|stop] [agent_ids...]")
+        print("Usage: python -m teotl.cli.orchestrator [start|status|stop] [agent_ids...]")
         sys.exit(1)
 
     command = sys.argv[1]

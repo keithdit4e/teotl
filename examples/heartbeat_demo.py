@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from teotl.primitives.harness import (
+from teotl.core.paths import teotl_home
     CleanupPolicy,
     ErrorThresholdCheck,
     EscalationEvent,
@@ -50,7 +51,7 @@ async def main():
 
     # Setup
     agent_id = "heartbeat-demo"
-    workspace = Path.home() / ".forge" / "agents" / agent_id
+    workspace = teotl_home() / "agents" / agent_id
     workspace.mkdir(parents=True, exist_ok=True)
 
     print(f"📂 Workspace: {workspace}")

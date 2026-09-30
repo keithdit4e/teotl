@@ -454,7 +454,7 @@ Skills are folders containing a `SKILL.md` file (YAML frontmatter plus instructi
 
 **Bundled skills:** `claude_code`, `filesystem`, `git`, `github`, `social-media`, `spec_kit`, `web`.
 
-**Search paths:** bundled skills, `~/.forge/skills/`, and directories listed in `TEOTL_SKILLS_PATH` (colon-separated; legacy `FORGE_SKILLS_PATH` is also read). To install a custom skill, copy its folder into `~/.forge/skills/`.
+**Search paths:** bundled skills, `~/.teotl/skills/`, and directories listed in `TEOTL_SKILLS_PATH` (colon-separated; legacy `TEOTL_SKILLS_PATH` is also read). To install a custom skill, copy its folder into `~/.teotl/skills/`.
 
 **Usage:**
 
@@ -515,7 +515,7 @@ class LocalMemory:
     ) -> None: ...
 ```
 
-- `path` (Path | str | None): Database path (default: `~/.forge/memory.db`)
+- `path` (Path | str | None): Database path (default: `~/.teotl/memory.db`)
 - `auto_cleanup` (bool): Automatically clean up expired memories (default: True)
 - `max_memories` (int): Storage limit (default: 10000)
 
@@ -583,7 +583,7 @@ class EncryptedMemory(LocalMemory):
     ) -> None: ...
 ```
 
-- `path` (Path | str | None): Database path (default: `~/.forge/memory.db`)
+- `path` (Path | str | None): Database path (default: `~/.teotl/memory.db`)
 - `encryption_key` (bytes | None): Fernet key (default: an existing key is loaded or a new one is created)
 
 **Methods:** Same as `LocalMemory`, plus `migrate_from_plaintext(dry_run: bool = False) -> dict`.
@@ -726,7 +726,7 @@ SQLite-backed mission storage.
 
 ```python
 class MissionStore:
-    def __init__(self, path: Path | str | None = None) -> None: ...  # default ~/.forge/missions.db
+    def __init__(self, path: Path | str | None = None) -> None: ...  # default ~/.teotl/missions.db
 
     async def create(self, mission: Mission) -> str: ...
     async def get(self, mission_id: str) -> Mission | None: ...
@@ -845,7 +845,7 @@ from teotl.primitives.integrations.credential_store import CredentialStore
 def create(cls, backend: str | None = None, **kwargs) -> "CredentialStore": ...
 ```
 
-- `backend` (str | None): `"keyring"`, `"file"`, `"environment"`, or `"aws_secrets"`. If `None`, the best available backend is auto-detected (environment if `FORGE_ALLOW_ENV_AUTH=true`, then AWS Secrets Manager if an AWS region is set, then the OS keyring, then an encrypted file).
+- `backend` (str | None): `"keyring"`, `"file"`, `"environment"`, or `"aws_secrets"`. If `None`, the best available backend is auto-detected (environment if `TEOTL_ALLOW_ENV_AUTH=true`, then AWS Secrets Manager if an AWS region is set, then the OS keyring, then an encrypted file).
 - `**kwargs`: Passed to the backend constructor
 
 Raises `ValueError` for an unknown backend name and `RuntimeError` if the backend cannot be initialized or none is available.
@@ -954,9 +954,9 @@ teotl memory import-memories memories.json
 View audit logs, generate compliance reports, and show security status.
 
 ```bash
-teotl security logs --workspace ~/.forge/my-agent --days 7
-teotl security report --workspace ~/.forge/my-agent --output report.json
-teotl security status --workspace ~/.forge/my-agent
+teotl security logs --workspace ~/.teotl/my-agent --days 7
+teotl security report --workspace ~/.teotl/my-agent --output report.json
+teotl security status --workspace ~/.teotl/my-agent
 ```
 
 ---

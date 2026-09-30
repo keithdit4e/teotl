@@ -72,7 +72,7 @@ class AuditLogger:
 
     Usage:
         audit = AuditLogger(
-            workspace_dir=Path("~/.forge/agents/my-agent"),
+            workspace_dir=Path("~/.teotl/agents/my-agent"),
             redact_pii=True,
         )
 

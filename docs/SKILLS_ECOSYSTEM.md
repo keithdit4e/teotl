@@ -58,7 +58,7 @@ Teotl discovers skills from multiple sources:
 
 ### 1. Local User Skills
 ```
-~/.forge/skills/
+~/.teotl/skills/
 ├── my-custom-skill/
 │   └── SKILL.md
 ├── database-queries/
@@ -82,7 +82,7 @@ teotl/skills/
 ### 3. Environment Path
 ```bash
 export TEOTL_SKILLS_PATH="/opt/company-skills:/home/user/projects/skills"
-# (legacy FORGE_SKILLS_PATH is also read)
+# (legacy TEOTL_SKILLS_PATH is also read)
 ```
 
 Discovery looks **one level deep**: each search directory must directly contain skill
@@ -96,8 +96,8 @@ level that directly contains the skill folders.
 
 ```bash
 # Example: installing a (hypothetical) community database skill
-mkdir -p ~/.forge/skills
-cd ~/.forge/skills
+mkdir -p ~/.teotl/skills
+cd ~/.teotl/skills
 git clone <skill-repo-url> postgres    # folder must contain SKILL.md at its top level
 
 # Teotl discovers it automatically. To check, start a chat with it and use /skills:
@@ -119,10 +119,10 @@ agent = Agent(
 
 ```bash
 # Link to skills from another project
-ln -s /path/to/project/skills/custom-skill ~/.forge/skills/custom-skill
+ln -s /path/to/project/skills/custom-skill ~/.teotl/skills/custom-skill
 
 # Or link entire skill collection
-ln -s /opt/company/skills/* ~/.forge/skills/
+ln -s /opt/company/skills/* ~/.teotl/skills/
 ```
 
 ### Method 3: Environment Variable
@@ -138,7 +138,7 @@ export TEOTL_SKILLS_PATH="/opt/company-skills:$HOME/projects/ml-skills"
 
 A skill marketplace with search/install/update commands is planned but does not exist yet.
 There is currently no `teotl skills` CLI command; install skills by copying or cloning
-their folders into `~/.forge/skills/` or a directory on `TEOTL_SKILLS_PATH`.
+their folders into `~/.teotl/skills/` or a directory on `TEOTL_SKILLS_PATH`.
 
 ## Creating Compatible Skills
 
@@ -146,8 +146,8 @@ their folders into `~/.forge/skills/` or a directory on `TEOTL_SKILLS_PATH`.
 
 ````bash
 # Create skill directory
-mkdir -p ~/.forge/skills/my-skill
-cd ~/.forge/skills/my-skill
+mkdir -p ~/.teotl/skills/my-skill
+cd ~/.teotl/skills/my-skill
 
 # Create SKILL.md
 cat > SKILL.md << 'EOF'
@@ -208,7 +208,7 @@ teotl chat --skills my-skill
 
 ````bash
 # Create repository
-cd ~/.forge/skills/my-skill
+cd ~/.teotl/skills/my-skill
 git init
 git add SKILL.md
 git commit -m "Initial skill"
@@ -224,7 +224,7 @@ Agent skill for [purpose].
 ## Installation
 
 ```bash
-cd ~/.forge/skills
+cd ~/.teotl/skills
 git clone https://github.com/you/my-skill
 ```
 
@@ -238,7 +238,7 @@ EOF
 
 ### 2. Share with the Community
 
-Publish your skill repository and let others clone it into their `~/.forge/skills/` directory.
+Publish your skill repository and let others clone it into their `~/.teotl/skills/` directory.
 See the Agent Skills standard at https://agentskills.io for format guidance.
 
 ## Compatibility Testing
@@ -297,7 +297,7 @@ FENCE = "`" * 3  # Markdown code fence
 with open("mcp-tool.json") as f:
     mcp = json.load(f)
 
-skill_dir = Path.home() / ".forge" / "skills" / mcp["name"]
+skill_dir = Path.home() / ".teotl" / "skills" / mcp["name"]
 skill_dir.mkdir(parents=True, exist_ok=True)
 
 # Generate SKILL.md
@@ -339,7 +339,7 @@ export TEOTL_SKILLS_PATH="$HOME/company-skills"
 
 ```bash
 # Check if skill exists
-ls ~/.forge/skills/my-skill/SKILL.md
+ls ~/.teotl/skills/my-skill/SKILL.md
 
 # Check if discovered (type /skills inside the chat)
 teotl chat --skills my-skill
@@ -352,12 +352,12 @@ teotl chat --skills my-skill
 Directories are scanned in this order, and if multiple skills have the same name, the
 **last one found wins**:
 
-1. User skills (`~/.forge/skills/`)
+1. User skills (`~/.teotl/skills/`)
 2. Package skills (`teotl/skills/`)
-3. Environment path (`$TEOTL_SKILLS_PATH`, then legacy `$FORGE_SKILLS_PATH`)
+3. Environment path (`$TEOTL_SKILLS_PATH`, then legacy `$TEOTL_SKILLS_PATH`)
 
 To override a bundled skill, put your version in a directory on `TEOTL_SKILLS_PATH`
-(a same-named skill in `~/.forge/skills/` is overridden by the bundled one).
+(a same-named skill in `~/.teotl/skills/` is overridden by the bundled one).
 
 ### Version Conflicts
 
@@ -413,11 +413,11 @@ See [GUARDRAILS.md](GUARDRAILS.md) for custom policies.
 ## Next Steps
 
 1. **Browse community skills** - Find what you need
-2. **Clone to ~/.forge/skills/** - Install locally
+2. **Clone to ~/.teotl/skills/** - Install locally
 3. **Enable in agent** - Add to `skills=[]` parameter
 4. **Test with simple task** - Verify it works
 5. **Create your own** - Share with community
 
 ---
 
-**Key Takeaway:** Teotl uses the standard SKILL.md format, so most community skills can be used by dropping their folder into `~/.forge/skills/`. Review a skill's instructions before enabling it.
+**Key Takeaway:** Teotl uses the standard SKILL.md format, so most community skills can be used by dropping their folder into `~/.teotl/skills/`. Review a skill's instructions before enabling it.

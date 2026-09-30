@@ -127,17 +127,17 @@ All file operations are scoped to this workspace. You have full permission to re
 1. Read GOALS.md
    Goal: "Add type hints to functions missing them"
 
-2. Read forge/cli/wizard.py
+2. Read teotl/cli/wizard.py
    Found function without type hint: def ask_question(question, default)
 
-3. Edit forge/cli/wizard.py
+3. Edit teotl/cli/wizard.py
    old: def ask_question(question, default)
    new: def ask_question(question: str, default: str | None = None) -> str
 
 4. Bash: pytest tests/ -v
    Result: PASSED
 
-5. Bash: git add forge/cli/wizard.py
+5. Bash: git add teotl/cli/wizard.py
 
 6. Bash: git commit -m "improve: add type hints to ask_question function"
 

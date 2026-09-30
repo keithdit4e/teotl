@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from teotl.core.paths import teotl_home
 from teotl.core.types import UI, Action, Decision, EventResult, ToolCall
 from teotl.primitives.guardrails.classifier import classify
 from teotl.primitives.guardrails.policy import Policy
@@ -20,7 +21,7 @@ class AuditLog:
     """Append-only audit trail for guardrail decisions."""
 
     def __init__(self, path: Path | None = None) -> None:
-        self.path = path or Path.home() / ".forge" / "audit.jsonl"
+        self.path = path or teotl_home() / "audit.jsonl"
 
     def log(self, action: Action, decision: str, reason: str = "") -> None:
         """Append an audit entry."""

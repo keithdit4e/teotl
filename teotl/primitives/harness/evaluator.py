@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 from teotl.core.agent import Agent
+from teotl.core.paths import teotl_home
 from teotl.core.provider import Provider
 from teotl.primitives.harness.plan import PlanManager
 from teotl.primitives.harness.progress import ProgressTracker
@@ -164,7 +165,7 @@ class Evaluator:
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.workspace_dir.mkdir(parents=True, exist_ok=True)
 

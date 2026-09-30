@@ -13,6 +13,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from teotl.core.paths import teotl_home
+
 logger = logging.getLogger(__name__)
 
 
@@ -121,7 +123,7 @@ class StateManager:
 
         Args:
             agent_id: Agent identifier
-            workspace_dir: Optional workspace directory (defaults to ~/.forge/agents/{agent_id})
+            workspace_dir: Optional workspace directory (defaults to ~/.teotl/agents/{agent_id})
             enable_validation: Enable Pydantic validation (default: True)
         """
         self.agent_id = agent_id
@@ -130,7 +132,7 @@ class StateManager:
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.path = self.workspace_dir / "STATE.json"
 

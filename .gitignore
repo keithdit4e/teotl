@@ -56,7 +56,7 @@ Thumbs.db
 .LSOverride
 ._*
 
-# Forge/teotl local data (never commit user data)
+# Teotl local data (.forge is the pre-rename name) (never commit user data)
 .forge/
 .teotl/
 *.db

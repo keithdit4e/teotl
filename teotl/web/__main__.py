@@ -5,28 +5,29 @@ import asyncio
 import sys
 from pathlib import Path
 
+from teotl.core.paths import teotl_home, teotl_home_display
 from teotl.web.server import DashboardServer
 
 
 def discover_agents() -> dict[str, Path]:
-    """Auto-discover agents in ~/.forge directory.
+    """Auto-discover agents in ~/.teotl directory.
 
     Returns:
         Dict mapping agent_id -> data_dir path
     """
-    forge_dir = Path.home() / ".forge"
+    data_dir = teotl_home()
 
-    if not forge_dir.exists():
+    if not data_dir.exists():
         return {}
 
     agents = {}
 
-    # Check for single-agent setup (databases directly in ~/.forge/)
-    if (forge_dir / "tasks.db").exists():
-        agents["default"] = forge_dir
+    # Check for single-agent setup (databases directly in ~/.teotl/)
+    if (data_dir / "tasks.db").exists():
+        agents["default"] = data_dir
 
-    # Check for multi-agent setup (databases in ~/.forge/agents/*)
-    agents_dir = forge_dir / "agents"
+    # Check for multi-agent setup (databases in ~/.teotl/agents/*)
+    agents_dir = data_dir / "agents"
     if agents_dir.exists() and agents_dir.is_dir():
         for agent_dir in agents_dir.iterdir():
             if agent_dir.is_dir() and (agent_dir / "tasks.db").exists():
@@ -66,22 +67,22 @@ def main():
     """Run the dashboard server."""
     parser = argparse.ArgumentParser(
         description="Teotl Agent Dashboard - Monitor multiple agents",
-        epilog="""
+        epilog=f"""
 Examples:
   # Auto-detect and monitor all agents
-  python3 -m forge.web
+  python3 -m teotl.web
 
   # Monitor specific agents
-  python3 -m forge.web --agents personal,work
+  python3 -m teotl.web --agents personal,work
 
   # Monitor single agent
-  python3 -m forge.web --agents personal
+  python3 -m teotl.web --agents personal
 
   # Custom port
-  python3 -m forge.web --port 3000
+  python3 -m teotl.web --port 3000
 
   # Manual data directory (legacy single-agent mode)
-  python3 -m forge.web --data-dir ~/.forge/my-agent
+  python3 -m teotl.web --data-dir {teotl_home_display()}/my-agent
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -136,7 +137,7 @@ Examples:
             print("")
             print("Please ensure:")
             print("  1. You have run an agent at least once")
-            print("  2. Agent data exists in ~/.forge/ or ~/.forge/agents/")
+            print(f"  2. Agent data exists in {teotl_home_display()}/ or {teotl_home_display()}/agents/")
             print("  3. Or specify --data-dir manually")
             sys.exit(1)
 

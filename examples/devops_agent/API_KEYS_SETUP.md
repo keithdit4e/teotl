@@ -415,4 +415,4 @@ Once both keys are set and verified, you're ready to:
 **Need Help?**
 - Anthropic Console: https://console.anthropic.com/
 - GitHub Tokens: https://github.com/settings/tokens
-- Project Issues: https://github.com/yourusername/forge-agent/issues
+- Project Issues: https://github.com/yourusername/teotl-agent/issues

@@ -246,9 +246,9 @@ class Agent:
         """
         model = self.provider.model.lower()
 
-        # Claude models (200K context)
-        if "claude-3" in model or "claude-opus" in model or "claude-sonnet" in model:
-            # Use 50% of context window for safety (100K tokens)
+        # Claude models (200K-1M context)
+        if model.startswith("claude"):
+            # Compact well before the smallest current window (Haiku 4.5, 200K)
             return 100_000
 
         # GPT-4 Turbo (128K context)
@@ -402,20 +402,24 @@ class Agent:
                 await self._auto_activate_skills(result.content)
                 break
 
-            # Add assistant message with tool use
-            assistant_content = []
-            if result.content:
-                assistant_content.append({"type": "text", "text": result.content})
+            # Add assistant message with tool use. Prefer the provider's native
+            # blocks so thinking blocks are echoed back unchanged.
+            if result.assistant_content:
+                assistant_content = list(result.assistant_content)
+            else:
+                assistant_content = []
+                if result.content:
+                    assistant_content.append({"type": "text", "text": result.content})
 
-            for tool_call in result.tool_calls:
-                assistant_content.append(
-                    {
-                        "type": "tool_use",
-                        "id": tool_call.id,
-                        "name": tool_call.name,
-                        "input": tool_call.args,
-                    }
-                )
+                for tool_call in result.tool_calls:
+                    assistant_content.append(
+                        {
+                            "type": "tool_use",
+                            "id": tool_call.id,
+                            "name": tool_call.name,
+                            "input": tool_call.args,
+                        }
+                    )
 
             messages.append(
                 {

@@ -19,6 +19,7 @@ import yaml
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
+from teotl.core.models import DEFAULT_PLANNER_MODEL, DEFAULT_WORKER_MODEL
 from teotl.core.security import SecurityPolicy
 
 console = Console()
@@ -401,11 +402,11 @@ class OnboardingWizard:
         model = ask_choice(
             "\nWhich Claude model?",
             [
-                "claude-sonnet-4-20250514 (recommended)",
-                "claude-opus-4-20241113 (most capable)",
-                "claude-haiku-4-20250401 (fastest)",
+                "claude-sonnet-5-5 (recommended)",
+                "claude-opus-5-5 (most capable)",
+                "claude-haiku-4-5 (fastest)",
             ],
-            default="claude-sonnet-4-20250514 (recommended)",
+            default="claude-sonnet-5-5 (recommended)",
         )
         model_id = model.split(" ")[0]
 
@@ -528,8 +529,8 @@ class OnboardingWizard:
         print("Use an expensive, capable model for best results.")
         print()
         print(f"{Color.CYAN}Recommended:{Color.END}")
-        print("  • claude-sonnet-4 (best quality)")
-        print("  • claude-opus-4 (most capable, slower)")
+        print("  • claude-sonnet-5-5 (best quality)")
+        print("  • claude-opus-5-5 (most capable, slower)")
         print("  • gpt-4-turbo (OpenAI alternative)")
         print()
 
@@ -539,7 +540,9 @@ class OnboardingWizard:
 
         if provider_type == "anthropic":
             model = ask_choice(
-                "Planner model:", ["claude-sonnet-4", "claude-opus-4"], default="claude-sonnet-4"
+                "Planner model:",
+                ["claude-sonnet-5-5", "claude-opus-5-5"],
+                default="claude-sonnet-5-5",
             )
 
             # Get or reuse API key
@@ -571,7 +574,7 @@ class OnboardingWizard:
         print("Use a cheap, fast model to minimize costs.")
         print()
         print(f"{Color.CYAN}Recommended:{Color.END}")
-        print("  • claude-haiku-4 (fastest, cheapest)")
+        print("  • claude-haiku-4-5 (fastest, cheapest)")
         print("  • gpt-3.5-turbo (OpenAI alternative)")
         print()
 
@@ -581,7 +584,9 @@ class OnboardingWizard:
 
         if provider_type == "anthropic":
             model = ask_choice(
-                "Worker model:", ["claude-haiku-4", "claude-sonnet-4"], default="claude-haiku-4"
+                "Worker model:",
+                ["claude-haiku-4-5", "claude-sonnet-5-5"],
+                default="claude-haiku-4-5",
             )
 
             # Reuse API key from planner if same provider
@@ -2216,8 +2221,12 @@ Context management:
 
         # Get configuration
         planner_config = self.config.get("planner_worker", {})
-        planner_provider_name = planner_config.get("planner", {}).get("provider", "claude-sonnet-4")
-        worker_provider_name = planner_config.get("worker", {}).get("provider", "claude-haiku-4")
+        planner_provider_name = planner_config.get("planner", {}).get(
+            "provider", DEFAULT_PLANNER_MODEL
+        )
+        worker_provider_name = planner_config.get("worker", {}).get(
+            "provider", DEFAULT_WORKER_MODEL
+        )
         worker_skills = planner_config.get("worker", {}).get("skills", ["filesystem", "git"])
         worker_policy = planner_config.get("worker", {}).get("policy", "autonomous-dev")
         planner_instructions = planner_config.get("planner", {}).get(

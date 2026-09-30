@@ -352,14 +352,14 @@ load_dotenv()  # Loads .env file
 
 ### Anthropic API Costs
 
-**Claude Sonnet 4:**
-- Input: ~$3 per million tokens
-- Output: ~$15 per million tokens
+**Claude Sonnet 5.5 (`claude-sonnet-5-5`):**
+- Input: $2 per million tokens
+- Output: $10 per million tokens
 
 **Typical agent run (investigating + fixing one issue):**
 - Input tokens: 50,000-100,000
 - Output tokens: 5,000-10,000
-- **Cost: $0.10-0.50 per issue**
+- **Cost: about $0.15-0.30 per issue**
 
 **Recommended budget for testing:**
 - Start with $5-10 for initial testing

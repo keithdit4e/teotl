@@ -150,9 +150,9 @@ Enter your choice [1-3]: 1
 
 ```
 Which Claude model?
-  1. claude-sonnet-4-20250514 (recommended)
-  2. claude-opus-4-20241113 (most capable)
-  3. claude-haiku-4-20250401 (fastest)
+  1. claude-sonnet-5-5 (recommended)
+  2. claude-opus-5-5 (most capable)
+  3. claude-haiku-4-5 (fastest)
 
 Enter your choice [1-3]: 1
 ```
@@ -288,7 +288,7 @@ The wizard will show your configuration:
 ```yaml
 provider:
   type: anthropic
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-5-5
   api_key_env: ANTHROPIC_API_KEY
 agent:
   agent_id: my-first-agent
@@ -332,7 +332,7 @@ You should see something like:
 ```yaml
 provider:
   type: anthropic
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-5-5
   api_key_env: ANTHROPIC_API_KEY
 agent:
   agent_id: my-first-agent
@@ -368,7 +368,7 @@ python -m teotl.daemon.run --config config.yaml
 
 Configuration:
   Agent ID: my-first-agent
-  Provider: anthropic (claude-sonnet-4-20250514)
+  Provider: anthropic (claude-sonnet-5-5)
   Poll Interval: 30 seconds
   Data Directory: ~/.teotl/my-first-agent
 

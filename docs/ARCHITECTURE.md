@@ -959,7 +959,7 @@ class Provider(Protocol):
 class AnthropicProvider(Provider):
     """Claude via Anthropic API."""
 
-    def __init__(self, model: str = "claude-sonnet-4-20250514", api_key: str = None):
+    def __init__(self, model: str = "claude-sonnet-5-5", api_key: str = None):
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
         self.model = model
 
@@ -1072,7 +1072,7 @@ from teotl import Agent, HeadlessUI, AnthropicProvider, Policy
 
 # Custom agent with full control
 agent = Agent(
-    provider=AnthropicProvider(model="claude-sonnet-4-20250514"),
+    provider=AnthropicProvider(model="claude-sonnet-5-5"),
     instructions="You are a customer support agent for Acme Corp.",
     skills=["knowledge_base", "ticketing"],
     policy=Policy.from_dict({

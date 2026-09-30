@@ -223,37 +223,37 @@ class TestCostEstimation:
         """Test cost estimation for Claude Opus."""
         cost = estimate_cost(
             provider="anthropic",
-            model="claude-opus-4-20250514",
+            model="claude-opus-5-5",
             input_tokens=1000,
             output_tokens=500,
         )
 
-        # (1000/1000) * 0.015 + (500/1000) * 0.075 = 0.015 + 0.0375 = 0.0525
-        assert abs(cost - 0.0525) < 0.0001
+        # $4/$20 per MTok: (1000/1000) * 0.004 + (500/1000) * 0.020 = 0.004 + 0.010 = 0.014
+        assert abs(cost - 0.014) < 0.0001
 
     def test_anthropic_claude_sonnet(self):
         """Test cost estimation for Claude Sonnet."""
         cost = estimate_cost(
             provider="anthropic",
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5-5",
             input_tokens=1000,
             output_tokens=1000,
         )
 
-        # (1000/1000) * 0.003 + (1000/1000) * 0.015 = 0.003 + 0.015 = 0.018
-        assert abs(cost - 0.018) < 0.0001
+        # $2/$10 per MTok: (1000/1000) * 0.002 + (1000/1000) * 0.010 = 0.012
+        assert abs(cost - 0.012) < 0.0001
 
     def test_anthropic_claude_haiku(self):
         """Test cost estimation for Claude Haiku."""
         cost = estimate_cost(
             provider="anthropic",
-            model="claude-haiku-4-20250514",
+            model="claude-haiku-4-5",
             input_tokens=10000,
             output_tokens=5000,
         )
 
-        # (10000/1000) * 0.00025 + (5000/1000) * 0.00125 = 0.0025 + 0.00625 = 0.00875
-        assert abs(cost - 0.00875) < 0.0001
+        # $1/$5 per MTok: (10000/1000) * 0.001 + (5000/1000) * 0.005 = 0.01 + 0.025 = 0.035
+        assert abs(cost - 0.035) < 0.0001
 
     def test_openai_gpt4o(self):
         """Test cost estimation for GPT-4o."""
@@ -282,7 +282,7 @@ class TestCostEstimation:
         """Test cost estimation with zero tokens."""
         cost = estimate_cost(
             provider="anthropic",
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5-5",
             input_tokens=0,
             output_tokens=0,
         )

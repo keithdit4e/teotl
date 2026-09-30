@@ -330,8 +330,8 @@ class RateLimitedProvider(Provider):
 
     # Pricing per 1M tokens (update as needed)
     PRICING = {
-        "claude-opus-4": {"input": 3.0, "output": 15.0},
-        "claude-sonnet-4": {"input": 1.0, "output": 5.0},
+        "claude-opus-5-5": {"input": 4.0, "output": 20.0},
+        "claude-sonnet-5-5": {"input": 2.0, "output": 10.0},
         "gpt-4": {"input": 10.0, "output": 30.0},
         "gpt-3.5-turbo": {"input": 0.5, "output": 1.5},
     }

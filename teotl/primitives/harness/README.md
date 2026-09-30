@@ -209,7 +209,7 @@ agent = HarnessAgent(
     agent_id="coding-assistant",
     provider=AnthropicProvider(
         api_key="...",
-        model="claude-3-haiku-20240307"
+        model="claude-haiku-4-5"
     ),
     instructions="You are a helpful coding assistant",
     skills=["filesystem", "git"],
@@ -417,9 +417,9 @@ from forge.primitives.harness import PlannerWorkerHarness
 harness = PlannerWorkerHarness(
     agent_id="coding-assistant",
     # Expensive model for planning (runs ONCE)
-    planner_provider=AnthropicProvider(model="claude-sonnet-4"),
+    planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),
     # Cheap model for execution (runs MANY times)
-    worker_provider=AnthropicProvider(model="claude-3-haiku-20240307"),
+    worker_provider=AnthropicProvider(model="claude-haiku-4-5"),
     workspace_dir=agent_dir,
     worker_skills=["filesystem", "git"]
 )
@@ -465,8 +465,8 @@ from forge.primitives.harness import PlannerWorkerHarness
 
 harness = PlannerWorkerHarness(
     agent_id="coding-assistant",
-    planner_provider=AnthropicProvider(model="claude-sonnet-4"),
-    worker_provider=AnthropicProvider(model="claude-3-haiku-20240307"),
+    planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),
+    worker_provider=AnthropicProvider(model="claude-haiku-4-5"),
     workspace_dir=agent_dir,
     worker_skills=["filesystem", "git"]
 )
@@ -554,7 +554,7 @@ from forge.primitives.harness import AdvancedContextJanitor
 
 janitor = AdvancedContextJanitor(
     agent_id="coding-assistant",
-    provider=AnthropicProvider(model="claude-3-haiku-20240307"),  # Cheap model for extraction
+    provider=AnthropicProvider(model="claude-haiku-4-5"),  # Cheap model for extraction
     compact_every=10,           # Compact every 10 turns
     max_context_tokens=10000,   # Force compact at 10K tokens
     use_llm_extraction=True     # Use LLM instead of keywords

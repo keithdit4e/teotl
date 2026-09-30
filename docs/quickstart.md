@@ -19,7 +19,7 @@ from teotl.core.provider import AnthropicProvider
 
 async def main():
     # Create provider
-    provider = AnthropicProvider(model="claude-sonnet-4-20250514")
+    provider = AnthropicProvider(model="claude-sonnet-5-5")
     
     # Create agent
     agent = Agent(
@@ -55,10 +55,10 @@ from teotl.core.provider import AnthropicProvider
 
 async def main():
     # Create planner (strategic)
-    planner = AnthropicProvider(model="claude-sonnet-4-20250514")
+    planner = AnthropicProvider(model="claude-sonnet-5-5")
     
     # Create worker (fast execution)
-    worker = AnthropicProvider(model="claude-haiku-4-20250514")
+    worker = AnthropicProvider(model="claude-haiku-4-5")
     
     # Create planner-worker agent
     agent = Agent.create_planner_worker(
@@ -91,7 +91,7 @@ from teotl.core.provider import AnthropicProvider
 from teotl.primitives.skills.registry import SkillRegistry
 
 async def main():
-    provider = AnthropicProvider(model="claude-sonnet-4-20250514")
+    provider = AnthropicProvider(model="claude-sonnet-5-5")
     
     # Load skills
     registry = SkillRegistry()
@@ -131,7 +131,7 @@ from teotl.core.provider import AnthropicProvider
 from teotl.primitives.skills.registry import SkillRegistry
 
 async def main():
-    provider = AnthropicProvider(model="claude-sonnet-4-20250514")
+    provider = AnthropicProvider(model="claude-sonnet-5-5")
     registry = SkillRegistry()
     registry.register_builtin("filesystem")
     registry.register_builtin("bash")
@@ -169,7 +169,7 @@ from teotl.core.provider import AnthropicProvider
 from teotl.primitives.memory.local import LocalMemory
 
 async def main():
-    provider = AnthropicProvider(model="claude-sonnet-4-20250514")
+    provider = AnthropicProvider(model="claude-sonnet-5-5")
     
     # Create memory
     memory = LocalMemory()
@@ -212,9 +212,9 @@ async def main():
         "objective": "Review pull requests and provide feedback",
         "execution_pattern": "planner_worker",
         "planner_worker": {
-            "planner": {"provider": "claude-sonnet-4"},
+            "planner": {"provider": "claude-sonnet-5-5"},
             "worker": {
-                "provider": "claude-haiku-4",
+                "provider": "claude-haiku-4-5",
                 "skills": ["filesystem", "git"]
             }
         }
@@ -248,7 +248,7 @@ Use Teotl from the command line:
 teotl
 
 # Chat with specific provider
-teotl --provider anthropic --model claude-sonnet-4
+teotl --provider anthropic --model claude-sonnet-5-5
 
 # Chat with guardrails
 teotl --policy strict
@@ -303,8 +303,8 @@ from teotl.primitives.skills.registry import SkillRegistry
 
 async def main():
     # Setup
-    planner = AnthropicProvider(model="claude-sonnet-4-20250514")
-    worker = AnthropicProvider(model="claude-haiku-4-20250514")
+    planner = AnthropicProvider(model="claude-sonnet-5-5")
+    worker = AnthropicProvider(model="claude-haiku-4-5")
     
     registry = SkillRegistry()
     registry.register_builtin("filesystem")

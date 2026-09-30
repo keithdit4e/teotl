@@ -17,7 +17,7 @@
 
 provider:
   type: anthropic              # "anthropic", "openai", or "ollama"
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-5-5
   api_key_env: ANTHROPIC_API_KEY  # Environment variable containing API key
   base_url: null               # Optional: custom API endpoint (for proxies)
 
@@ -173,13 +173,13 @@ agent:
     enabled: false             # Set to true to enable
 
     planner:
-      provider: claude-sonnet-4  # Use capable model for planning
+      provider: claude-sonnet-5-5  # Use capable model for planning
       instructions: |
         Create detailed execution plans.
         Break tasks into atomic, verifiable steps.
 
     worker:
-      provider: claude-haiku-4   # Use cheaper model for execution
+      provider: claude-haiku-4-5   # Use cheaper model for execution
       skills:
         - filesystem
         - git
@@ -250,7 +250,7 @@ missions:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agents:
   # Agent 1: Feature Developer
@@ -296,7 +296,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agent:
   agent_id: simple-agent
@@ -312,7 +312,7 @@ agent:
 
 provider:
   type: anthropic
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-5-5
   parameters:
     temperature: 0.3           # Lower temperature for consistency
 

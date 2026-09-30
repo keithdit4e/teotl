@@ -80,7 +80,7 @@ class AuditLogger:
         audit.log_planning(
             prompt="Create execution plan for...",
             response="Step 1: ...",
-            model="claude-sonnet-4",
+            model="claude-sonnet-5-5",
             cost=0.15,
             cycle=1,
         )
@@ -91,7 +91,7 @@ class AuditLogger:
             prompt="Execute step 5...",
             response="Step complete",
             tool_calls=[{"tool": "write_file", "args": {"path": "..."}}],
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
             cost=0.05,
             success=True,
         )

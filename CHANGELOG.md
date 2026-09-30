@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-30
+
+### Fixed
+- Replaced invalid and retired Claude model IDs throughout. `claude-3-haiku-20240307` (retired April 2026) was the default worker model, and several date-suffixed IDs such as `claude-sonnet-4-6-20260301` and `claude-haiku-4-20250514` never existed, so the default setups failed at the API
+- Defaults are now `claude-sonnet-5-5` (general and planner) and `claude-haiku-4-5` (worker); the wizard offers Sonnet 5.5, Opus 5.5, and Haiku 4.5
+- Tool loops now send Claude's assistant turn back exactly as received, including thinking blocks. Current models think by default and reject turns where those blocks were dropped
+- Claude Haiku models got a 10K-token compaction threshold because only "opus"/"sonnet" names were recognized; all Claude models now use 100K
+- Corrected Haiku 4.5's context window (200K, not 1M) and Claude pricing used for cost tracking
+
+### Added
+- `teotl.core.models`: one catalog of Claude model IDs, context windows, and prices, used by the provider, cost tracking, and the wizard
+
+### Changed
+- `docs/MODEL_STRATEGY.md` updated for current models and prices. With current pricing, a Haiku worker saves about 50% versus an all-Sonnet setup (earlier docs claimed 97%, based on retired Claude 3 Haiku pricing)
+
 ## [0.2.0] - 2026-09-30
 
 First release published to PyPI (`pip install teotl`).

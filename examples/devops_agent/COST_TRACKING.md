@@ -132,7 +132,7 @@ The `Agent` class automatically tracks costs:
 ```python
 # Agent initialization (from autonomous_executor.py)
 agent = Agent(
-    provider=AnthropicProvider(model="claude-sonnet-4-20250514"),
+    provider=AnthropicProvider(model="claude-sonnet-5-5"),
     tools=mcp_tools,
     instructions=f"Fix issue #{issue_number}...",
     skills=SkillRegistry(enabled=["git", "filesystem", "github"]),

@@ -116,8 +116,8 @@ Create an agent with planner-worker architecture.
 
 ```python
 agent = Agent.create_planner_worker(
-    planner=AnthropicProvider(model="claude-sonnet-4-20250514"),
-    worker=AnthropicProvider(model="claude-haiku-4-20250514"),
+    planner=AnthropicProvider(model="claude-sonnet-5-5"),
+    worker=AnthropicProvider(model="claude-haiku-4-5"),
     instructions="You are a helpful assistant.",
 )
 ```
@@ -192,27 +192,27 @@ from teotl.core.provider import AnthropicProvider
 
 ```python
 AnthropicProvider(
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-5-5",
     api_key: str | None = None,
     max_tokens: int = 8192,
 )
 ```
 
 **Parameters:**
-- `model` (str): Model name (default: "claude-sonnet-4-20250514")
+- `model` (str): Model name (default: "claude-sonnet-5-5")
 - `api_key` (str | None): API key (default: from ANTHROPIC_API_KEY env)
 - `max_tokens` (int): Max tokens per request (default: 8192)
 
 **Supported Models:**
-- `claude-opus-4-20250514` - Most capable
-- `claude-sonnet-4-20250514` - Balanced (recommended)
-- `claude-haiku-4-20250514` - Fastest, cheapest
+- `claude-opus-5-5` - Most capable
+- `claude-sonnet-5-5` - Balanced (recommended)
+- `claude-haiku-4-5` - Fastest, cheapest
 
 **Example:**
 
 ```python
 provider = AnthropicProvider(
-    model="claude-sonnet-4-20250514",
+    model="claude-sonnet-5-5",
     max_tokens=4096,
 )
 ```
@@ -821,7 +821,7 @@ Start interactive REPL.
 
 ```bash
 teotl
-teotl --provider anthropic --model claude-sonnet-4
+teotl --provider anthropic --model claude-sonnet-5-5
 teotl --policy strict
 ```
 

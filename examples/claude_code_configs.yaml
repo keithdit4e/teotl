@@ -8,7 +8,7 @@
 
 provider:
   type: anthropic
-  model: claude-haiku-4  # Cheap model for worker tasks
+  model: claude-haiku-4-5  # Cheap model for worker tasks
 
 agent:
   agent_id: dev-assistant
@@ -39,20 +39,20 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-sonnet-4  # Planner uses expensive model
+  model: claude-sonnet-5-5  # Planner uses expensive model
 
 planner_worker:
   enabled: true
 
   planner:
-    provider: claude-sonnet-4  # Smart planning
+    provider: claude-sonnet-5-5  # Smart planning
     instructions: |
       Create detailed execution plans for coding projects.
       Break down into atomic steps.
       Identify which steps require coding assistance (use claude_code).
 
   worker:
-    provider: claude-haiku-4  # Cheap execution
+    provider: claude-haiku-4-5  # Cheap execution
     skills:
       - filesystem
       - git
@@ -77,7 +77,7 @@ planner_worker:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agent:
   agent_id: code-reviewer
@@ -110,7 +110,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agent:
   agent_id: bug-fixer
@@ -147,7 +147,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agent:
   agent_id: test-writer
@@ -180,7 +180,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-sonnet-4  # Use better model for complex refactoring
+  model: claude-sonnet-5-5  # Use better model for complex refactoring
 
 agent:
   agent_id: refactoring-specialist
@@ -219,7 +219,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 # Agent 1: Feature implementer
 agents:
@@ -265,7 +265,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-haiku-4
+  model: claude-haiku-4-5
 
 agent:
   agent_id: coder
@@ -284,7 +284,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-haiku-4  # Cheapest model
+  model: claude-haiku-4-5  # Cheapest model
 
 agent:
   agent_id: budget-coder
@@ -317,7 +317,7 @@ daemon:
 
 provider:
   type: anthropic
-  model: claude-sonnet-4  # Better model for production
+  model: claude-sonnet-5-5  # Better model for production
 
 agent:
   agent_id: prod-coder

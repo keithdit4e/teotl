@@ -8,7 +8,7 @@ Use **different models for different phases** to optimize cost, speed, and quali
 - **Execution**: Fast model (Haiku) for implementing specific tasks
 - **Review** (optional): Smart model for final validation
 
-This can reduce costs by **80-90%** while maintaining quality.
+With current pricing this cuts execution cost roughly in half (see [Cost Analysis](#cost-analysis)), and the fast model also makes each retry quicker.
 
 ## Model Phases
 
@@ -16,10 +16,10 @@ This can reduce costs by **80-90%** while maintaining quality.
 
 **When:** Generating initial roadmap (once)
 
-**Model:** Claude Sonnet 4
+**Model:** Claude Sonnet 5.5 (`claude-sonnet-5-5`)
 - **Use case:** Codebase analysis, identifying improvements, prioritization
 - **Frequency:** Once per roadmap (every 10-20 improvements)
-- **Cost:** High (~$15 per million tokens)
+- **Cost:** $2 input / $10 output per million tokens
 - **Quality:** Best reasoning, deep analysis
 
 **Why Sonnet:**
@@ -41,10 +41,10 @@ Roadmap of 20 improvements:
 
 **When:** Implementing each improvement (20+ times)
 
-**Model:** Claude 3 Haiku
+**Model:** Claude Haiku 4.5 (`claude-haiku-4-5`)
 - **Use case:** Making specific code changes, running tests, iterating
 - **Frequency:** Every improvement (20+ per roadmap)
-- **Cost:** Low (~$0.25 per million tokens) - **60x cheaper than Sonnet!**
+- **Cost:** $1 input / $5 output per million tokens (half of Sonnet 5.5)
 - **Quality:** Good for focused tasks
 
 **Why Haiku:**
@@ -72,7 +72,7 @@ Tests: PASSED ✅
 
 **When:** Before committing critical changes
 
-**Model:** Claude Sonnet 4
+**Model:** Claude Sonnet 5.5 (`claude-sonnet-5-5`)
 - **Use case:** Final validation, security review
 - **Frequency:** Optional (disabled by default)
 - **Cost:** Medium (only for critical changes)
@@ -82,7 +82,7 @@ Tests: PASSED ✅
 ```yaml
 models:
   review:
-    name: claude-sonnet-4-20250514
+    name: claude-sonnet-5-5
     enabled: true  # ← Enable review phase
 ```
 
@@ -90,17 +90,24 @@ models:
 
 ### Example: 20 Improvements with 5 Retries Each
 
+Assume each call uses about 20K input tokens and 2K output tokens:
+
+| Model | Cost per call |
+|-------|---------------|
+| Claude Sonnet 5.5 | 20K × $2/M + 2K × $10/M = **$0.06** |
+| Claude Haiku 4.5 | 20K × $1/M + 2K × $5/M = **$0.03** |
+
 **Without multi-model (all Sonnet):**
-- Analysis: 1 × $15 = $15
-- Execution: 100 × $15 = $1,500
-- **Total: $1,515**
+- Analysis: 1 × $0.06 = $0.06
+- Execution: 100 × $0.06 = $6.00
+- **Total: $6.06**
 
 **With multi-model (Sonnet + Haiku):**
-- Analysis: 1 × $15 = $15
-- Execution: 100 × $0.25 = $25
-- **Total: $40**
+- Analysis: 1 × $0.06 = $0.06
+- Execution: 100 × $0.03 = $3.00
+- **Total: $3.06**
 
-**Savings: $1,475 (97% reduction!)**
+**Savings: about 50%**, as long as Haiku doesn't need many more attempts than Sonnet (see [Consider Total Cost](#4-consider-total-cost)). Your token counts will differ; the ratio is what matters.
 
 ### Real-World Usage
 
@@ -108,9 +115,9 @@ For continuous autonomous development:
 - Roadmap refresh: Every 20 improvements (weekly)
 - Executions: ~100 per week
 
-**Monthly costs:**
-- All Sonnet: ~$6,000/month
-- Multi-model: ~$160/month
+**Monthly costs** (same per-call assumptions, ~430 executions and 4 roadmaps a month):
+- All Sonnet: ~$26/month
+- Multi-model: ~$13/month
 
 **The smart model does deep work once, fast model executes 100 times.**
 
@@ -122,7 +129,7 @@ Edit `~/.teotl/agents/coding-assistant/AUTONOMOUS_CONFIG.yaml`:
 models:
   # Analysis phase - use smart model
   analysis:
-    name: claude-sonnet-4-20250514  # Best reasoning
+    name: claude-sonnet-5-5  # Best reasoning
     max_tokens: 8192
     use_case: "Deep codebase analysis, roadmap planning"
     cost: high
@@ -130,7 +137,7 @@ models:
 
   # Execution phase - use fast model
   execution:
-    name: claude-3-haiku-20240307  # Fast & cheap
+    name: claude-haiku-4-5  # Fast & cheap
     max_tokens: 4096
     use_case: "Implementing tasks, running tests, iterating"
     cost: low
@@ -138,7 +145,7 @@ models:
 
   # Review phase - optional
   review:
-    name: claude-sonnet-4-20250514  # Best validation
+    name: claude-sonnet-5-5  # Best validation
     max_tokens: 4096
     enabled: false  # Disable to save cost
 ```
@@ -149,31 +156,32 @@ models:
 
 | Model | Cost | Quality | When to Use |
 |-------|------|---------|-------------|
-| **Claude Sonnet 4** | High | Best | Default (recommended) |
-| Claude Opus 4 | Very High | Best+ | Critical codebases only |
-| Claude 3.5 Sonnet | Medium | Good | Budget-conscious |
+| **Claude Sonnet 5.5** (`claude-sonnet-5-5`) | $2 / $10 | Excellent | Default (recommended) |
+| Claude Opus 5.5 (`claude-opus-5-5`) | $4 / $20 | Best | Large or critical codebases |
+| Claude Fable 5.1 (`claude-fable-5-1`) | $10 / $50 | Most capable | Hardest long-horizon work |
 
 ### Execution Phase Options
 
 | Model | Cost | Quality | When to Use |
 |-------|------|---------|-------------|
-| **Claude 3 Haiku** | Low | Good | Default (recommended) |
-| Claude 3.5 Haiku | Low | Good+ | If available |
-| Claude 3.5 Sonnet | Medium | Better | Complex changes |
-| Claude Sonnet 4 | High | Best | Critical changes only |
+| **Claude Haiku 4.5** (`claude-haiku-4-5`) | $1 / $5 | Good | Default (recommended) |
+| Claude Sonnet 5.5 (`claude-sonnet-5-5`) | $2 / $10 | Excellent | Complex changes |
+| Claude Opus 5.5 (`claude-opus-5-5`) | $4 / $20 | Best | Critical changes only |
+
+Costs are input / output USD per million tokens (Anthropic API list prices, September 2026). Model IDs and prices used for cost tracking live in `teotl/core/models.py`.
 
 ### Trade-off Matrix
 
 ```
 Quality vs Cost for 100 executions:
 
-High Quality │              ● Sonnet ($1,500)
+Best Quality │              ● Opus 5.5 ($12)
              │            ╱
              │          ╱
-Good Quality │        ● 3.5 Sonnet ($750)
+Excellent    │        ● Sonnet 5.5 ($6)
              │      ╱
              │    ╱
-Acceptable   │  ● Haiku ($25) ← Recommended
+Good         │  ● Haiku 4.5 ($3) ← Recommended
              │
              └──────────────────────────────
                Low Cost        High Cost
@@ -191,7 +199,7 @@ Acceptable   │  ● Haiku ($25) ← Recommended
        priority: 1
    models:
      execution:
-       name: claude-sonnet-4-20250514  # Use smart model
+       name: claude-sonnet-5-5  # Use smart model
    ```
 
 2. **Complex refactoring**
@@ -254,11 +262,11 @@ Start cheap, escalate if needed:
 ```yaml
 execution:
   # Try Haiku first (fast, cheap)
-  primary_model: claude-3-haiku-20240307
+  primary_model: claude-haiku-4-5
   max_retries: 3
 
   # Escalate to Sonnet if Haiku fails
-  fallback_model: claude-sonnet-4-20250514
+  fallback_model: claude-sonnet-5-5
   fallback_after: 3  # Switch after 3 Haiku failures
 ```
 
@@ -269,11 +277,11 @@ Different models for different times:
 ```yaml
 execution:
   # Daytime: Use Haiku (fast iteration)
-  daytime_model: claude-3-haiku-20240307
+  daytime_model: claude-haiku-4-5
   daytime_hours: [9, 17]  # 9 AM - 5 PM
 
   # Nighttime: Use Sonnet (overnight batch)
-  nighttime_model: claude-sonnet-4-20250514
+  nighttime_model: claude-sonnet-5-5
   nighttime_hours: [22, 6]  # 10 PM - 6 AM
 ```
 
@@ -285,11 +293,11 @@ Model selection by improvement priority:
 focus:
   - name: critical_bugs
     priority: 1
-    model: claude-sonnet-4-20250514  # Use smart model
+    model: claude-sonnet-5-5  # Use smart model
 
   - name: type_safety
     priority: 3
-    model: claude-3-haiku-20240307  # Use fast model
+    model: claude-haiku-4-5  # Use fast model
 ```
 
 ## Monitoring Model Performance
@@ -300,13 +308,13 @@ Track success rates per model:
 # In mission metadata
 {
   "model_stats": {
-    "claude-3-haiku-20240307": {
+    "claude-haiku-4-5": {
       "attempts": 87,
       "successes": 68,
       "success_rate": 0.78,
       "avg_retries": 2.1
     },
-    "claude-sonnet-4-20250514": {
+    "claude-sonnet-5-5": {
       "attempts": 13,
       "successes": 12,
       "success_rate": 0.92,
@@ -328,13 +336,13 @@ If Haiku success rate drops below 60%, consider:
 **Don't:** Try to save money on roadmap generation
 ```yaml
 analysis:
-  name: claude-3-haiku-20240307  # ❌ Bad - weak analysis
+  name: claude-haiku-4-5  # ❌ Bad - weak analysis
 ```
 
 **Do:** Invest in good roadmap
 ```yaml
 analysis:
-  name: claude-sonnet-4-20250514  # ✅ Good - strong foundation
+  name: claude-sonnet-5-5  # ✅ Good - strong foundation
 ```
 
 **Why:** A smart roadmap makes execution easier. Weak analysis = vague tasks = Haiku struggles.
@@ -358,11 +366,11 @@ Quality = "Does it work?" not "Which model made it?"
 **Apparent cost:** Haiku vs Sonnet per token
 
 **Real cost:** Including retries and human time
-- Haiku: 3 retries × $0.25 = $0.75 + 0 human time
-- Sonnet: 1 try × $15 = $15 + 0 human time
+- Haiku: 2 tries × $0.03 = $0.06
+- Sonnet: 1 try × $0.06 = $0.06
 - Human: 1 fix × $50/hour = $50 + frustration
 
-**Even with 5× retries, Haiku is cheaper.**
+**Haiku is cheaper only while it needs fewer than about 2 attempts for every 1 Sonnet attempt.** Track success rates per model; if Haiku keeps retrying, Sonnet is the cheaper worker. Either way, both are far cheaper than a human fix.
 
 ## Summary
 
@@ -373,7 +381,7 @@ Quality = "Does it work?" not "Which model made it?"
 4. **Dashboard tracks** → Monitor success rates per model
 
 **The Result:**
-- 97% cost reduction
+- About 50% lower execution cost
 - Minimal quality impact (tests ensure correctness)
 - Faster iteration (Haiku is fast)
 - Scalable autonomous development
@@ -383,7 +391,7 @@ Quality = "Does it work?" not "Which model made it?"
 - Total time per improvement: ~same (Haiku is faster per try)
 - Quality output: same (tests validate both)
 
-**Bottom line:** Use the smart model to think, fast model to execute. Let tests ensure quality. Save 97% on costs.
+**Bottom line:** Use the smart model to think, fast model to execute. Let tests ensure quality, and measure retries to confirm the savings.
 
 ---
 

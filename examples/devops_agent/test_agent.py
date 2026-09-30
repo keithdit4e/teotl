@@ -88,8 +88,8 @@ async def test_agent_creation():
 
     try:
         # Create providers
-        planner = AnthropicProvider(model="claude-sonnet-4-20250514", api_key=anthropic_key)
-        worker = AnthropicProvider(model="claude-haiku-4-20250514", api_key=anthropic_key)
+        planner = AnthropicProvider(model="claude-sonnet-5-5", api_key=anthropic_key)
+        worker = AnthropicProvider(model="claude-haiku-4-5", api_key=anthropic_key)
         console.print("[green]✓[/green] Created providers (Sonnet + Haiku)")
 
         # Create skill registry with enabled skills

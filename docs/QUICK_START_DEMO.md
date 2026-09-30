@@ -132,7 +132,7 @@ Your configuration:
 ---
 provider:
   type: anthropic
-  model: claude-sonnet-4
+  model: claude-sonnet-5-5
 
 agent:
   agent_id: demo-agent
@@ -247,7 +247,7 @@ cat ~/.teotl/agents/demo-agent/AUDIT_LOG.jsonl | jq .
   "event_type": "planning",
   "agent_id": "demo-agent",
   "cycle": 1,
-  "model": "claude-sonnet-4",
+  "model": "claude-sonnet-5-5",
   "cost": 0.15,
   "success": true,
   "prompt": "Create execution plan for...",

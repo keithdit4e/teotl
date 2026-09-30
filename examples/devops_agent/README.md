@@ -108,8 +108,8 @@ repository: "owner/repo"
 github_token: "${GITHUB_TOKEN}"
 
 agent:
-  planner_model: "claude-sonnet-4-20250514"
-  worker_model: "claude-haiku-4-20250514"
+  planner_model: "claude-sonnet-5-5"
+  worker_model: "claude-haiku-4-5"
   policy: "standard"
 
 mission:

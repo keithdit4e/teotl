@@ -29,7 +29,7 @@ class DevOpsExecutor:
         """
         self.anthropic_key = anthropic_key
         self.provider = AnthropicProvider(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5-5",
             api_key=anthropic_key
         )
         self.mcp_bridge = create_mcp_bridge()

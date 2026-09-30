@@ -69,13 +69,13 @@ The code should be production-ready when complete.
         # Strategic model (Planner + Evaluator)
         planner_provider=AnthropicProvider(
             api_key=api_key,
-            model="claude-sonnet-4",
+            model="claude-sonnet-5-5",
             max_tokens=4096,
         ),
         # Tactical model (Worker)
         worker_provider=AnthropicProvider(
             api_key=api_key,
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
             max_tokens=4096,
         ),
         workspace_dir=workspace,
@@ -83,9 +83,9 @@ The code should be production-ready when complete.
         worker_policy="autonomous-dev",
     )
 
-    print("   ✅ Planner: claude-sonnet-4 (strategic)")
-    print("   ✅ Worker: claude-3-haiku-20240307 (tactical)")
-    print("   ✅ Evaluator: claude-sonnet-4 (strategic)")
+    print("   ✅ Planner: claude-sonnet-5-5 (strategic)")
+    print("   ✅ Worker: claude-haiku-4-5 (tactical)")
+    print("   ✅ Evaluator: claude-sonnet-5-5 (strategic)")
     print()
 
     # -------------------------------------------------------------------

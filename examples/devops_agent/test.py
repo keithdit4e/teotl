@@ -115,7 +115,7 @@ async def test_mcp_integration():
         # Create agent
         console.print("\n[yellow]→[/yellow] Creating agent with MCP tools...")
         provider = AnthropicProvider(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5-5",
             api_key=os.getenv("ANTHROPIC_API_KEY")
         )
         agent = Agent(

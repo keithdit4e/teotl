@@ -66,7 +66,7 @@ class AdvancedContextJanitor(ContextJanitor):
     Usage:
         janitor = AdvancedContextJanitor(
             agent_id="coding-assistant",
-            provider=AnthropicProvider(model="claude-3-haiku-20240307"),
+            provider=AnthropicProvider(model="claude-haiku-4-5"),
             compact_every=10,
             max_context_tokens=10000
         )

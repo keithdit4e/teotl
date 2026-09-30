@@ -18,7 +18,7 @@ async def main():
 
     # Create agent with Claude Code skill
     Agent(
-        provider=AnthropicProvider(model="claude-haiku-4"),
+        provider=AnthropicProvider(model="claude-haiku-4-5"),
         instructions="""You are an expert software development assistant.
 
 When you encounter coding tasks (refactoring, features, bug fixes, tests),

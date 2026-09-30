@@ -55,7 +55,7 @@ async def main():
         agent_id=agent_id,
         provider=AnthropicProvider(
             api_key=api_key,
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
         ),
         workspace_dir=workspace,
         compact_every=5,
@@ -64,7 +64,7 @@ async def main():
     )
 
     print("✅ Created janitor with LLM-powered extraction")
-    print("   Model: claude-3-haiku-20240307")
+    print("   Model: claude-haiku-4-5")
     print("   Compact every: 5 turns")
     print("   Max tokens: 10,000")
     print()
@@ -170,7 +170,7 @@ failures. Finally, I updated all the imports across the codebase to use the new 
         agent_id=f"{agent_id}-compact",
         provider=AnthropicProvider(
             api_key=api_key,
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
         ),
         workspace_dir=workspace,
         compact_every=3,  # Compact every 3 turns

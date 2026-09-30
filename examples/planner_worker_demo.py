@@ -66,13 +66,13 @@ Focus on the most impactful improvements.
         # Expensive model for planning (runs once)
         planner_provider=AnthropicProvider(
             api_key=api_key,
-            model="claude-sonnet-4",  # Smart, expensive
+            model="claude-sonnet-5-5",  # Smart, expensive
             max_tokens=4096,
         ),
         # Cheap model for execution (runs many times)
         worker_provider=AnthropicProvider(
             api_key=api_key,
-            model="claude-3-haiku-20240307",  # Fast, cheap
+            model="claude-haiku-4-5",  # Fast, cheap
             max_tokens=4096,
         ),
         workspace_dir=workspace,
@@ -80,8 +80,8 @@ Focus on the most impactful improvements.
         worker_policy="autonomous-dev",
     )
 
-    print("   ✅ Planner: claude-sonnet-4 (expensive, strategic)")
-    print("   ✅ Worker: claude-3-haiku-20240307 (cheap, tactical)")
+    print("   ✅ Planner: claude-sonnet-5-5 (expensive, strategic)")
+    print("   ✅ Worker: claude-haiku-4-5 (cheap, tactical)")
     print()
 
     # -------------------------------------------------------------------

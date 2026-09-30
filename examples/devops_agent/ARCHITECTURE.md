@@ -1,7 +1,7 @@
 # Autonomous DevOps Agent - Architecture Documentation
 
 **Project:** teotl / Autonomous DevOps Agent
-**Built With:** Claude Sonnet 4, Model Context Protocol (MCP), Python 3.11+
+**Built With:** Claude Sonnet 5.5, Model Context Protocol (MCP), Python 3.11+
 
 ---
 
@@ -56,7 +56,7 @@ Human Review: Only at merge time
         │              │              │
    ┌────▼────┐   ┌────▼────┐   ┌────▼────┐
    │   MCP   │   │ CLAUDE  │   │ SKILLS  │
-   │ BRIDGE  │   │SONNET 4 │   │REGISTRY │
+   │ BRIDGE  │   │ CLAUDE  │   │REGISTRY │
    └────┬────┘   └────┬────┘   └────┬────┘
         │              │              │
         └──────────────┴──────────────┘
@@ -190,7 +190,7 @@ Created → Pending → In Progress → Completed
                                Failed (retry or expire)
 ```
 
-### 4. Agent - Reasoning Engine (Claude Sonnet 4)
+### 4. Agent - Reasoning Engine (Claude Sonnet 5.5)
 
 **Execution Loop:**
 ```
@@ -296,8 +296,8 @@ Tool Call → Guardrails → Decision (ALLOW/CONFIRM/BLOCK)
 - **Per Fix:** 30-70 seconds average
 - **Scan Mission:** ~60 seconds + 2s per bug found
 
-### Cost (Claude Sonnet 4)
-- **Per Fix:** ~$0.30-0.60
+### Cost (Claude Sonnet 5.5)
+- **Per Fix:** ~$0.20-0.40
 - **Compared to Human:** $100/hour (99.5% savings)
 
 ### Throughput

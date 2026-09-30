@@ -5,12 +5,13 @@ from __future__ import annotations
 from teotl.core.types import Action, ActionType, RiskLevel, ToolCall
 
 
-def classify(tool_call: ToolCall) -> Action:
+def classify(tool_call: ToolCall, tool_risk: dict[str, RiskLevel] | None = None) -> Action:
     """
     Classify a tool call into an Action with type and risk level.
 
     This is the entry point for the guardrails system. Every tool call
-    goes through classification before policy evaluation.
+    goes through classification before policy evaluation. `tool_risk` holds
+    risk levels declared for custom tools; undeclared tools are low risk.
     """
     if tool_call.name == "bash":
         return classify_bash(tool_call.args.get("command", ""))
@@ -32,7 +33,7 @@ def classify(tool_call: ToolCall) -> Action:
         return Action(
             type=ActionType.EXECUTE,
             target=tool_call.name,
-            risk=RiskLevel.LOW,
+            risk=(tool_risk or {}).get(tool_call.name, RiskLevel.LOW),
             details={"tool": tool_call.name, "args": tool_call.args},
         )
 

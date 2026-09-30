@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from abc import ABC, abstractmethod
 from typing import Any
@@ -10,6 +11,147 @@ from teotl.core.models import CLAUDE_MODELS, DEFAULT_CONTEXT_WINDOW, DEFAULT_MOD
 from teotl.core.types import CompletionResult, ToolCall, ToolDefinition
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Message conversion
+#
+# The agent keeps conversation history in Anthropic's format: content is a
+# string, or a list of blocks ("text", "tool_use", "tool_result", and
+# provider-native blocks such as "thinking"). Other providers convert it.
+# ---------------------------------------------------------------------------
+
+
+def _blocks(content: Any) -> list[dict[str, Any]]:
+    if isinstance(content, str):
+        return [{"type": "text", "text": content}] if content else []
+    return [b for b in content or [] if isinstance(b, dict)]
+
+
+def _text(blocks: list[dict[str, Any]]) -> str:
+    return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+
+
+def _result_text(block: dict[str, Any]) -> str:
+    content = block.get("content", "")
+    if isinstance(content, list):
+        content = _text(_blocks(content))
+    return str(content)
+
+
+def _to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Anthropic-format history -> OpenAI chat messages (tool_calls / role "tool")."""
+    out: list[dict[str, Any]] = []
+    for msg in messages:
+        blocks = _blocks(msg.get("content"))
+        if msg["role"] == "assistant":
+            calls = [b for b in blocks if b.get("type") == "tool_use"]
+            entry: dict[str, Any] = {"role": "assistant", "content": _text(blocks) or None}
+            if calls:
+                entry["tool_calls"] = [
+                    {
+                        "id": b["id"],
+                        "type": "function",
+                        "function": {
+                            "name": b["name"],
+                            "arguments": json.dumps(b.get("input", {})),
+                        },
+                    }
+                    for b in calls
+                ]
+            out.append(entry)
+        else:
+            for b in blocks:
+                if b.get("type") == "tool_result":
+                    out.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": b["tool_use_id"],
+                            "content": _result_text(b),
+                        }
+                    )
+            text = _text(blocks)
+            if text:
+                out.append({"role": "user", "content": text})
+    return out
+
+
+def _to_ollama_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Anthropic-format history -> Ollama chat messages."""
+    out: list[dict[str, Any]] = []
+    names: dict[str, str] = {}
+    for msg in messages:
+        blocks = _blocks(msg.get("content"))
+        if msg["role"] == "assistant":
+            calls = [b for b in blocks if b.get("type") == "tool_use"]
+            entry: dict[str, Any] = {"role": "assistant", "content": _text(blocks)}
+            if calls:
+                entry["tool_calls"] = [
+                    {"function": {"name": b["name"], "arguments": b.get("input", {})}}
+                    for b in calls
+                ]
+                names.update({b["id"]: b["name"] for b in calls})
+            out.append(entry)
+        else:
+            for b in blocks:
+                if b.get("type") == "tool_result":
+                    out.append(
+                        {
+                            "role": "tool",
+                            "content": _result_text(b),
+                            "tool_name": names.get(b["tool_use_id"], ""),
+                        }
+                    )
+            text = _text(blocks)
+            if text:
+                out.append({"role": "user", "content": text})
+    return out
+
+
+def _to_gemini_contents(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Anthropic-format history -> Gemini contents (function_call / function_response)."""
+    out: list[dict[str, Any]] = []
+    names: dict[str, str] = {}
+    for msg in messages:
+        blocks = _blocks(msg.get("content"))
+        parts: list[Any] = []
+        if msg["role"] == "assistant":
+            text = _text(blocks)
+            if text:
+                parts.append({"text": text})
+            for b in blocks:
+                if b.get("type") == "tool_use":
+                    names[b["id"]] = b["name"]
+                    parts.append({"function_call": {"name": b["name"], "args": b.get("input", {})}})
+            if parts:
+                out.append({"role": "model", "parts": parts})
+        else:
+            for b in blocks:
+                if b.get("type") == "tool_result":
+                    parts.append(
+                        {
+                            "function_response": {
+                                "name": names.get(b["tool_use_id"], "unknown"),
+                                "response": {"result": _result_text(b)},
+                            }
+                        }
+                    )
+            text = _text(blocks)
+            if text:
+                parts.append({"text": text})
+            if parts:
+                out.append({"role": "user", "parts": parts})
+    return out
+
+
+def _openai_style_tools(tools: list[ToolDefinition]) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "function",
+            "function": {"name": t.name, "description": t.description, "parameters": t.parameters},
+        }
+        for t in tools
+    ]
 
 
 class Provider(ABC):
@@ -177,31 +319,22 @@ class OpenAIProvider(Provider):
         system: str = "",
         messages: list[dict[str, Any]],
         tools: list[ToolDefinition] | None = None,
-        max_tokens: int = 4096,
+        max_tokens: int | None = None,
     ) -> CompletionResult:
         api_messages = []
         if system:
             api_messages.append({"role": "system", "content": system})
-        api_messages.extend(messages)
+        api_messages.extend(_to_openai_messages(messages))
 
         kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": api_messages,
-            "max_tokens": max_tokens or self.max_tokens,
+            # Current OpenAI models reject `max_tokens`
+            "max_completion_tokens": max_tokens if max_tokens is not None else self.max_tokens,
         }
 
         if tools:
-            kwargs["tools"] = [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": t.name,
-                        "description": t.description,
-                        "parameters": t.parameters,
-                    },
-                }
-                for t in tools
-            ]
+            kwargs["tools"] = _openai_style_tools(tools)
 
         response = await self.client.chat.completions.create(**kwargs)
         choice = response.choices[0]
@@ -210,8 +343,6 @@ class OpenAIProvider(Provider):
         tool_calls = []
 
         if choice.message.tool_calls:
-            import json
-
             for tc in choice.message.tool_calls:
                 tool_calls.append(
                     ToolCall(
@@ -269,7 +400,7 @@ class OllamaProvider(Provider):
         system: str = "",
         messages: list[dict[str, Any]],
         tools: list[ToolDefinition] | None = None,
-        max_tokens: int = 4096,
+        max_tokens: int | None = None,
     ) -> CompletionResult:
         try:
             import ollama
@@ -281,19 +412,35 @@ class OllamaProvider(Provider):
         api_messages = []
         if system:
             api_messages.append({"role": "system", "content": system})
-        api_messages.extend(messages)
+        api_messages.extend(_to_ollama_messages(messages))
+
+        kwargs: dict[str, Any] = {"model": self.model, "messages": api_messages}
+        if tools:
+            kwargs["tools"] = _openai_style_tools(tools)
+        if max_tokens is not None:
+            kwargs["options"] = {"num_predict": max_tokens}
 
         client = ollama.AsyncClient(host=self.host)
-        response = await client.chat(
-            model=self.model,
-            messages=api_messages,
-        )
+        response = await client.chat(**kwargs)
+
+        message = response["message"]
+        tool_calls = [
+            ToolCall(
+                id=f"call_{i}_{tc['function']['name']}",
+                name=tc["function"]["name"],
+                args=dict(tc["function"].get("arguments") or {}),
+            )
+            for i, tc in enumerate(message.get("tool_calls") or [])
+        ]
 
         return CompletionResult(
-            content=response["message"]["content"],
-            tool_calls=[],
-            done=True,
-            usage={},
+            content=message.get("content") or "",
+            tool_calls=tool_calls,
+            done=len(tool_calls) == 0,
+            usage={
+                "input_tokens": response.get("prompt_eval_count") or 0,
+                "output_tokens": response.get("eval_count") or 0,
+            },
             raw=response,
         )
 
@@ -343,36 +490,8 @@ class GeminiProvider(Provider):
     ) -> CompletionResult:
         import asyncio
 
-        # Convert messages to Gemini format
-        # Gemini uses "user" and "model" roles (not "assistant")
-        gemini_messages = []
-        for msg in messages:
-            role = msg["role"]
-            if role == "assistant":
-                role = "model"
-
-            content = msg.get("content", "")
-
-            # Handle tool results - Gemini expects function responses
-            if role == "user" and "tool_result" in msg:
-                # This is a tool result message
-                from google.generativeai.types import content_types
-
-                gemini_messages.append(
-                    content_types.ContentDict(
-                        role="user",
-                        parts=[
-                            {
-                                "function_response": {
-                                    "name": msg.get("tool_name", "unknown"),
-                                    "response": {"result": msg["tool_result"]},
-                                }
-                            }
-                        ],
-                    )
-                )
-            elif content:
-                gemini_messages.append({"role": role, "parts": [content]})
+        # Convert Anthropic-format history (incl. tool calls/results) to Gemini contents
+        gemini_messages = _to_gemini_contents(messages)
 
         # Build generation config
         generation_config = {
@@ -414,7 +533,7 @@ class GeminiProvider(Provider):
             for part in response.candidates[0].content.parts:
                 if hasattr(part, "text") and part.text:
                     content += part.text
-                elif hasattr(part, "function_call"):
+                elif getattr(part, "function_call", None) and part.function_call.name:
                     fc = part.function_call
                     tool_calls.append(
                         ToolCall(

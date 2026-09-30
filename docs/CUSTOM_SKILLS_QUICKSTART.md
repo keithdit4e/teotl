@@ -118,7 +118,7 @@ license: MIT              # Recommended
 tags:                     # Optional: for discovery
   - database
   - postgres
-triggers:                 # Optional: auto-activate keywords
+triggers:                 # Optional: load the skill when these words appear in a message
   - database
   - sql
   - query

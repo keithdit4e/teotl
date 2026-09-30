@@ -96,7 +96,10 @@ class SkillRegistry:
             active_marker = " [active]" if name in self.active else ""
             lines.append(f"- **{name}**: {meta.description}{active_marker}")
         lines.append("")
-        lines.append("To use a capability, just ask. Full instructions will be loaded.")
+        lines.append(
+            "Before doing a task one of these covers, call the `load_skill` tool with its "
+            "name to load its full instructions."
+        )
         return "\n".join(lines)
 
     async def activate(self, skill_name: str) -> str:
@@ -107,7 +110,7 @@ class SkillRegistry:
         Returns the full instructions for injection into the conversation.
         """
         if skill_name in self.active:
-            return self.active[skill_name].instructions
+            return self._render(self.active[skill_name])
 
         meta = self.skills.get(skill_name)
         if not meta:
@@ -120,7 +123,12 @@ class SkillRegistry:
         self.active[skill_name] = full
 
         logger.info(f"Activated skill: {skill_name} ({len(full.instructions)} chars)")
-        return full.instructions
+        return self._render(full)
+
+    @staticmethod
+    def _render(skill: SkillFull) -> str:
+        """Skill instructions plus its directory, so bundled scripts and files can be found."""
+        return f"Skill directory: {skill.meta.path}\n\n{skill.instructions}"
 
     def deactivate(self, skill_name: str) -> None:
         """Remove skill instructions from active context."""
@@ -143,7 +151,7 @@ class SkillRegistry:
 
         parts = []
         for name, skill in self.active.items():
-            parts.append(f"## Skill: {name}\n\n{skill.instructions}")
+            parts.append(f"## Skill: {name}\n\n{self._render(skill)}")
         return "\n\n---\n\n".join(parts)
 
     @property

@@ -53,7 +53,7 @@ agent = Agent(
     skills=["filesystem", "git", "web"],
 )
 
-# Skills auto-activate when the agent needs them
+# The agent loads a skill's full instructions when it needs them
 response = await agent.run("List all TODO comments in Python files")
 ```
 
@@ -68,10 +68,14 @@ Available capabilities:
 ```
 Cost: ~150 tokens (3 skills × 50 tokens)
 
-**Step 2: Skill is activated when relevant**
-When the model's response mentions a skill's name or one of its `triggers`, the agent
-activates that skill and loads its full instructions for the next turn. You can also
-activate a skill manually (see below).
+**Step 2: Skill is loaded when relevant**
+A skill's full instructions are loaded in any of these ways:
+- **Your message names it:** if your message contains the skill's name or one of its `triggers`, it's loaded before the model's first call.
+- **The model asks for it:** the model calls the built-in `load_skill` tool with the skill's name. The instructions come back as the tool result, in the same run.
+- **The model's reply mentions it:** it's loaded for the next run.
+- **You load it yourself:** see Manual Activation below.
+
+Loaded instructions start with `Skill directory: <path>`, so the model can find scripts and files that ship in the skill's folder.
 
 **Step 3: Full instructions loaded on-demand**
 ```
@@ -172,7 +176,7 @@ command example
 | `version` | No (defaults to `0.1.0`) | Semantic version (1.0.0) |
 | `description` | Recommended | One-line description (always in context) |
 | `auth` | No (defaults to `none`) | Authentication type: `none`, `token`, `oauth` (informational) |
-| `triggers` | No | Keywords that auto-activate this skill when they appear in the model's response |
+| `triggers` | No | Keywords that load this skill when they appear in your message (or the model's reply) |
 
 ### Example: Database Skill
 
@@ -358,9 +362,9 @@ registry = SkillRegistry()
 print(list(registry.skills.keys()))
 ```
 
-### Skill Not Auto-Activating
+### Skill Not Loading
 
-Add trigger keywords to frontmatter:
+The model can load any registered skill itself with the `load_skill` tool, so check first that the skill is registered (see above) and that its `description` says clearly when to use it. To load it whenever certain words appear in your message, add trigger keywords to the frontmatter:
 
 ```yaml
 triggers:

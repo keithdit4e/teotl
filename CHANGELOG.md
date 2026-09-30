@@ -19,7 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `browser` install extra (`teotl[browser]`). Installing with it now only prints a pip warning
 
 ### Added
+- **`load_skill` tool:** the model can load any registered skill's full instructions mid-run. Before this, a skill passed as `skills=[...]` only showed its one-line description; its instructions arrived only after the model's final reply happened to mention it, so they were never available in the same run
+- **Skills load from your message:** a skill whose name or trigger appears in your message is loaded before the first model call
+- **Skill directory path:** loaded skill instructions include the skill's directory, so bundled scripts and reference files can be found and run with the `bash` tool
+- **`register_tool(..., risk=...)`:** declare `"low"` (default), `"medium"`, `"high"`, or `"critical"` so guardrails ask for confirmation or block custom tools that change data or contact people
 - A test that every `SKILL.md` bundled in the package is discovered by the skill registry
+
+### Fixed
+- **Plain functions as tools:** tool handlers can now be regular (synchronous) functions. Before this they had to be async, and a regular function failed with a "can't be awaited" error
+- **Duplicate tool names:** registering a tool name twice now replaces the tool. Before this it added a duplicate definition, which the model APIs reject (e.g. a custom `bash` alongside the built-in one). Invalid tool names now raise a clear error at registration
+- **OpenAI tool history:** the turn after a tool call used to fail on OpenAI, because tool history was sent in Anthropic's format. It's now converted to `tool_calls` and `role: "tool"` messages
+- **OpenAI token limit:** OpenAI requests now send `max_completion_tokens`, which current models require instead of `max_tokens`. The provider's `max_tokens` setting is also respected now, instead of always being 4096
+- **Gemini tool history:** tool calls and results are now sent to Gemini as `function_call` / `function_response` parts. Before this, tool results never reached the model
+- **Ollama tool support:** Ollama now sends tools and parses tool calls. Before this it ignored tools entirely
 
 ## [0.2.2] - 2026-09-30
 

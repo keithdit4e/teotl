@@ -36,23 +36,23 @@ def chat(agent: str | None, skills: tuple[str, ...], no_memory: bool):
 
       \b
       # Basic chat
-      forge chat
+      teotl chat
 
       \b
       # Chat with skills (comma-separated)
-      forge chat --skills filesystem,git,web
+      teotl chat --skills filesystem,git,web
 
       \b
       # Chat with skills (repeated flags)
-      forge chat --skills filesystem --skills git
+      teotl chat --skills filesystem --skills git
 
       \b
       # Chat with specific agent (loads workspace files)
-      forge chat --agent my-agent
+      teotl chat --agent my-agent
 
       \b
       # Chat without memory
-      forge chat --no-memory
+      teotl chat --no-memory
     """
     import asyncio
 
@@ -97,7 +97,14 @@ def wizard():
     wizard_main()
 
 
-@main.command()
-def security():
-    """Manage security policies and configurations."""
-    security_main()
+@main.command(
+    context_settings={"ignore_unknown_options": True, "help_option_names": []},
+    add_help_option=False,
+)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def security(args: tuple[str, ...]):
+    """View security audit logs, reports, and status (logs | report | status)."""
+    security_main(list(args))
+
+
+main.add_command(memory)

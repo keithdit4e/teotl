@@ -17,7 +17,7 @@ from typing import Any
 import yaml
 
 from teotl.daemon.executor import create_simple_executor
-from teotl.daemon.heartbeat import HeartbeatDaemon
+from teotl.daemon.agent_daemon import AgentDaemon
 from teotl.primitives.discovery import LocalDiscovery
 from teotl.primitives.missions import Mission, MissionInterval
 from teotl.primitives.tasks import Priority, Task
@@ -83,7 +83,7 @@ def normalize_config(config: dict[str, Any]) -> dict[str, Any]:
     return config
 
 
-async def load_initial_tasks(daemon: HeartbeatDaemon, tasks_config: list[dict[str, Any]]):
+async def load_initial_tasks(daemon: AgentDaemon, tasks_config: list[dict[str, Any]]):
     """Load initial tasks from config."""
     for task_config in tasks_config:
         task = Task(
@@ -102,7 +102,7 @@ async def load_initial_tasks(daemon: HeartbeatDaemon, tasks_config: list[dict[st
         logger.info(f"✅ Loaded task: {task.description}")
 
 
-async def load_initial_missions(daemon: HeartbeatDaemon, missions_config: list[dict[str, Any]]):
+async def load_initial_missions(daemon: AgentDaemon, missions_config: list[dict[str, Any]]):
     """Load initial missions from config."""
     for mission_config in missions_config:
         from datetime import datetime, timedelta
@@ -239,7 +239,7 @@ async def run_daemon(config_path: Path, agent_id: str | None = None):
     )
 
     # Create daemon
-    daemon = HeartbeatDaemon(
+    daemon = AgentDaemon(
         agent_id=agent_id,
         agent_executor=executor,
         data_dir=data_dir,

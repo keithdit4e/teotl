@@ -3,6 +3,10 @@
 > A platform for building any agent type. Minimal core, maximum extensibility.
 > Open core: free framework + paid cloud services.
 
+> **Note:** This is the framework's design document. Code listings in sections 5–8 are
+> design sketches that explain the architecture; they are simplified and may differ from the
+> shipped implementation. For the actual public API, see [api_reference.md](api_reference.md).
+
 ---
 
 ## 1. Positioning & Competitive Gap
@@ -83,67 +87,60 @@ Take pi-mono's philosophy (minimal core, extensions, skills) and rebuild it in P
 
 ## 4. Project Structure
 
+Main packages (abridged):
+
 ```
 teotl/
 ├── pyproject.toml              # Package config, entry points
 ├── teotl/
-│   ├── __init__.py             # Public API surface
+│   ├── __init__.py             # Public API: Agent, EventBus, Session, Extension, Response, ToolCall
 │   ├── core/
 │   │   ├── agent.py            # Agent loop (the heart)
 │   │   ├── session.py          # JSONL session management
 │   │   ├── events.py           # Event bus + hook system
-│   │   ├── provider.py         # LLM provider abstraction
-│   │   └── types.py            # Core type definitions
+│   │   ├── provider.py         # LLM providers (Anthropic, OpenAI, Gemini, Ollama)
+│   │   ├── models.py           # Model IDs and pricing
+│   │   ├── types.py            # Core type definitions
+│   │   └── security/           # SecurityPolicy, sandboxing, audit logging, cost tracking
 │   ├── primitives/
 │   │   ├── guardrails/
 │   │   │   ├── engine.py       # Policy evaluation engine
 │   │   │   ├── policy.py       # Declarative policy loader
 │   │   │   ├── classifier.py   # Action classification (read/write/execute/network)
 │   │   │   ├── bash_analyzer.py # Structural bash command analysis
+│   │   │   ├── prompt_injection.py # Prompt injection detection
+│   │   │   ├── rate_limiter.py # Request / cost rate limiting
 │   │   │   ├── trust.py        # Progressive trust tracker
 │   │   │   └── presets.py      # minimal / standard / strict
 │   │   ├── memory/
 │   │   │   ├── store.py        # Memory storage interface
 │   │   │   ├── local.py        # SQLite-backed local memory
-│   │   │   ├── context.py      # Memory injection into prompts
-│   │   │   └── compactor.py    # Session → memory extraction
+│   │   │   ├── encrypted.py    # Encrypted memory store
+│   │   │   └── context.py      # Memory injection into prompts
 │   │   ├── skills/
 │   │   │   ├── registry.py     # Skill discovery + loading
 │   │   │   ├── loader.py       # SKILL.md parser (frontmatter + body)
-│   │   │   ├── router.py       # Description-based skill matching
-│   │   │   └── standard.py     # Built-in skill format spec
-│   │   └── integrations/
-│   │       ├── registry.py     # Integration catalog
-│   │       ├── auth.py         # OAuth/API key management
-│   │       ├── connector.py    # CLI script executor
-│   │       └── mcp_bridge.py   # MCP escape hatch (meta-tool pattern)
+│   │   │   └── router.py       # Description-based skill matching
+│   │   ├── integrations/
+│   │   │   ├── registry.py     # Integration catalog
+│   │   │   ├── credential_store.py # Credential storage backends
+│   │   │   └── mcp_bridge.py   # MCP escape hatch (meta-tool pattern)
+│   │   ├── harness/            # Planner-worker harness, janitor, heartbeat, checkpoints
+│   │   ├── missions/           # Recurring scheduled missions
+│   │   └── tasks/, a2a/, discovery/, permissions/, resolution/
 │   ├── extensions/
 │   │   ├── manager.py          # Extension loading + lifecycle
-│   │   ├── hooks.py            # Hook definitions (tool_call, tool_result, etc.)
 │   │   └── builtin/            # Bundled extensions
 │   │       ├── audit.py        # Append-only audit logging
-│   │       ├── undo.py         # File snapshot + rollback
-│   │       └── observe.py      # Reasoning trace / /why command
-│   ├── ui/
-│   │   ├── base.py             # Abstract UI interface
-│   │   ├── cli.py              # Rich terminal UI (default)
-│   │   ├── web.py              # WebSocket-based web UI adapter
-│   │   └── headless.py         # Programmatic / API mode
-│   └── cloud/                  # ← Open core boundary
-│       ├── __init__.py         # Cloud client stub (free tier: noop)
-│       ├── sync.py             # Memory sync client
-│       ├── analytics.py        # Usage analytics client
-│       └── teams.py            # Team/shared workspace client
-├── skills/                     # Community skill library
-│   ├── filesystem/
-│   │   └── SKILL.md
-│   ├── git/
-│   │   ├── SKILL.md
-│   │   └── scripts/
-│   ├── web/
-│   │   ├── SKILL.md
-│   │   └── scripts/
-│   └── ...
+│   │       └── undo.py         # File snapshot + rollback
+│   ├── skills/                 # Bundled skills (filesystem, git, github, web, ...)
+│   ├── ui/                     # Rich terminal UI + security panel
+│   ├── cli/                    # `teotl` command (chat, onboard, memory, security)
+│   ├── daemon/                 # Long-running agent daemon (python -m teotl.daemon.run)
+│   ├── web/                    # Web dashboard (python -m teotl.web)
+│   ├── config/                 # Config factory, multi-agent config
+│   ├── templates/              # Agent workspace templates
+│   └── cloud/                  # ← Open core boundary (stub)
 ├── policies/                   # Preset policy files
 │   ├── minimal.json
 │   ├── standard.json
@@ -151,10 +148,6 @@ teotl/
 ├── tests/
 ├── docs/
 └── examples/
-    ├── coding_agent/
-    ├── research_agent/
-    ├── customer_support/
-    └── personal_assistant/
 ```
 
 ---
@@ -341,14 +334,14 @@ class GuardrailEngine:
         )
 ```
 
-**Policy file format** (`~/.teotl/policy.json`):
+**Policy file format** (JSON or YAML, loaded with `Policy.from_file(path)` or passed to `Agent(policy=Path(...))`; presets live in `policies/`):
 
 ```json
 {
   "level": "standard",
   "filesystem": {
     "allow": ["~/projects/**", "~/Documents/**", "/tmp/**"],
-    "deny": ["~/.ssh/**", "~/.aws/**", "~/.teotl/auth/**"],
+    "deny": ["~/.ssh/**", "~/.aws/**", "~/.forge/auth/**"],
     "confirm_write_outside_scope": true
   },
   "bash": {
@@ -542,9 +535,10 @@ class SkillRegistry:
     def _discover(self, enabled: list[str] | None) -> None:
         """Scan skill directories for SKILL.md files."""
         search_paths = [
-            Path.home() / ".teotl" / "skills",      # User skills
+            Path.home() / ".forge" / "skills",      # User skills
             Path(__file__).parent.parent / "skills",  # Built-in skills
         ]
+        # Plus any directories listed in TEOTL_SKILLS_PATH (colon-separated)
 
         for path in search_paths:
             if not path.exists():
@@ -589,55 +583,34 @@ class SkillRegistry:
         """Remove skill instructions from context (e.g., after compaction)."""
         self.active.pop(skill_name, None)
 
+```
 
-# SKILL.md format
+**SKILL.md format** — a skill is a folder containing a `SKILL.md` with YAML frontmatter
+plus instructions. Only the `description` is always in context; the body is loaded on
+activation. Excerpt from the bundled `git` skill (`teotl/skills/git/SKILL.md`):
 
-SKILL_FORMAT = """
+````markdown
 ---
-name: gmail
-version: 1.0.0
-description: "Send, read, and search email"  # ← Always in context (~15 tokens)
-auth: oauth2
+name: git
+version: 2.0.0
+description: "Version control with Git: status, commits, branches, diffs"  # ← Always in context
+auth: none
 triggers:
-  - email
-  - mail
-  - inbox
-  - send message
+  - git
+  - commit
+  - branch
 ---
 
-# Gmail Integration
+# Git Version Control
 
-## Setup
-Run `teotl auth gmail` to connect your Google account.
+## Essential Status & Info
 
-## Commands
-
-### List recent emails
+### Repository Status
 ```bash
-teotl-gmail list --limit 10
+git status
+git status -s
 ```
-
-### Read an email
-```bash
-teotl-gmail read <message_id>
-```
-
-### Send an email
-```bash
-teotl-gmail send --to "user@example.com" --subject "Hello" --body "Content here"
-```
-
-### Search emails
-```bash
-teotl-gmail search "from:boss@company.com after:2025/01/01"
-```
-
-## Notes
-- All commands output JSON by default. Add `--format human` for readable output.
-- Attachments: use `--attach /path/to/file` with send.
-- The agent should always confirm before sending emails.
-"""
-```
+````
 
 ### 5.5 Integration Registry
 
@@ -1016,51 +989,39 @@ Optional cloud services for teams and enterprises are planned but not yet availa
 
 ```bash
 # Install
-pip install -e ".[anthropic]"  # from cloned repo
+pip install "teotl[anthropic]"            # or: pip install -e ".[dev,anthropic]" from a clone
 
-# First run (interactive setup)
-teotl init
-# → Choose provider (Anthropic/OpenAI/Ollama/other)
-# → Set API key
-# → Choose guardrail level (minimal/standard/strict)
-# → Discover available skills
+# First run (interactive setup wizard)
+teotl onboard                              # alias: teotl wizard
+# → Configure API key
+# → Agent personality and preferences
+# → Skills selection
+# → Security policies
 
 # Run
-teotl                          # Interactive REPL
-teotl "refactor auth.py"       # One-shot
-teotl --skill gmail,github     # Enable specific skills
-teotl --policy strict          # Override policy
-teotl --resume                 # Continue last session
+teotl chat                                 # Interactive chat
+teotl chat --skills filesystem,git,web     # Enable specific skills
+teotl chat --agent my-agent                # Load an agent's workspace files
+teotl chat --no-memory                     # Disable memory
+# Inside chat: /help, /skills, /memory, /clear, /exit
 
 # Manage
-teotl skills list              # Show available skills
-teotl skills install slack     # Install from skill store
-teotl auth gmail               # Connect a service
-teotl memory search "project"  # Query memories
-teotl memory forget <id>       # Delete a memory
-teotl audit show               # View recent audit log
-teotl policy edit              # Open policy.json in editor
+teotl memory list                          # List memories
+teotl memory search "project"              # Query memories
+teotl memory delete <id>                   # Delete a memory
+teotl security logs                        # View recent audit log
+teotl security report                      # Compliance report
+teotl security status                      # Security status
 ```
 
-### Web UI (adapter)
+Installing a skill means copying its folder (containing `SKILL.md`) into `~/.forge/skills/`
+or a directory listed in `TEOTL_SKILLS_PATH`.
 
-```python
-# teotl/ui/web.py — thin adapter over the core
+### Web dashboard
 
-from teotl import Agent, WebUI
-
-agent = Agent(
-    provider=AnthropicProvider(),
-    policy="standard",
-)
-
-# WebSocket-based UI
-app = WebUI(agent, port=8080)
-app.run()
-# → Opens browser with chat interface
-# → Guardrail confirmations appear as modals
-# → Audit log visible in sidebar
-# → Memory browser accessible via /memory
+```bash
+pip install "teotl[web]"
+python -m teotl.web --agents my-agent --port 8080
 ```
 
 ### Programmatic (for platform builders)
@@ -1068,32 +1029,27 @@ app.run()
 ```python
 # The API that platform builders use
 
-from teotl import Agent, HeadlessUI, AnthropicProvider, Policy
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.guardrails import Policy
+from teotl.primitives.memory.local import LocalMemory
 
 # Custom agent with full control
 agent = Agent(
     provider=AnthropicProvider(model="claude-sonnet-5-5"),
     instructions="You are a customer support agent for Acme Corp.",
-    skills=["knowledge_base", "ticketing"],
+    skills=["web"],
     policy=Policy.from_dict({
         "level": "strict",
         "bash": {"block": ["*"]},  # No bash access
-        "integrations": {
-            "zendesk": {"read": "allow", "write": "allow"},
-        }
     }),
     memory=LocalMemory(path="./customer_memory.db"),
-    extensions=[
-        AuditExtension(sink=CloudAuditSink()),
-        CustomEscalation(),
-    ],
 )
 
-# Run programmatically
-response = await agent.run(
-    "Customer says they were charged twice",
-    ui=HeadlessUI(auto_approve=True),  # No human in loop
-)
+# Run programmatically. With no `ui`, a headless UI is used that
+# auto-approves confirmations — pass a UI adapter for human-in-the-loop.
+response = await agent.run("Customer says they were charged twice")
+print(response.text)
 ```
 
 ---
@@ -1106,7 +1062,7 @@ response = await agent.run(
 - [ ] Anthropic + OpenAI providers
 - [ ] JSONL session management
 - [ ] Basic CLI UI (Rich-based)
-- [ ] `teotl init` / `teotl run`
+- [ ] `teotl onboard` / `teotl chat`
 
 ### Phase 1: Guardrails (Weeks 5-8)
 - [ ] Policy file format + presets
@@ -1122,7 +1078,7 @@ response = await agent.run(
 - [ ] Description injection (always-in-context)
 - [ ] On-demand activation
 - [ ] Built-in skills: filesystem, git, web
-- [ ] `teotl skills` CLI
+- [ ] `teotl skills` CLI (planned, not yet available; install skills by copying folders into `~/.forge/skills/`)
 
 ### Phase 3: Memory (Weeks 13-16)
 - [ ] SQLite memory store
@@ -1139,7 +1095,7 @@ response = await agent.run(
 - [ ] CLI script executor
 - [ ] MCP bridge (meta-tool pattern)
 - [ ] Built-in integrations: Gmail, GitHub, Slack
-- [ ] `teotl auth` CLI
+- [ ] `teotl auth` CLI (planned, not yet available)
 
 ### Phase 5: Cloud (Weeks 21-26)
 - [ ] Cloud client stubs
@@ -1199,8 +1155,8 @@ Teotl's guardrails operate at the **tool execution layer** — between the LLM's
 
 **Teotl** — a place where tools are made. Agents are created here.
 
-- Install from source (PyPI coming soon)
-- `teotl init` / `teotl run` / `teotl skills`
+- Install from PyPI: `pip install teotl`
+- `teotl onboard` / `teotl chat` / `teotl memory` / `teotl security`
 - Framework: MIT license
 
 ---
@@ -1227,30 +1183,37 @@ Teotl's guardrails operate at the **tool execution layer** — between the LLM's
 
 ```python
 """
-Build a customer support agent in 20 lines.
+Build a support agent in a few lines.
 """
-from teotl import Agent, AnthropicProvider, Policy
+from pathlib import Path
 
-agent = Agent(
-    provider=AnthropicProvider(),
-    instructions="""
-    You are a support agent for TechCorp. Be helpful and professional.
-    You can look up customer records and create support tickets.
-    Always verify customer identity before sharing account details.
-    """,
-    skills=["zendesk", "customer_db"],
-    policy=Policy.from_dict({
-        "level": "strict",
-        "bash": {"block": ["*"]},
-        "integrations": {
-            "zendesk": {"read": "allow", "create_ticket": "allow", "delete": "block"},
-            "customer_db": {"read": "allow", "write": "block"},
-        }
-    }),
-)
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.guardrails import Policy
+from teotl.primitives.memory.local import LocalMemory
 
-# Each customer gets their own memory
+POLICY = Policy.from_dict({
+    "level": "strict",
+    "bash": {"block": ["*"]},
+})
+
+
+def make_agent(customer_id: str) -> Agent:
+    # Each customer gets their own memory database
+    Path("./memories").mkdir(exist_ok=True)
+    return Agent(
+        provider=AnthropicProvider(),
+        instructions="""
+        You are a support agent for TechCorp. Be helpful and professional.
+        Always verify customer identity before sharing account details.
+        """,
+        policy=POLICY,
+        memory=LocalMemory(path=f"./memories/{customer_id}.db"),
+    )
+
+
 async def handle_customer(customer_id: str, message: str):
-    agent.memory = LocalMemory(path=f"./memories/{customer_id}.db")
-    return await agent.run(message)
+    agent = make_agent(customer_id)
+    response = await agent.run(message)
+    return response.text
 ```

@@ -333,34 +333,18 @@ Agent: [Expanded with solutions]
 
 Set up recurring research tasks:
 
-```python
-from forge.primitives.mission import Mission, MissionInterval
+```yaml
+missions:
+  - description: "Daily tech news summary: search for tech news from the last 24 hours; filter for AI and developer tools topics; summarize top 5 stories; save to daily_news.md"
+    interval: DAILY
+  - description: "Weekly competitor analysis: check competitor websites for product updates; search for news mentions; track pricing changes; update competitor_tracking.md"
+    interval: WEEKLY
+```
 
-# Daily industry news summary
-mission = Mission(
-    description="Daily tech news summary",
-    interval=MissionInterval.DAILY,
-    instructions="""
-    1. Search for tech news from the last 24 hours
-    2. Filter for AI and developer tools topics
-    3. Summarize top 5 stories
-    4. Save to daily_news.md
-    """,
-    tools=["web", "filesystem"],
-)
+Missions are run by the agent daemon:
 
-# Weekly competitive monitoring
-mission = Mission(
-    description="Weekly competitor analysis",
-    interval=MissionInterval.WEEKLY,
-    instructions="""
-    1. Check competitor websites for product updates
-    2. Search for news mentions
-    3. Track pricing changes
-    4. Update competitor_tracking.md
-    """,
-    tools=["web", "filesystem"],
-)
+```bash
+python -m teotl.daemon.run --config config.yaml
 ```
 
 ## Skills Reference
@@ -511,15 +495,28 @@ teotl chat --agent research-agent
 ### API Integration
 
 ```python
-# Use agent programmatically
-from forge.core.agent import Agent
+# Use the agent programmatically
+import asyncio
+from pathlib import Path
 
-agent = Agent.load("research-agent")
-result = await agent.run("Research emerging AI trends")
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
+from teotl.daemon.executor import load_workspace_files
 
-# Extract structured data
-findings = result.data["key_findings"]
-sources = result.data["sources"]
+
+async def main():
+    workspace = Path("~/.forge/agents/research-agent").expanduser()
+    agent = Agent(
+        provider=AnthropicProvider(model="claude-sonnet-5-5"),
+        # Combines PERSONALITY.md, USER.md, INSTRUCTIONS.md and SKILLS.md
+        instructions=load_workspace_files(workspace),
+        skills=["web", "filesystem"],
+    )
+    response = await agent.run("Research emerging AI trends")
+    print(response.text)
+
+
+asyncio.run(main())
 ```
 
 ## Template Files

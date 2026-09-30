@@ -1,6 +1,6 @@
 # Memory System
 
-**Persistent, encrypted, context-aware memory for AI agents.**
+**Persistent, context-aware memory for AI agents.**
 
 Teotl's memory system provides intelligent long-term storage that helps agents maintain context across sessions, remember user preferences, and build on past interactions.
 
@@ -35,7 +35,7 @@ The memory system stores facts, preferences, and context that persist across age
 ### Key Features
 
 ✅ **Persistent** - Memories survive agent restarts
-✅ **Encrypted** - Sensitive data protected at rest
+✅ **Optional Encryption** - `EncryptedMemory` encrypts content at rest
 ✅ **Searchable** - Full-text search with BM25 ranking
 ✅ **Auto-Expiring** - Importance-based TTL prevents bloat
 ✅ **Context-Aware** - Relevant memories injected automatically
@@ -48,12 +48,12 @@ The memory system stores facts, preferences, and context that persist across age
 ### Basic Usage
 
 ```python
-from teotl.core.agent import Agent
-from teotl.providers.anthropic_provider import AnthropicProvider
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
 from teotl.primitives.memory.local import LocalMemory
 
 # Create memory store
-memory = LocalMemory()  # Defaults to ~/.teotl/memory.db
+memory = LocalMemory()  # Defaults to ~/.forge/memory.db
 
 # Create agent with memory
 agent = Agent(
@@ -61,9 +61,9 @@ agent = Agent(
     memory=memory
 )
 
-# Agent automatically recalls relevant memories
-await agent.run("What programming language do I prefer?")
-# Agent: "You prefer Python over JavaScript" (from past conversation)
+# Agent automatically recalls relevant memories and injects them into context
+response = await agent.run("What programming language do I prefer?")
+print(response.text)
 ```
 
 ### Storing Memories Manually
@@ -110,13 +110,13 @@ await agent.remember(
                            ▼
             ┌─────────────────────────────┐
             │      Local Memory            │
-            │  (SQLite + FTS5 + Encryption)│
+            │  (SQLite + FTS5)             │
             └─────────────────────────────┘
 ```
 
 ### Storage
 
-**Default location:** `~/.teotl/memory.db`
+**Default location:** `~/.forge/memory.db`
 
 **Database schema:**
 ```sql
@@ -210,22 +210,22 @@ When the user sends a message, the agent automatically:
 
 ### Ranking Algorithm
 
-```python
-# SQLite query
+```sql
+-- SQLite query (simplified)
 ORDER BY
-    bm25_score *                    # Relevance to query
-    (importance / 5.0) *            # Importance weighting
-    (1.0 + 1.0 / (1.0 + days_old))  # Recency boost
+    bm25(memories_fts) *            -- Relevance to query
+    (importance / 5.0) *            -- Importance weighting
+    (1.0 + 1.0 / (1.0 + days_old))  -- Recency boost
 ```
 
-**Example:**
-- Query: "What do I prefer for web development?"
-- Memory: "User prefers React over Vue" (importance=8, created 30 days ago)
-- Score: High BM25 (matches "prefer", "web") × 1.6 (importance) × 1.03 (recency)
+If the query isn't valid FTS5 syntax, recall falls back to a `LIKE` search ordered by
+importance and recency.
+
 
 ### Token Budget
 
-By default, memory context is limited to ~500 tokens (2000 characters):
+The agent recalls up to 10 memories per message and limits the injected memory context to
+~500 tokens:
 
 ```python
 # Default budget
@@ -270,38 +270,24 @@ After each agent turn, the system:
 2. Extracts the factual content
 3. Stores with `source="explicit"` and `importance=8`
 
-**Example conversation:**
+**Example:**
 ```
-User: "Hi! My name is Bob and I prefer Python."
-
-Agent: "Nice to meet you, Bob! I'll remember that you prefer Python."
+User: "My name is Bob. I prefer Python."
 
 # Two memories stored automatically:
 # 1. "My name is Bob" (importance=8)
 # 2. "I prefer Python" (importance=8)
 ```
 
+Matching is simple pattern-based, so phrasing matters (e.g. "My name is Bob and I prefer
+Python" only stores the preference).
+
 ### Future: LLM-Based Extraction
 
 **Not yet implemented** (planned for post-MVP):
 
-Use a cheap/fast model (like Haiku) to analyze completed sessions and extract implicit facts:
-
-```python
-# Future capability
-session_compactor = SessionCompactor(
-    store=memory,
-    extraction_provider=haiku_provider
-)
-
-# At session end
-await session_compactor.extract_from_session(session)
-
-# Extracts things like:
-# - "User is working on a CLI project"
-# - "User has 10 years of Python experience"
-# - "User is debugging a performance issue"
-```
+Use a cheap/fast model (like Haiku) to analyze completed sessions and extract implicit facts
+such as "User is working on a CLI project" or "User is debugging a performance issue".
 
 ---
 
@@ -311,13 +297,13 @@ await session_compactor.extract_from_session(session)
 
 #### remember()
 ```python
-memory_id = await agent.remember(
+async def remember(
     content: str,
     *,
     importance: int = 5,
     tags: list[str] | None = None,
-    ttl_days: int | None = None
-) -> str
+    ttl_days: int | None = None,
+) -> str: ...
 ```
 
 **Parameters:**
@@ -341,11 +327,7 @@ await agent.remember(
 
 #### recall()
 ```python
-memories = await agent.recall(
-    query: str,
-    *,
-    limit: int = 10
-) -> list[Memory]
+async def recall(query: str, *, limit: int = 10) -> list[Memory]: ...
 ```
 
 **Parameters:**
@@ -365,7 +347,7 @@ for m in memories:
 
 #### forget()
 ```python
-deleted = await agent.forget(memory_id: str) -> bool
+async def forget(memory_id: str) -> bool: ...
 ```
 
 **Parameters:**
@@ -383,11 +365,7 @@ if await agent.forget("abc123"):
 
 #### list_memories()
 ```python
-memories = await agent.list_memories(
-    *,
-    limit: int = 100,
-    offset: int = 0
-) -> list[Memory]
+async def list_memories(*, limit: int = 100, offset: int = 0) -> list[Memory]: ...
 ```
 
 **Parameters:**
@@ -422,7 +400,7 @@ teotl memory list --limit 50 --offset 100
 teotl memory list --path ~/my-agent/memory.db
 ```
 
-**Output:**
+**Output (illustrative):**
 ```
 ┌────────┬──────────────────────────────┬────────────┬────────────┬───────────┐
 │ ID     │ Content                      │ Importance │ Created    │ Expires   │
@@ -441,7 +419,7 @@ teotl memory list --path ~/my-agent/memory.db
 teotl memory search "Python programming"
 ```
 
-**Output:**
+**Output (illustrative):**
 ```
 Found 3 memories:
 
@@ -462,10 +440,12 @@ Found 3 memories:
 teotl memory delete abc123
 ```
 
-**Output:**
+**Output (illustrative):**
 ```
 ✓ Deleted memory abc123
 ```
+
+All `teotl memory` subcommands accept `--path` to point at a specific database.
 
 ---
 
@@ -479,7 +459,7 @@ teotl memory cleanup --dry-run
 teotl memory cleanup
 ```
 
-**Output:**
+**Output (illustrative):**
 ```
 ✓ Cleaned up 12 memories
   - Expired: 5
@@ -494,7 +474,7 @@ teotl memory cleanup
 teotl memory stats
 ```
 
-**Output:**
+**Output (illustrative):**
 ```
 ┌──────────────────────────────┬────────┐
 │ Metric                        │  Value │
@@ -527,7 +507,7 @@ By Importance:
 teotl memory export memories.json
 
 # Import from JSON
-teotl memory import memories.json
+teotl memory import-memories memories.json
 ```
 
 ---
@@ -536,7 +516,7 @@ teotl memory import memories.json
 
 ### Encryption
 
-**EncryptedMemory** (optional): Encrypts content at rest while keeping metadata searchable.
+**EncryptedMemory** (optional, requires `cryptography`): Encrypts content at rest while keeping metadata searchable.
 
 ```python
 from teotl.primitives.memory.encrypted import EncryptedMemory
@@ -574,24 +554,8 @@ EncryptedMemory automatically removes PII from search index:
 
 ### File Permissions
 
-Memory databases are created with restricted permissions:
-- Unix: `0o600` (owner read/write only)
-- Other users cannot read the database
-
-### Audit Trail
-
-All memory operations are logged to `~/.teotl/audit.jsonl`:
-
-```json
-{
-  "timestamp": "2026-03-20T10:15:30Z",
-  "operation": "remember",
-  "memory_id": "abc123",
-  "content_preview": "User prefers Python...",
-  "importance": 8,
-  "source": "explicit"
-}
-```
+Teotl does not change the database file's permissions; it is created with your default
+umask. Restrict it yourself if needed (e.g. `chmod 600 ~/.forge/memory.db`).
 
 ---
 
@@ -637,8 +601,8 @@ await agent.remember(
 ```python
 from teotl.primitives.integrations.credential_store import CredentialStore
 
-store = CredentialStore()
-await store.set_credential("github", "api_key", "ghp_...")
+store = CredentialStore.create()
+store.save_credential("github", {"token": "ghp_..."})
 ```
 
 ### 4. Clean Up Regularly
@@ -730,13 +694,9 @@ teotl memory delete <id>
    teotl memory cleanup
    ```
 
-2. Reduce token budget:
-   ```python
-   # In memory system configuration
-   token_budget=300  # Lower budget
-   ```
+2. Lower the storage limit: `LocalMemory(max_memories=1000)`
 
-3. Increase importance threshold for storage
+3. Delete memories you no longer need (`teotl memory delete <id>`)
 
 ---
 
@@ -744,7 +704,7 @@ teotl memory delete <id>
 
 **Symptom:** Memories disappear after restart.
 
-**Cause:** Using in-memory database or database file deleted.
+**Cause:** Database file deleted, or a different `path` used between runs.
 
 **Solution:**
 ```python
@@ -778,10 +738,8 @@ See [Manual Memory API](#manual-memory-api) for detailed API documentation.
 ## Related Documentation
 
 - [Guardrails System](GUARDRAILS.md) - Safety controls
-- [Skills System](SKILLS.md) - Agent capabilities
-- [Autonomy Roadmap](AUTONOMY_ROADMAP.md) - Autonomous operation
+- [Skills Guide](SKILLS_GUIDE.md) - Agent capabilities
 
 ---
 
-**Last Updated:** March 20, 2026
-**Version:** 1.0
+**Last Updated:** September 2026

@@ -69,9 +69,10 @@ pip install -e ".[dev]"
 ```
 
 This installs:
-- Core dependencies (anthropic, openai, rich, click, etc.)
-- Development tools (pytest, ruff, mypy, etc.)
-- Testing utilities
+- Core dependencies (pydantic, httpx, rich, click, etc.)
+- Development tools (pytest, pytest-asyncio, pytest-cov, ruff, mypy, pre-commit)
+
+Add provider extras as needed, e.g. `pip install -e ".[dev,anthropic]"`.
 
 ### Environment Variables
 
@@ -95,7 +96,7 @@ teotl/
 │   ├── cli/            # CLI commands
 │   ├── ui/             # User interface components
 │   └── daemon/         # Daemon services
-├── tests/              # Test suite (553 tests)
+├── tests/              # Test suite
 ├── docs/               # Documentation
 ├── examples/           # Example agents and demos
 └── pyproject.toml      # Package configuration
@@ -158,7 +159,7 @@ git checkout -b feature/your-feature-name
 pytest tests/ -v
 
 # Run specific tests
-pytest tests/core/test_agent.py -v
+pytest tests/core/test_session.py -v
 
 # Check coverage
 pytest tests/ --cov=teotl --cov-report=html
@@ -258,14 +259,12 @@ class Agent:
         policy: Guardrail policy level (minimal/standard/strict)
     
     Example:
-        ```python
         agent = Agent(
             provider=AnthropicProvider(),
             instructions="You are a helpful assistant.",
-            policy="standard"
+            policy="standard",
         )
         response = await agent.run("Hello!")
-        ```
     """
     
     def __init__(
@@ -287,7 +286,7 @@ class Agent:
 
 - **All new features must include tests**
 - **Bug fixes should include regression tests**
-- **Maintain >99% test pass rate** (currently 553/556 = 99.5%)
+- **Keep the test suite passing**
 - **Aim for high code coverage** (>85%)
 
 ### Running Tests
@@ -297,16 +296,13 @@ class Agent:
 pytest tests/ -v
 
 # Specific test file
-pytest tests/core/test_agent.py -v
+pytest tests/core/test_session.py -v
 
 # Specific test function
-pytest tests/core/test_agent.py::test_agent_initialization -v
+pytest tests/core/test_session.py::<test_name> -v
 
 # With coverage
 pytest tests/ --cov=teotl --cov-report=html
-
-# Skip slow tests
-pytest tests/ -m "not slow"
 
 # Run only unit tests (not integration)
 pytest tests/ -k "not integration"
@@ -316,7 +312,10 @@ pytest tests/ -k "not integration"
 
 ```python
 import pytest
-from teotl.core.agent import Agent
+from teotl import Agent
+
+# MockProvider: a minimal Provider subclass returning canned responses —
+# see tests/integration/test_skills_integration.py for an example.
 
 
 @pytest.mark.asyncio
@@ -346,8 +345,8 @@ def test_agent_initialization_without_provider():
 - **End-to-end tests:** Test complete workflows
 
 Place tests in `tests/` matching the source structure:
-- `teotl/core/agent.py` → `tests/core/test_agent.py`
-- `teotl/primitives/skills/filesystem.py` → `tests/primitives/skills/test_filesystem.py`
+- `teotl/core/session.py` → `tests/core/test_session.py`
+- `teotl/primitives/guardrails/rate_limiter.py` → `tests/primitives/guardrails/test_rate_limiter.py`
 
 ---
 
@@ -397,7 +396,6 @@ Brief description of changes
 ### After Merge
 
 - Your contribution will be included in the next release
-- You'll be added to CONTRIBUTORS.md
 - Thank you! 🎉
 
 ---
@@ -421,7 +419,7 @@ Use the bug report template and include:
 
 ### Feature Requests
 
-Use the feature request template and include:
+Open an issue (or start a discussion) and include:
 
 1. **Problem:** What problem does this solve?
 2. **Solution:** Proposed solution
@@ -433,7 +431,7 @@ Use the feature request template and include:
 
 **Do not open public issues for security vulnerabilities.**
 
-Email security concerns to: security@teotl.dev (or your security contact)
+Report them privately via GitHub's [private vulnerability reporting](https://github.com/keithdit4e/teotl/security/advisories/new) (see [SECURITY.md](SECURITY.md)).
 
 Include:
 - Description of vulnerability
@@ -461,7 +459,6 @@ Include:
 ## Recognition
 
 Contributors will be recognized in:
-- CONTRIBUTORS.md file
 - Release notes
 - Project README (for significant contributions)
 

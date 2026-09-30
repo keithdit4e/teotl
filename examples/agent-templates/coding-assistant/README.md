@@ -73,7 +73,7 @@ Bot: "Analyzing the calculate_total function...
 **Suggested Fix:**
 ```python
 def calculate_total(price: Decimal, quantity: int) -> Decimal:
-    \"\"\"Calculate total price for given quantity.
+    """Calculate total price for given quantity.
 
     Args:
         price: Unit price (must be positive)
@@ -84,11 +84,11 @@ def calculate_total(price: Decimal, quantity: int) -> Decimal:
 
     Raises:
         ValueError: If price or quantity is invalid
-    \"\"\"
+    """
     if quantity <= 0:
-        raise ValueError(\"Quantity must be positive\")
+        raise ValueError("Quantity must be positive")
     if price < 0:
-        raise ValueError(\"Price cannot be negative\")
+        raise ValueError("Price cannot be negative")
 
     discount_rate = 0.1 if quantity > 100 else 0.0
     return price * quantity * (1 - discount_rate)
@@ -170,7 +170,7 @@ Bot: "Analyzing the 150-line handle_request function...
 **After Refactoring:**
 ```python
 def handle_request(request: Request) -> Response:
-    \"\"\"Process incoming request and return response.\"\"\"
+    """Process incoming request and return response."""
     try:
         data = parse_request(request)
         validate_request(data)
@@ -202,11 +202,11 @@ from myapp.services import UserService
 class TestUserService:
     @pytest.fixture
     def service(self):
-        \"\"\"Create UserService instance for testing.\"\"\"
+        """Create UserService instance for testing."""
         return UserService(db=Mock())
 
     def test_create_user_success(self, service):
-        \"\"\"Should create user with valid data.\"\"\"
+        """Should create user with valid data."""
         user_data = {
             "email": "test@example.com",
             "name": "Test User"
@@ -219,14 +219,14 @@ class TestUserService:
         service.db.save.assert_called_once()
 
     def test_create_user_duplicate_email(self, service):
-        \"\"\"Should raise error for duplicate email.\"\"\"
+        """Should raise error for duplicate email."""
         service.db.find_by_email.return_value = Mock()
 
         with pytest.raises(DuplicateEmailError):
             service.create_user({"email": "exists@example.com"})
 
     def test_create_user_invalid_email(self, service):
-        \"\"\"Should raise error for invalid email format.\"\"\"
+        """Should raise error for invalid email format."""
         with pytest.raises(ValidationError):
             service.create_user({"email": "invalid-email"})
 
@@ -237,7 +237,7 @@ class TestUserService:
         "no-domain@",
     ])
     def test_create_user_invalid_emails(self, service, email):
-        \"\"\"Should reject various invalid email formats.\"\"\"
+        """Should reject various invalid email formats."""
         with pytest.raises(ValidationError):
             service.create_user({"email": email})
 ```
@@ -406,21 +406,16 @@ Always review generated code:
 
 Set up recurring code quality tasks:
 
-```python
-from forge.primitives.mission import Mission, MissionInterval
+```yaml
+missions:
+  - description: "Daily code quality scan: run linter on changed files; check test coverage; find TODO/FIXME comments; report any issues"
+    interval: DAILY
+```
 
-# Daily code quality check
-mission = Mission(
-    description="Daily code quality scan",
-    interval=MissionInterval.DAILY,
-    instructions="""
-    1. Run linter on changed files
-    2. Check test coverage
-    3. Find TODO/FIXME comments
-    4. Report any issues
-    """,
-    tools=["filesystem", "git", "bash"],
-)
+Missions are run by the agent daemon:
+
+```bash
+python -m teotl.daemon.run --config config.yaml
 ```
 
 ## Skills Reference

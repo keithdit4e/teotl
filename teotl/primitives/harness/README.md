@@ -24,7 +24,7 @@ Tracks current task, completed tasks, and remaining tasks in a durable markdown 
 
 **Example:**
 ```python
-from forge.primitives.harness import ProgressTracker
+from teotl.primitives.harness import ProgressTracker
 
 tracker = ProgressTracker(agent_id="coding-assistant")
 
@@ -84,7 +84,7 @@ Persists variables, flags, counters, and checkpoints across agent executions.
 
 **Example:**
 ```python
-from forge.primitives.harness import StateManager
+from teotl.primitives.harness import StateManager
 
 state = StateManager(agent_id="crm-sync")
 
@@ -141,7 +141,7 @@ Compacts context by extracting key decisions and enabling context resets.
 
 **Example:**
 ```python
-from forge.primitives.harness import ContextJanitor
+from teotl.primitives.harness import ContextJanitor
 
 janitor = ContextJanitor(
     agent_id="coding-assistant",
@@ -202,8 +202,8 @@ Wrapper that adds all harness primitives to any Agent.
 
 **Example:**
 ```python
-from forge.core.provider import AnthropicProvider
-from forge.primitives.harness import HarnessAgent
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import HarnessAgent
 
 agent = HarnessAgent(
     agent_id="coding-assistant",
@@ -411,8 +411,8 @@ Coordinates two-phase execution for 93-97% cost savings:
 
 **Usage:**
 ```python
-from forge.core.provider import AnthropicProvider
-from forge.primitives.harness import PlannerWorkerHarness
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import PlannerWorkerHarness
 
 harness = PlannerWorkerHarness(
     agent_id="coding-assistant",
@@ -461,7 +461,7 @@ Intelligent closed-loop system where Sonnet plans, Haiku executes, and Sonnet ev
 
 **Usage:**
 ```python
-from forge.primitives.harness import PlannerWorkerHarness
+from teotl.primitives.harness import PlannerWorkerHarness
 
 harness = PlannerWorkerHarness(
     agent_id="coding-assistant",
@@ -549,8 +549,8 @@ Enhanced context management with LLM-powered decision extraction and smart compa
 
 **Usage:**
 ```python
-from forge.core.provider import AnthropicProvider
-from forge.primitives.harness import AdvancedContextJanitor
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import AdvancedContextJanitor
 
 janitor = AdvancedContextJanitor(
     agent_id="coding-assistant",
@@ -667,8 +667,8 @@ Autonomous oversight with health checks, escalation, and auto cleanup.
 
 **Usage:**
 ```python
-from forge.core.provider import AnthropicProvider
-from forge.primitives.harness import (
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import (
     PlannerWorkerHarness,
     StuckDetectionCheck,
     ErrorThresholdCheck,
@@ -692,7 +692,7 @@ result = await harness.run_supervised_cycle(goals=goals)
 
 **Standalone Usage:**
 ```python
-from forge.primitives.harness import (
+from teotl.primitives.harness import (
     HeartbeatMonitor,
     StuckDetectionCheck,
     ErrorThresholdCheck,

@@ -147,7 +147,7 @@ def test_power():
 ```
 
 **README.md:**
-```markdown
+````markdown
 # Calculator Test Project
 
 Simple Python calculator for testing autonomous bug fixing.
@@ -163,19 +163,19 @@ Simple Python calculator for testing autonomous bug fixing.
 
 ## Usage
 
-\`\`\`python
+```python
 from calculator import add, subtract, multiply_all
 
 result = add(5, 3)
 numbers = multiply_all([2, 3, 4])  # BUG: Function doesn't exist
-\`\`\`
+```
 
 ## Testing
 
-\`\`\`bash
+```bash
 pytest test_calculator.py
-\`\`\`
 ```
+````
 
 ### Step 5: Commit and Push
 ```bash

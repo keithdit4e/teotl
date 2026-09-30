@@ -1,80 +1,58 @@
 # Teotl Framework
-## The Only Production-Ready Autonomous Agent Platform Built for Enterprise
+## An Autonomous Agent Framework Built for Production Safety
 
 ---
 
 ### **The Problem**
 
-Current autonomous agent frameworks are **not production-ready**:
-- ❌ **No budget controls** → Runaway spending (OpenClaw banned for $500K+ bills)
-- ❌ **No rollback capabilities** → Permanent data loss from failed operations
-- ❌ **No security enforcement** → Agents bypass policies and access sensitive files
+Many autonomous agent setups are hard to trust in production:
+- ❌ **No budget controls** → Runaway spending
+- ❌ **No rollback capabilities** → Failed operations leave a mess behind
+- ❌ **No security enforcement** → Agents can reach files and commands they shouldn't
 - ❌ **No transparency** → Users don't know what will happen before execution
-- ❌ **No audit trails** → Missing logging needed for compliance frameworks
+- ❌ **No audit trails** → Missing the logging needed for review and compliance work
 
-**Result:** Autonomous agents remain "demos" — too risky for real business use.
+**Result:** Autonomous agents often stay "demos" — too risky for real business use.
 
 ---
 
 ### **The Teotl Solution**
 
-Teotl is the **first and only** autonomous agent framework with **11 integrated safety layers** that make autonomous agents safe for production deployment.
+Teotl's harness bundles **11 safety and reliability primitives** — state artifacts, planner-worker separation, evaluation, context janitor, heartbeat monitoring, cost tracking, human-in-the-loop approval, security policy, checkpoints and rollback, audit trail, and state validation — so autonomous agents can run with guardrails.
 
 #### **Three Pillars of Safety**
 
-**🔒 Security First (Phase 6)**
-- Real-time budget enforcement ($/hour, $/day, $/month limits)
+**🔒 Security First**
+- Budget enforcement with hourly, daily, and monthly limits (`CostTracker`)
 - Pre-execution security policy validation
-- Human-in-the-loop approval gates
+- Human-in-the-loop approval gates between autonomous cycles
 - Automatic halt on critical health issues
 
-**🛡️ Advanced Safety (Phase 7)**
-- Git-based checkpoints with automatic rollback on failure
-- Comprehensive audit trail with PII redaction (JSONL format)
-- Pydantic state validation to prevent corruption
-- Comprehensive audit logging designed with compliance frameworks in mind
+**🛡️ Advanced Safety**
+- Git-based checkpoints with rollback on failure (`CheckpointManager`)
+- Audit trail in JSONL format with PII redaction (`AuditLogger`)
+- Pydantic validation of agent state (`STATE.json`) to prevent corruption
 
-**✨ User Experience (Phase 8)**
-- Read-only exploration mode (understand before changing)
-- Dry-run preview with cost estimates (see before spending)
-- 40+ destructive pattern detections (`rm -rf`, `DROP DATABASE`, etc.)
-- 4-level risk assessment with actionable suggestions
-
----
-
-### **Unique Advantages**
-
-| Feature | Teotl | OpenClaw | LangGraph | AutoGPT | CrewAI |
-|---------|:-----:|:--------:|:---------:|:-------:|:------:|
-| **Budget Enforcement** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Automatic Rollback** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Audit Trail + PII Redaction** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Dry-Run Preview** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Exploration Mode** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Pattern-Based Verification** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Production Ready** | ✅ | ❌ | ⚠️ | ⚠️ | ⚠️ |
-
-**Teotl is the ONLY framework with all 6 enterprise-critical features.**
+**✨ User Experience**
+- Read-only exploration mode to understand a codebase before changing it (`ExplorationMode`)
+- Dry-run preview of a plan with risk analysis and cost estimates (`DryRunAnalyzer`)
+- Destructive-pattern detection (`rm -rf`, `DROP DATABASE`, `TRUNCATE`, `DELETE` without `WHERE`, `chmod 777`, `sudo`, disk formatting, and more) via `StepVerifier`
+- 4-level risk assessment (low, medium, high, critical) with suggestions
 
 ---
 
-### **By The Numbers**
+### **What's Included**
 
-**Security & Safety**
-- **11 safety layers** (competitors: 0-2)
-- **40+ destructive pattern detections** (competitors: 0)
-- **100% policy enforcement** (pre-execution validation)
-- **0 CVEs** (OpenClaw: 4 critical vulnerabilities)
-
-**Cost Efficiency**
-- **82% cost reduction** vs OpenClaw ($0.42 vs $2.40 per 10-step task)
-- **3.2x faster execution** (57s vs 180s for typical workflows)
-- **45% lower memory footprint** (125 MB vs 230 MB)
-
-**Enterprise Readiness**
-- **Compliance-informed design** (audit logging aligned with GDPR, SOC2, HIPAA practices)
-- **94% test coverage** across safety primitives
-- **5,589 lines of safety code** (rigorously tested)
+| Capability | Where it lives |
+|------------|----------------|
+| **Budget Enforcement** | `teotl.primitives.harness.CostTracker` (on by default in the harness) |
+| **Checkpoints & Rollback** | `teotl.primitives.harness.CheckpointManager` (on by default in the harness) |
+| **Human Approval Gates** | `PlannerWorkerHarness(require_approval_for_continuation=True)` |
+| **Audit Trail + PII Redaction** | `teotl.primitives.harness.AuditLogger` |
+| **Dry-Run Preview** | `teotl.primitives.harness.DryRunAnalyzer` |
+| **Exploration Mode** | `teotl.primitives.harness.ExplorationMode` |
+| **Pattern-Based Verification** | `teotl.primitives.harness.StepVerifier` |
+| **Agent Guardrails** | `Agent(policy="minimal" \| "standard" \| "strict")` |
 
 ---
 
@@ -82,29 +60,28 @@ Teotl is the **first and only** autonomous agent framework with **11 integrated 
 
 **Autonomous Code Review**
 ```
-• Agent explores codebase (read-only, zero risk)
+• Agent explores the codebase read-only before planning
 • Identifies security issues and anti-patterns
-• Creates detailed PR with fixes
-• Cost: $1.20 (with budget limits)
-• Time: 8 minutes (with rollback if tests fail)
+• Proposes fixes as a step-by-step plan
+• Stays within configured budget limits
+• Checkpoints before changes, with rollback if a step fails
 ```
 
 **Customer Support Automation**
 ```
-• Agent answers 500 support tickets/day
-• Learns from knowledge base (exploration mode)
-• Preview responses before sending (dry-run)
-• Audit trail for compliance (PII redaction)
-• Cost: $15/day (vs $8,000/month human support)
+• Agent drafts answers to support tickets
+• Guardrail policies limit what tools it can use
+• Audit trail records each turn, with PII redaction
+• Budget limits cap daily spend
 ```
 
 **Database Migration Assistant**
 ```
-• Agent plans multi-step migration
-• Shows exactly what will change (dry-run preview)
-• Detects "DROP DATABASE production" (blocked!)
-• Creates git checkpoint before execution
-• Auto-rollback on failure (zero data loss)
+• Agent plans a multi-step migration
+• Dry-run preview shows the planned actions and their risk levels
+• Flags "DROP DATABASE" and similar destructive steps for approval
+• Creates a git checkpoint before execution
+• Rolls back on failure
 ```
 
 ---
@@ -112,64 +89,64 @@ Teotl is the **first and only** autonomous agent framework with **11 integrated 
 ### **Architecture Highlights**
 
 **Planner-Worker Separation**
-- Expensive model (Sonnet) for planning
-- Cheap model (Haiku) for execution
-- 82% cost savings vs single-model approaches
+- Stronger model (Claude Sonnet 5.5) for planning
+- Cheaper model (Claude Haiku 4.5) for execution — about half the per-token price of Sonnet 5.5
 
 **Multi-Model Support**
-- Anthropic (Claude Opus, Sonnet, Haiku)
-- OpenAI (GPT-4, GPT-3.5)
-- Ollama (local deployment)
+- Anthropic (Claude Opus, Sonnet, Haiku, Fable)
+- OpenAI (and OpenAI-compatible endpoints via `base_url`)
+- Google Gemini
+- Ollama (local models)
 
 **Decentralized Agent Architecture**
 - One daemon per agent (isolation)
-- Horizontal scaling (add more agents)
+- Scale out by running more agents
 - Priority system (CRITICAL → LOW)
-- Multi-tenancy ready
+- Recurring missions (hourly, daily, weekly) defined in YAML
 
 **Heartbeat Monitoring**
 - Stuck detection (no progress)
 - Error threshold monitoring
 - Progress rate tracking
-- Automatic escalation policies
-
----
+- Escalation policies
 
 ---
 
 ### **Get Started in 5 Minutes**
 
 ```python
-from teotl.primitives.harness import PlannerWorkerHarness
+import asyncio
+from pathlib import Path
+
 from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import PlannerWorkerHarness
 
-# Initialize with full safety
-harness = PlannerWorkerHarness(
-    agent_id="autonomous-developer",
-    planner_provider=AnthropicProvider("claude-sonnet-5-5"),
-    worker_provider=AnthropicProvider("claude-haiku-4-5"),
+async def main():
+    harness = PlannerWorkerHarness(
+        agent_id="autonomous-developer",
+        planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),
+        worker_provider=AnthropicProvider(model="claude-haiku-4-5"),
+        workspace_dir=Path(".teotl/autonomous-developer"),
+        worker_skills=["filesystem", "git"],
 
-    # Phase 6: Security
-    enable_cost_tracking=True,
-    require_approval_for_continuation=True,
-    halt_on_critical_escalation=True,
+        # Security
+        enable_cost_tracking=True,
+        require_approval_for_continuation=True,
+        halt_on_critical_escalation=True,
 
-    # Phase 7: Safety
-    enable_checkpoints=True,
-    enable_audit_trail=True,
-    enable_state_validation=True,
+        # Safety
+        enable_checkpoints=True,
+        enable_heartbeat=True,
+    )
 
-    # Phase 8: UX
-    enable_exploration=True,
-    enable_dry_run=True,
-    enable_verification=True,
-)
+    # Supervised autonomous execution: plan, execute, evaluate, ask to continue
+    result = await harness.run_supervised_cycle(
+        goals="Refactor authentication to use OAuth2",
+        max_cycles=5,
+    )
+    print(f"Complete: {result.complete} after {result.cycles_completed} cycle(s)")
 
-# Safe autonomous execution
-result = await harness.run_supervised_cycle(
-    goals=["Refactor authentication to use OAuth2"],
-    max_cycles=5,
-)
+asyncio.run(main())
 ```
 
 ---
@@ -179,40 +156,32 @@ result = await harness.run_supervised_cycle(
 **Open Source** (MIT License)
 - ✅ Full framework access
 - ✅ All safety features included
-- ✅ Community support (GitHub Issues)
-- ✅ No usage limits
-
-**Enterprise** (Contact Sales)
-- ✅ Priority support (24/7)
-- ✅ Custom integration assistance
-- ✅ SLA guarantees
-- ✅ Dedicated Slack channel
-- ✅ Compliance consulting
+- ✅ Community support (GitHub Issues and Discussions)
+- ✅ No usage limits from Teotl (you pay your LLM provider directly)
 
 ---
 
 ### **Key Differentiators**
 
-**Why Teotl Wins:**
+**Why Teotl:**
 
-1. **Safety-First Design** → Only framework built for production from day one
-2. **Zero Data Loss** → Git-based rollback unique to Teotl
+1. **Safety-First Design** → Budget limits, approval gates, and guardrails built into the harness
+2. **Rollback** → Git-based checkpoints before risky steps
 3. **Cost Control** → Budget enforcement prevents runaway spending
-4. **Transparency** → See what will happen before it happens
-5. **Compliance-Informed** → Audit trails designed with SOC2, GDPR, HIPAA practices in mind
-6. **Enterprise Support** → Not a research project, built for business
+4. **Transparency** → Exploration and dry-run preview before changes
+5. **Audit-Friendly** → JSONL audit trail with PII redaction to support compliance work
+6. **Model Choice** → Anthropic, OpenAI, Gemini, or local Ollama models
 
 **The Bottom Line:**
-Teotl is designed for production use with built-in safety features to reduce risks of data loss, budget overruns, and compliance gaps.
+Teotl is designed for production use with built-in safety features to reduce the risks of data loss, budget overruns, and compliance gaps.
 
 ---
 
 ### **Resources**
 
-📚 **Documentation:** https://github.com/keithfoster/teotl/docs
-🚀 **Quick Start:** https://github.com/keithfoster/teotl#quick-start
-💬 **Community:** https://github.com/keithfoster/teotl/discussions
-📧 **Enterprise Sales:** teotl-enterprise@example.com
+📚 **Documentation:** https://github.com/keithdit4e/teotl/tree/main/docs
+🚀 **Quick Start:** [docs/quickstart.md](quickstart.md)
+💬 **Community:** https://github.com/keithdit4e/teotl/discussions
 
 ---
 
@@ -220,22 +189,24 @@ Teotl is designed for production use with built-in safety features to reduce ris
 
 ```bash
 # Install
-pip install -e ".[anthropic]"  # from cloned repo
+pip install "teotl[anthropic]"
 
-# Run your first safe autonomous agent
-teotl init my-agent --template autonomous-dev
-teotl run my-agent --goal "Review code for security issues"
+# Set up your first agent (generates config.yaml, and run_planner_worker.py for planner-worker agents)
+teotl onboard
+
+# Run it as a daemon
+python -m teotl.daemon.run --config config.yaml
 ```
 
-**Get started** with production-ready autonomous agents.
+**Get started** with safer autonomous agents.
 
 ---
 
 <div align="center">
 
 ### **Teotl Framework**
-**Production-Ready Autonomous Agents**
+**Autonomous Agents with Built-In Safety**
 
-[GitHub](https://github.com/keithfoster/teotl) | [Documentation](https://teotl-docs.example.com) | [Demo](https://teotl-demo.example.com)
+[GitHub](https://github.com/keithdit4e/teotl) | [Documentation](https://github.com/keithdit4e/teotl/tree/main/docs)
 
 </div>

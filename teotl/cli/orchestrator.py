@@ -1,11 +1,11 @@
 """Multi-agent orchestrator CLI command.
 
 Usage:
-    forge start                    # Start all agents from config.yaml
-    forge start personal           # Start specific agent
-    forge start personal work      # Start multiple specific agents
-    forge status                   # Show status of all agents
-    forge stop                     # Stop all running agents
+    teotl start                    # Start all agents from config.yaml
+    teotl start personal           # Start specific agent
+    teotl start personal work      # Start multiple specific agents
+    teotl status                   # Show status of all agents
+    teotl stop                     # Stop all running agents
 """
 
 import asyncio
@@ -104,7 +104,7 @@ async def show_status():
 
         if not agents:
             print_info("No agents currently registered")
-            print_info("Start agents with: forge start")
+            print_info("Start agents with: teotl start")
             return
 
         print(f"\n{Color.BOLD}Registered Agents:{Color.END}\n")
@@ -170,7 +170,7 @@ async def stop_agents(agent_ids: list[str] | None = None):
 
 
 def main_start(args: list[str]):
-    """Handle 'forge start' command."""
+    """Handle 'teotl start' command."""
     config_path = "config.yaml"
     agent_ids = args if args else None
 
@@ -178,12 +178,12 @@ def main_start(args: list[str]):
 
 
 def main_status(args: list[str]):
-    """Handle 'forge status' command."""
+    """Handle 'teotl status' command."""
     asyncio.run(show_status())
 
 
 def main_stop(args: list[str]):
-    """Handle 'forge stop' command."""
+    """Handle 'teotl stop' command."""
     agent_ids = args if args else None
     asyncio.run(stop_agents(agent_ids))
 

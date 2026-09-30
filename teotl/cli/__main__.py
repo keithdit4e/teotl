@@ -1,8 +1,8 @@
-"""Main entry point for forge CLI.
+"""Main entry point for teotl CLI.
 
 Usage:
     python -m forge.cli [command]
-    forge [command]
+    teotl [command]
 """
 
 from teotl.cli import main

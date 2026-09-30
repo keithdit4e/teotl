@@ -6,13 +6,33 @@ This guide covers installing Teotl on your system.
 
 - **Python:** 3.11 or higher
 - **Operating System:** macOS, Linux, or Windows
-- **API Keys:** Anthropic Claude or OpenAI account (for LLM access)
+- **LLM access:** an Anthropic, OpenAI, or Google API key, or a local Ollama install
 
 ## Installation Methods
 
-### Method 1: From Source (Current - Required)
+### Method 1: From PyPI (Recommended)
 
-**Teotl is currently in alpha and must be installed from source.**
+```bash
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install with the Anthropic provider
+pip install "teotl[anthropic]"
+```
+
+Other provider extras: `openai`, `google`, `ollama`, `litellm`. Combine extras as needed, e.g. `pip install "teotl[anthropic,memory]"`.
+
+**Verify installation:**
+
+```bash
+teotl --version
+python -c "import teotl; print(teotl.__version__)"
+```
+
+### Method 2: From Source (Contributors)
+
+For contributing or development:
 
 ```bash
 # Clone repository
@@ -23,57 +43,15 @@ cd teotl
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install with Anthropic provider
-pip install -e ".[anthropic]"
-```
-
-**Verify installation:**
-
-```bash
-python -c "import teotl; print('Teotl installed!')"
-```
-
-### Method 2: From PyPI (Coming Soon)
-
-> **Note:** PyPI installation is not yet available. This will be enabled after Teotl reaches stable release.
-
-```bash
-# Future command (not available yet)
-pip install teotl
-```
-
-### Method 3: From Source (Development)
-
-For contributing or development:
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/teotl
-cd teotl
-
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in editable mode
-pip install -e .
-
-# Or with development dependencies
-pip install -e ".[dev]"
-```
-
-**Verify installation:**
-
-```bash
-python -c "import teotl; print(teotl.__version__)"
-# 0.1.0
+# Install in editable mode with dev tools and the Anthropic provider
+pip install -e ".[dev,anthropic]"
 ```
 
 ## Configuration
 
 ### API Keys
 
-Teotl requires an LLM provider API key. You can use either Anthropic Claude or OpenAI.
+Teotl needs access to an LLM provider: Anthropic Claude, OpenAI, Google Gemini, or a local model via Ollama. Install the matching extra (e.g. `teotl[openai]`).
 
 #### Anthropic Claude (Recommended)
 
@@ -105,7 +83,8 @@ For local models with Ollama:
 
 1. Install Ollama: https://ollama.ai/
 2. Pull a model: `ollama pull llama3`
-3. No API key needed (runs locally)
+3. Install the extra: `pip install "teotl[ollama]"`
+4. No API key needed (runs locally)
 
 ### Verify Configuration
 
@@ -128,25 +107,17 @@ teotl onboard
 ```
 
 This wizard will:
-- Configure your API key (stored securely)
+- Help you set your API key (for the current session, and optionally in your shell profile)
 - Set up agent preferences
 - Choose skills and capabilities
-- Configure security policies
-- Create your first agent configuration
+- Configure security settings
+- Generate a `config.yaml` (and, for planner-worker agents, a `run_planner_worker.py` script)
+
+`teotl wizard` is an alias for the same wizard.
 
 ### Manual Setup
 
-Alternatively, create agent configuration manually:
-
-```bash
-# Initialize Teotl
-teotl init
-
-# Creates ~/.teotl/ directory with:
-# - auth/           (credential storage)
-# - skills/         (custom skills)
-# - agents/         (agent configurations)
-```
+Alternatively, skip the wizard and use Teotl directly from Python (see the [Quick Start Guide](quickstart.md)), or write a daemon config by hand starting from [examples/full_config_reference.yaml](../examples/full_config_reference.yaml).
 
 ## Platform-Specific Instructions
 
@@ -163,13 +134,8 @@ python3 --version
 
 **Installation:**
 ```bash
-git clone https://github.com/keithdit4e/teotl.git
-cd teotl
-pip3 install -e ".[anthropic]"
+pip3 install "teotl[anthropic]"
 ```
-
-**Credential Storage:**
-Uses macOS Keychain automatically for secure credential storage.
 
 ### Linux
 
@@ -177,10 +143,10 @@ Uses macOS Keychain automatically for secure credential storage.
 ```bash
 # Ubuntu/Debian
 sudo apt-get update
-sudo apt-get install python3.11 python3.11-venv python3-pip git
+sudo apt-get install python3.11 python3.11-venv python3-pip
 
 # Fedora/RHEL
-sudo dnf install python3.11 git
+sudo dnf install python3.11
 
 # Verify version
 python3 --version
@@ -188,13 +154,8 @@ python3 --version
 
 **Installation:**
 ```bash
-git clone https://github.com/keithdit4e/teotl.git
-cd teotl
-pip3 install -e ".[anthropic]"
+pip3 install "teotl[anthropic]"
 ```
-
-**Credential Storage:**
-Uses Secret Service (GNOME Keyring, KWallet) if available, otherwise encrypted file storage.
 
 ### Windows
 
@@ -204,23 +165,18 @@ Uses Secret Service (GNOME Keyring, KWallet) if available, otherwise encrypted f
 
 **Installation (Command Prompt or PowerShell):**
 ```bash
-git clone https://github.com/keithdit4e/teotl.git
-cd teotl
-pip install -e ".[anthropic]"
+pip install "teotl[anthropic]"
 ```
 
-**Credential Storage:**
-Uses Windows Credential Manager automatically for secure credential storage.
+### Credential Storage
+
+Integration credentials saved through Teotl's `CredentialStore` use the OS keyring when one is available (macOS Keychain, Windows Credential Manager, or Secret Service such as GNOME Keyring/KWallet on Linux), and fall back to an encrypted file otherwise. LLM API keys are read from environment variables such as `ANTHROPIC_API_KEY`.
 
 ## Virtual Environments (Recommended)
 
 Using virtual environments keeps Teotl isolated from system Python:
 
 ```bash
-# Clone repository
-git clone https://github.com/keithdit4e/teotl.git
-cd teotl
-
 # Create virtual environment
 python -m venv venv
 
@@ -231,7 +187,7 @@ source venv/bin/activate
 venv\Scripts\activate
 
 # Install Teotl
-pip install -e ".[anthropic]"
+pip install "teotl[anthropic]"
 
 # When done, deactivate
 deactivate
@@ -239,37 +195,28 @@ deactivate
 
 ## Optional Dependencies
 
-### Development Tools
+| Extra | Installs | Use for |
+|-------|----------|---------|
+| `anthropic` | anthropic | Claude models |
+| `openai` | openai | OpenAI models |
+| `google` | google-generativeai | Gemini models |
+| `ollama` | ollama | Local models via Ollama |
+| `litellm` | litellm | LiteLLM |
+| `memory` | sentence-transformers, sqlite-vec | `LocalMemory` long-term memory |
+| `security` | cryptography, keyring | Encryption and OS credential storage |
+| `web` | aiohttp | Web dashboard (`python -m teotl.web`) |
+| `browser` | browser-use | Browser automation |
+| `aws` | boto3 | AWS integrations |
+| `all` | all of the above | Everything |
+| `dev` | pytest, pytest-asyncio, pytest-cov, ruff, mypy, pre-commit | Contributing |
 
-For development and testing:
-
-```bash
-pip install -e ".[dev]"
-```
-
-Includes:
-- pytest (testing framework)
-- ruff (code formatter and linter)
-- mypy (type checking)
-- coverage (code coverage)
-
-### Security Enhancements
-
-For enhanced security features:
-
-```bash
-pip install -e ".[security]"
-```
-
-Includes:
-- cryptography (encryption)
-- keyring (OS credential storage)
-
-### All Optional Dependencies
+Example:
 
 ```bash
-pip install -e ".[all]"
+pip install "teotl[anthropic,memory,security]"
 ```
+
+From a source checkout, use the same extras with an editable install, e.g. `pip install -e ".[dev,anthropic]"`.
 
 ## Troubleshooting
 
@@ -277,25 +224,22 @@ pip install -e ".[all]"
 
 **Solution:**
 ```bash
-# Check if pip installed to correct location
+# Check that pip installed the package
 pip show teotl
 
-# If installed but not in PATH, use:
-python -m teotl --help
+# If installed but the script isn't on your PATH, use:
+python -m teotl.cli --help
 ```
 
 ### Issue: "No module named 'teotl'"
 
 **Solution:**
 ```bash
-# Ensure you're in the teotl directory
-cd /path/to/teotl
-
-# Ensure virtual environment is activated
+# Ensure your virtual environment is activated
 source venv/bin/activate
 
 # Reinstall
-pip install -e ".[anthropic]"
+pip install "teotl[anthropic]"
 ```
 
 ### Issue: "API key not configured"
@@ -339,35 +283,31 @@ export REQUESTS_CA_BUNDLE=/path/to/ca-bundle.crt
 
 ## Upgrading
 
-### From Source (Current Method)
+### From PyPI
+
+```bash
+pip install --upgrade "teotl[anthropic]"
+```
+
+### From Source
 
 ```bash
 cd teotl
 git pull origin main
-pip install -e ".[anthropic]"
-```
-
-### From PyPI (Coming Soon)
-
-```bash
-# Future command (not available yet)
-pip install --upgrade teotl
+pip install -e ".[dev,anthropic]"
 ```
 
 ## Uninstallation
 
 ```bash
 pip uninstall teotl
-
-# Optional: Remove configuration
-rm -rf ~/.teotl
 ```
 
-## Docker (Coming Soon)
+Agent workspaces and data created by the wizard or daemon live under `~/.forge/` by default; remove them manually if you no longer need them.
 
-> **Note:** Docker images will be available after Teotl reaches stable release.
+## Docker
 
-For now, install from source as described above.
+Official Docker images are not currently published. Install with pip as described above.
 
 ## Next Steps
 
@@ -377,6 +317,6 @@ For now, install from source as described above.
 
 ## Getting Help
 
-- **Documentation:** https://github.com/yourusername/teotl/docs
-- **Issues:** https://github.com/yourusername/teotl/issues
-- **Discussions:** https://github.com/yourusername/teotl/discussions
+- **Documentation:** https://github.com/keithdit4e/teotl/tree/main/docs
+- **Issues:** https://github.com/keithdit4e/teotl/issues
+- **Discussions:** https://github.com/keithdit4e/teotl/discussions

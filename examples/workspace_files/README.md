@@ -75,7 +75,7 @@ You are a friendly assistant...
 Then create a task that tests for it:
 
 ```python
-from forge.primitives.tasks import Task, Priority
+from teotl.primitives.tasks import Task, Priority
 
 task = Task(
     description="What is your personality? Please include any unique test phrases you see.",
@@ -146,7 +146,7 @@ They're combined with `\n\n---\n\n` separators into one system prompt.
 **Debug:**
 ```python
 from pathlib import Path
-from forge.daemon.executor import load_workspace_files
+from teotl.daemon.executor import load_workspace_files
 
 workspace_dir = Path("~/.teotl/agents/my-agent").expanduser()
 content = load_workspace_files(workspace_dir)

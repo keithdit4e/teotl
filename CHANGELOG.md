@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-09-30
+
+Found by live testing 0.2.4 against real Claude models: the planner-worker harness didn't do the work it reported as done, and memory recall didn't find stored facts.
+
+### Security
+- **Retries skipped the harness safety check.** `Worker.retry_step()` ran the step without the pre-execution safety check. A step refused on its first attempt was then run anyway on retry. Retries now go through the same path as the first attempt: safety check, checkpoint, and evidence-based result.
+- **The safety check now uses the denylist, not the allowlist.** It blocks steps whose target file is on the worker preset's blocked or read-only list. Before, it also blocked anything outside `~/Documents`, `~/workspace` and the agent directory, which blocked valid projects elsewhere. Free-text or placeholder paths from the plan (`<proj>/x.py`, `N/A`) are no longer treated as paths. Actual tool calls are checked by the worker's guardrails. Bash commands are not confined to a directory, and never effectively were.
+
+### Fixed
+- **Steps were marked done on the model's wording.** Success came from keywords like "complete" or "done" in the reply, so steps were shown as ✓ in PLAN.md even when nothing was done, or when a tool call was blocked. A step now succeeds only when all of these hold:
+  - the worker ends its reply with `STEP_STATUS: DONE`
+  - it actually used a tool
+  - none of its tool calls was blocked or failed
+  - the step's target file exists afterward, when the plan names a concrete file
+- **Retries now get the failure reason as feedback.**
+- **Failed steps are now marked skipped (⊘),** even with `max_retries=0`. Before, a failing step could be re-run forever by `while not harness.is_complete()` loops.
+- **Plans used far more steps than needed.** The planner was told to write "10-20 atomic steps" (live: 10 steps for a two-file task, 4 of them inspection-only). It now uses as few steps as the goals need, follows explicit step limits, writes runnable `Verify` commands, and is capped by `max_plan_steps` (default 8).
+- **Memory recall missed stored facts.** It sent the whole question to SQLite full-text search, which requires every word to match. Recall now searches the question's keywords (common words dropped, each term quoted) and returns memories containing any of them, ranked by relevance, importance and recency. Words of 4+ characters also match as prefixes.
+
+### Added
+- `Response.tool_results`: the result of each tool call in a run, with `is_error=True` when a call was blocked or failed
+- `PlannerWorkerHarness(max_plan_steps=...)` and `Planner(max_steps=...)`
+
 ## [0.2.4] - 2026-09-30
 
 ### Changed

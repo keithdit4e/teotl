@@ -107,7 +107,7 @@ async def main():
 asyncio.run(main())
 ```
 
-The harness writes `PLAN.md` and `PROGRESS.md` into the workspace, so you can read, edit, or resume a plan at any point. By default it asks for approval before starting each new execution cycle.
+The harness writes `PLAN.md` and `PROGRESS.md` into the workspace, so you can read, edit, or resume a plan at any point. Plans use as few steps as the goal needs (at most `max_plan_steps`, default 8). A step is marked done only on evidence: the worker reports `STEP_STATUS: DONE`, it actually used tools, none were blocked or failed, and the target file exists. Failed steps are retried with feedback, then marked skipped.
 
 ### Other providers
 

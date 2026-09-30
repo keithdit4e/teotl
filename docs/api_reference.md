@@ -646,6 +646,7 @@ class PlannerWorkerHarness:
         enable_cost_tracking: bool = True,
         cost_tracker: CostTracker | None = None,
         require_approval_for_continuation: bool = True,
+        max_plan_steps: int = 8,
         approval_callback: Callable[[CycleApprovalRequest], bool] | None = None,
         halt_on_critical_escalation: bool = True,
         enable_checkpoints: bool = True,
@@ -653,7 +654,17 @@ class PlannerWorkerHarness:
     ): ...
 ```
 
-`worker_policy` uses the security presets from `teotl.core.security.SecurityPolicy` (`strict`, `moderate`, `permissive`, `autonomous-dev`), which are separate from the agent `policy=` presets.
+`worker_policy` uses the security presets from `teotl.core.security.SecurityPolicy` (`strict`, `moderate`, `permissive`, `autonomous-dev`), which are separate from the agent `policy=` presets. The worker's tool calls are checked by guardrails mapped from that preset (`strict`→`strict`, `moderate`/`autonomous-dev`→`standard`, `permissive`→`minimal`). A step whose target file is on the preset's blocked or read-only list is refused before it runs. Bash commands are not confined to a directory.
+
+`max_plan_steps` caps the plan length; the planner is told to use as few steps as the goals need.
+
+**How a step's success is decided:** the worker must end its reply with `STEP_STATUS: DONE` (or `STEP_STATUS: FAILED - <reason>`). A step counts as done only if all of these hold:
+- the reply ends with `STEP_STATUS: DONE`
+- the worker actually used a tool
+- none of its tool calls was blocked by guardrails or failed
+- the step's target file exists afterward, when the plan names a concrete file
+
+Otherwise the step is retried with the failure reason as feedback. If it still fails after `max_retries`, it's marked skipped (⊘ in PLAN.md). Retries go through the same safety checks as the first attempt.
 
 **Methods:**
 

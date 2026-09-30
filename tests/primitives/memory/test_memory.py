@@ -95,3 +95,46 @@ async def test_format_for_context_budget(memory):
 async def test_recall_with_no_results(memory):
     results = await memory.recall("something that doesn't exist")
     assert results == []
+
+
+class TestNaturalLanguageRecall:
+    """recall() searches the question's keywords, matching memories with any of them."""
+
+    @pytest.mark.asyncio
+    async def test_question_finds_memory(self, tmp_path):
+        from teotl.primitives.memory.local import LocalMemory
+
+        memory = LocalMemory(tmp_path / "m.db", auto_cleanup=False)
+        await memory.remember("my favorite deployment region is eu-west-3 and my team is called Nightjar")
+        await memory.remember("the staging database password rotates monthly")
+
+        found = await memory.recall("Which deployment region do I prefer, and what's my team called?")
+        assert [m.content for m in found][0].startswith("my favorite deployment region")
+        assert all("staging" not in m.content for m in found)
+
+    @pytest.mark.asyncio
+    async def test_unrelated_question_finds_nothing(self, tmp_path):
+        from teotl.primitives.memory.local import LocalMemory
+
+        memory = LocalMemory(tmp_path / "m.db", auto_cleanup=False)
+        await memory.remember("my favorite deployment region is eu-west-3")
+        assert await memory.recall("What's the weather like?") == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("query", ['"unbalanced', "a AND OR NOT (", "???", "", "O'Brien's *"])
+    async def test_odd_input_does_not_raise(self, tmp_path, query):
+        from teotl.primitives.memory.local import LocalMemory
+
+        memory = LocalMemory(tmp_path / "m.db", auto_cleanup=False)
+        await memory.remember("O'Brien owns the billing service")
+        await memory.recall(query)  # no exception
+
+    @pytest.mark.asyncio
+    async def test_more_matching_terms_rank_first(self, tmp_path):
+        from teotl.primitives.memory.local import LocalMemory
+
+        memory = LocalMemory(tmp_path / "m.db", auto_cleanup=False)
+        await memory.remember("the billing service runs on Postgres")
+        await memory.remember("the billing service deploys to eu-west-3 on Postgres 16")
+        found = await memory.recall("Where does the billing service deploy, and which Postgres?")
+        assert "eu-west-3" in found[0].content

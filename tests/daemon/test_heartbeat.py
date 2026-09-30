@@ -541,11 +541,11 @@ async def test_multiple_cycles(daemon, mock_executor):
     # Start daemon
     start_task = asyncio.create_task(daemon.start())
 
-    # Wait for all tasks to be processed
-    for _ in range(10):  # Max 10 attempts
+    # Wait for all tasks to be executed (a task leaves the pending queue
+    # before the executor is called, so poll the executor instead)
+    for _ in range(25):  # Max 5 seconds
         await asyncio.sleep(0.2)
-        pending = await daemon.task_store.get_pending()
-        if not pending:
+        if mock_executor.call_count >= 3:
             break
 
     # All tasks should be completed

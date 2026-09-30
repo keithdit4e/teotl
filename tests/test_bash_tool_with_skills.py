@@ -104,10 +104,10 @@ async def test_git_skill_commands():
 
     result = await bash_handler(command="git status")
     print(f"Git status result: {result[:200]}")
-    # Either we're in a git repo or we get "not a git repository" error
-    assert "On branch" in result or "not a git repository" in result or "Error" in result, (
-        "Should get git status or appropriate error"
-    )
+    # Either we're in a git repo (on a branch, or detached as in CI) or we get an error
+    assert any(
+        s in result for s in ("On branch", "HEAD detached", "not a git repository", "Error")
+    ), "Should get git status or appropriate error"
 
     print("✅ Git skill commands execute correctly")
 

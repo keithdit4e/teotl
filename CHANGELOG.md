@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-09-30
+
+### Removed
+- **Social media skills** (`social-media`, and `linkedin`, `medium`, `substack`, `twitter` under `platforms/`) and the `BrowserTool` browser automation behind them, until they can be rebuilt properly:
+  - The platform skills were never discovered (they sat one directory too deep)
+  - `BrowserTool` was written for an old `browser-use` API and failed to launch with any current release
+  - No agent tool exposed browser actions, so an agent couldn't follow the skills anyway
+  - Posting through automated browser sessions conflicts with LinkedIn's and X's automation rules; a rebuild should use official APIs where they exist
+  - The code remains in git history (tag `v0.2.2`)
+- The `browser` install extra (`teotl[browser]`). Installing with it now only prints a pip warning
+
+### Added
+- A test that every `SKILL.md` bundled in the package is discovered by the skill registry
+
 ## [0.2.2] - 2026-09-30
 
 ### Security

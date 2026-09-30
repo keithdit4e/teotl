@@ -205,7 +205,6 @@ deactivate
 | `memory` | sentence-transformers, sqlite-vec | `LocalMemory` long-term memory |
 | `security` | cryptography, keyring | Encryption and OS credential storage |
 | `web` | aiohttp | Web dashboard (`python -m teotl.web`) |
-| `browser` | browser-use | Browser automation |
 | `aws` | boto3 | AWS integrations |
 | `all` | all of the above | Everything |
 | `dev` | pytest, pytest-asyncio, pytest-cov, ruff, mypy, pre-commit | Contributing |

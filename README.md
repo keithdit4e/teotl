@@ -16,7 +16,7 @@ Teotl splits agent work between a **planner** (a strong model that runs once to 
 - **Planner-worker harness**: plan once with a capable model, execute many steps with a cheap one
 - **Guardrails**: `minimal` / `standard` / `strict` policies, bash command analysis, prompt-injection checks, rate and cost limits, progressive trust
 - **Multi-provider**: Anthropic Claude, OpenAI, Google Gemini, Ollama (local), or LiteLLM
-- **Skills**: capabilities defined in `SKILL.md` files, loaded on demand to save context (filesystem, git, GitHub, web, Claude Code, spec-kit, social media)
+- **Skills**: capabilities defined in `SKILL.md` files, loaded on demand to save context (filesystem, git, GitHub, web, Claude Code, spec-kit)
 - **Memory**: optional local vector memory with automatic context compaction
 - **Harness artifacts**: `PLAN.md`, `PROGRESS.md`, state checkpoints, cost tracking, append-only audit log
 - **Credentials**: OS keyring, encrypted file, or AWS Secrets Manager storage
@@ -40,7 +40,6 @@ Pick the extras you need:
 | `memory` | Vector memory (sentence-transformers, sqlite-vec) |
 | `security` | OS keyring and encrypted credential storage |
 | `web` | Web dashboard |
-| `browser` | Browser automation (browser-use) |
 | `aws` | AWS Secrets Manager credential backend |
 | `all` | Everything above |
 
@@ -162,7 +161,7 @@ See [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md) and [docs/CUSTOM_SKILLS_QUICKST
 | [`examples/supervisor_demo.py`](examples/supervisor_demo.py) | Supervised execution with approvals |
 | [`examples/custom_skill_example.py`](examples/custom_skill_example.py) | Writing your own skill |
 | [`examples/full_config_reference.yaml`](examples/full_config_reference.yaml) | Every YAML configuration option |
-| [`examples/social_media_agent.yaml`](examples/social_media_agent.yaml) | Browser-driven social media skills |
+| [`examples/social_media_agent.yaml`](examples/social_media_agent.yaml) | Content-drafting agent that writes social posts to files |
 
 ## Documentation
 
@@ -179,7 +178,6 @@ See [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md) and [docs/CUSTOM_SKILLS_QUICKST
 - [x] Guardrails, credential storage, audit log, cost tracking
 - [x] Anthropic, OpenAI, Gemini, Ollama, LiteLLM providers
 - [x] YAML configuration for multi-agent setups
-- [x] Browser automation and social media skills
 - [ ] Published benchmark results (GAIA and cost comparisons)
 - [ ] More end-to-end examples (code review, test generation)
 - [ ] Deeper MCP integration

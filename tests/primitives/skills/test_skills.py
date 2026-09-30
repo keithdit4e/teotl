@@ -136,3 +136,17 @@ class TestSkillRegistry:
         inst1 = await registry.activate("test_skill")
         inst2 = await registry.activate("test_skill")
         assert inst1 == inst2  # Returns cached version
+
+
+def test_every_bundled_skill_is_discovered():
+    """Every SKILL.md shipped in teotl/skills must be reachable by the registry."""
+    from pathlib import Path
+
+    import teotl
+    from teotl.primitives.skills.loader import SkillLoader
+    from teotl.primitives.skills.registry import SkillRegistry
+
+    bundled = Path(teotl.__file__).parent / "skills"
+    names = {SkillLoader.parse_frontmatter(p).name for p in bundled.rglob("SKILL.md")}
+    assert names, "no bundled skills found"
+    assert names <= set(SkillRegistry().skills)

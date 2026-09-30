@@ -105,7 +105,6 @@ asyncio.run(main())
 - `web` - Fetch pages, download files, HTTP requests
 - `claude_code` - Coding tasks via the Claude Code CLI
 - `spec_kit` - Structured specifications for planning
-- `social-media` - Cross-post content (LinkedIn, X, Medium, Substack)
 
 Skills are folders containing a `SKILL.md` file. Teotl looks for them in its bundled skills, `~/.teotl/skills/`, and any directories listed in `TEOTL_SKILLS_PATH`. See [Custom Skills](CUSTOM_SKILLS_QUICKSTART.md) to write your own.
 

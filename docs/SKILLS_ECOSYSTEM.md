@@ -74,7 +74,6 @@ teotl/skills/
 ├── filesystem/SKILL.md
 ├── git/SKILL.md
 ├── github/SKILL.md
-├── social-media/SKILL.md
 ├── spec_kit/SKILL.md
 └── web/SKILL.md
 ```

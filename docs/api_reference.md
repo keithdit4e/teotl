@@ -452,7 +452,7 @@ class Message:
 
 Skills are folders containing a `SKILL.md` file (YAML frontmatter plus instructions). They are enabled by name; there is no `Skill` base class to subclass. See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) to write your own.
 
-**Bundled skills:** `claude_code`, `filesystem`, `git`, `github`, `social-media`, `spec_kit`, `web`.
+**Bundled skills:** `claude_code`, `filesystem`, `git`, `github`, `spec_kit`, `web`.
 
 **Search paths:** bundled skills, `~/.teotl/skills/`, and directories listed in `TEOTL_SKILLS_PATH` (colon-separated; legacy `TEOTL_SKILLS_PATH` is also read). To install a custom skill, copy its folder into `~/.teotl/skills/`.
 

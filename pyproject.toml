@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "teotl"
-version = "0.2.2"
+version = "0.2.3"
 description = "Autonomous agent framework with a planner-worker architecture, built-in guardrails, and multi-provider support (Claude, GPT, Gemini, Ollama)."
 readme = "README.md"
 license = "MIT"
@@ -59,14 +59,11 @@ security = [
 web = [
     "aiohttp>=3.9",
 ]
-browser = [
-    "browser-use>=0.1",
-]
 aws = [
     "boto3>=1.34",
 ]
 all = [
-    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,browser,aws]",
+    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,aws]",
 ]
 dev = [
     "pytest>=8.0",

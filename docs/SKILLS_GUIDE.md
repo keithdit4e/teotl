@@ -22,7 +22,6 @@ Teotl bundles these skills in `teotl/skills/`:
 | `web` | Fetch web pages, download files, make HTTP requests (via `curl`) |
 | `claude_code` | Coding assistant via the Claude Code CLI |
 | `spec_kit` | Formal specification creation for structured planning |
-| `social-media` | Cross-post and manage content across LinkedIn, X, Medium, Substack |
 
 A skill is a set of instructions, not code. The agent carries them out with its built-in
 `bash` tool (registered automatically), so every command still passes through the agent's
@@ -235,7 +234,7 @@ name, the one found last wins):
 
 2. **Package skills** (built-in)
    - Location: `teotl/skills/`
-   - Includes: filesystem, git, github, web, claude_code, spec_kit, social-media
+   - Includes: filesystem, git, github, web, claude_code, spec_kit
 
 3. **Environment path**
    - Set `TEOTL_SKILLS_PATH=/path1:/path2` (legacy `TEOTL_SKILLS_PATH` also works)

@@ -227,7 +227,7 @@ Skills use progressive disclosure: only each skill's short description is always
 
 ### Built-in Skills
 
-Teotl bundles these skills: `claude_code`, `filesystem`, `git`, `github`, `social-media`, `spec_kit`, and `web`.
+Teotl bundles these skills: `claude_code`, `filesystem`, `git`, `github`, `spec_kit`, and `web`.
 
 Enable skills by passing their names to the agent:
 

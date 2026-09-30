@@ -1,4 +1,4 @@
-"""Dashboard web server for Forge agents.
+"""Dashboard web server for Teotl agents.
 
 Provides a unified web interface to monitor multiple agents simultaneously.
 """

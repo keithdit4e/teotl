@@ -1,4 +1,4 @@
-"""Example: Using Claude Code skill with Forge agent.
+"""Example: Using Claude Code skill with Teotl agent.
 
 This demonstrates how to create an agent that can use Claude Code
 for complex coding tasks like refactoring, features, and bug fixes.

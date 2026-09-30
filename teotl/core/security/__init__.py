@@ -1,4 +1,4 @@
-"""Security and compliance system for Forge agents.
+"""Security and compliance system for Teotl agents.
 
 Provides:
 - Policy-based access control

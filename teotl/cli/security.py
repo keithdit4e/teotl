@@ -432,7 +432,7 @@ def show_status(args: argparse.Namespace) -> None:
 def main() -> None:
     """Main entry point for security CLI."""
     parser = argparse.ArgumentParser(
-        description="Forge Agent Security Management",
+        description="Teotl Agent Security Management",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 

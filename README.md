@@ -1,466 +1,206 @@
 # Teotl
 
-**Autonomous agent framework with planner-worker architecture for cost-efficient execution.**
-
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)]() [![License](https://img.shields.io/badge/license-MIT-blue)]()
-
-🤖 **Autonomous Missions** • 🔒 **Built-in Guardrails** • 💰 **Cost Optimization** • 🎯 **Safety-First Design**
-
----
-
-## Why Teotl?
-
-Most agent frameworks are **expensive** and **unreliable**:
-
-❌ Single-model agents waste tokens on simple tasks
-❌ No built-in security (guardrails, credentials, sandboxing)
-❌ Poor error handling for production use
-❌ Expensive for long-running autonomous workflows
-
-**Teotl solves this** with a **planner-worker architecture**:
-
-✅ **~40% cost reduction** - Strategic planner (Sonnet) + fast worker (Haiku)
-✅ **Production-focused** - Guardrails, credential management, error recovery
-✅ **Autonomous missions** - Long-running workflows that execute without supervision
-✅ **Tested** - Comprehensive test suite with high coverage
-
----
-
-## Quick Start
-
-### Installation
-
-```bash
-# Clone and install from source (PyPI coming soon)
-git clone https://github.com/keithdit4e/teotl
-cd teotl
-pip install -e .
-```
-
-### Your First Agent (30 seconds)
-
-\`\`\`python
-from teotl import Agent
-
-# Create agent with planner-worker architecture
-agent = Agent.create_planner_worker(
-    planner_model="claude-sonnet-4",
-    worker_model="claude-haiku-4"
-)
-
-# Run autonomous task
-response = await agent.run(
-    "Analyze this repository and suggest 3 performance improvements"
-)
-
-print(response.text)
-\`\`\`
-
-**That's it!** 🎉
-
----
-
-## Key Features
-
-### 🎯 Planner-Worker Architecture
-
-Strategic planning with fast execution:
-
-\`\`\`yaml
-# missions/my_agent.yaml
-execution_pattern: planner_worker
-
-planner_worker:
-  planner:
-    provider: claude-sonnet-4  # Strategic reasoning
-  worker:
-    provider: claude-haiku-4   # Fast execution
-    skills:
-      - filesystem
-      - git
-      - bash
-\`\`\`
-
-**Result:** ~40% cost savings vs single-model approaches in benchmarks
-
-### 🤖 Autonomous Missions
-
-Long-running workflows that execute without supervision:
-
-\`\`\`python
-from teotl import Mission
-
-# Define mission
-mission = Mission.from_file("missions/devops_agent.yaml")
-
-# Run autonomously
-result = await mission.run(context={
-    "repository": "owner/repo",
-    "task": "Fix all failing tests"
-})
-
-# Agent investigates, fixes, tests, creates PR - all autonomous
-\`\`\`
-
-### 🔒 Production Security
-
-Built-in guardrails and credential management:
-
-\`\`\`python
-agent = Agent(
-    provider=provider,
-    policy="standard",  # or "strict" for high-security environments
-)
-
-# Guardrails automatically:
-# - Block dangerous commands (rm -rf /, etc.)
-# - Require approval for sensitive operations
-# - Track costs and enforce budgets
-# - Build trust over repeated safe actions
-\`\`\`
-
-**Credentials stored securely:**
-- OS keyring (macOS/Windows/Linux)
-- Encrypted file storage
-- AWS Secrets Manager
-- Never in code or environment variables
-
-### 🛠️ Skills System
-
-Modular capabilities that agents can use:
-
-\`\`\`python
-# Built-in skills
-- filesystem  # Read/write files
-- git         # Repository operations
-- bash        # Shell commands
-- python_repl # Dynamic code execution
-
-# Custom skills
-from teotl.primitives.skills import Skill
-
-class MyCustomSkill(Skill):
-    name = "my_skill"
-
-    async def my_action(self, param: str) -> str:
-        # Your logic here
-        return result
-\`\`\`
-
-### 📊 Benchmark Results
-
-Tested on real-world coding tasks:
-
-| Metric | Result |
-|--------|--------|
-| **Avg cost per task** | ~$0.17 |
-| **Cost savings** | ~40% vs single-model |
-| **Success rate** | 87% on test suite |
-
-*Results from internal benchmarks. Your results may vary based on task complexity.*
-
----
-
-## Examples
-
-### DevOps Automation Agent
-
-Autonomously investigates GitHub issues and creates fixes:
-
-\`\`\`bash
-cd examples/devops_agent
-python run_agent.py --repo owner/repo --mode daemon
-
-# Agent autonomously:
-# 1. Monitors for new issues
-# 2. Reproduces bugs
-# 3. Investigates root cause
-# 4. Creates fixes
-# 5. Submits pull requests
-\`\`\`
-
-**Example results:** Tested on real GitHub issues with autonomous bug fixing
-
-[See full example →](examples/devops_agent/)
-
-
----
-
-## Architecture
-
-### Planner-Worker Pattern
-
-\`\`\`
-┌─────────────────────────────────────────────┐
-│             User Request                     │
-└──────────────┬──────────────────────────────┘
-               │
-       ┌───────▼────────┐
-       │    Planner     │  Claude Sonnet 4
-       │  (Strategic)   │  - Analyze task
-       └───────┬────────┘  - Break into steps
-               │           - Choose approach
-               │
-       ┌───────▼────────┐
-       │    Worker      │  Claude Haiku 4
-       │  (Execution)   │  - Execute steps
-       └───────┬────────┘  - Use skills
-               │           - Report results
-               │
-       ┌───────▼────────┐
-       │     Result     │  40% cheaper
-       │   + Context    │  Same quality
-       └────────────────┘
-\`\`\`
-
-**Why it works:**
-- **Planner**: Expensive model for strategy (infrequent calls)
-- **Worker**: Cheap model for execution (frequent calls)
-- **Result**: Best of both worlds - smart + efficient
-
-### Cost Comparison
-
-**Traditional (single model):**
-\`\`\`
-Task: "Fix bug in user authentication"
-├─ Analysis:    Claude Sonnet 4 ($0.10)
-├─ Planning:    Claude Sonnet 4 ($0.05)
-├─ Execution:   Claude Sonnet 4 ($0.08)
-├─ Validation:  Claude Sonnet 4 ($0.06)
-└─ Total: $0.29
-\`\`\`
-
-**Teotl (planner-worker):**
-\`\`\`
-Task: "Fix bug in user authentication"
-├─ Analysis:    Claude Sonnet 4 ($0.10)  ← Strategic
-├─ Planning:    Claude Sonnet 4 ($0.05)  ← Strategic
-├─ Execution:   Claude Haiku 4  ($0.01)  ← Fast tasks
-├─ Validation:  Claude Haiku 4  ($0.01)  ← Fast tasks
-└─ Total: $0.17 (40% savings!)
-\`\`\`
-
----
-
-## Documentation
-
-- [Installation](docs/installation.md) - Setup and configuration
-- [Quick Start](docs/quickstart.md) - Build your first agent in 5 minutes
-- [Concepts](docs/concepts.md) - Missions, skills, planner-worker, security
-- [API Reference](docs/api_reference.md) - Complete API documentation
-- [Examples](examples/) - DevOps agent, comparisons, and more
-
----
-
-## Use Cases
-
-### 🐛 DevOps Automation
-Autonomous bug investigation, test fixing, deployment monitoring
-
-**Benefit:** Automate routine debugging and maintenance tasks
-
-### 🔍 Code Review
-Automated PR reviews, security scanning, best practice enforcement
-
-**Benefit:** Catch issues before human review, faster merges
-
-### 📊 Research & Analysis
-Market research, competitive analysis, data gathering
-
-**Benefit:** Autonomous multi-hour research tasks
-
-### 🧪 Testing
-Generate test cases, find edge cases, increase coverage
-
-**Benefit:** Thorough testing without manual effort
-
-### 🔄 ETL & Data Pipelines
-Autonomous data extraction, transformation, validation
-
-**Benefit:** Reliable pipelines with error recovery
-
----
-
-## Key Differentiators
-
-| Feature | Teotl |
-|---------|-------|
-| **Planner-Worker Architecture** | ✅ Built-in dual-model pattern |
-| **Cost Optimization** | ✅ ~40% savings in benchmarks |
-| **Autonomous Missions** | ✅ Long-running workflows |
-| **Built-in Guardrails** | ✅ Policy-based security |
-| **Credential Management** | ✅ Secure storage |
-| **Audit Logging** | ✅ Compliance-informed |
-| **Cost Tracking** | ✅ Real-time monitoring |
-| **Error Recovery** | ✅ Built-in retry logic |
-
----
-
-## Requirements
-
-- **Python:** 3.11 or higher
-- **API Keys:** Anthropic Claude or OpenAI GPT
-- **OS:** macOS, Linux, Windows
-
----
+**An autonomous agent framework for Python: planner-worker execution, built-in guardrails, and any LLM provider.**
+
+[![PyPI](https://img.shields.io/pypi/v/teotl)](https://pypi.org/project/teotl/)
+[![Python](https://img.shields.io/pypi/pyversions/teotl)](https://pypi.org/project/teotl/)
+[![CI](https://github.com/keithdit4e/teotl/actions/workflows/ci.yml/badge.svg)](https://github.com/keithdit4e/teotl/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+Teotl splits agent work between a **planner** (a strong model that runs once to write a step-by-step plan) and a **worker** (a cheaper, faster model that executes each step). Every tool call passes through a policy-based guardrail layer before it runs, and a harness keeps plans, progress, costs, and audit logs on disk so long-running missions can pause, resume, and be inspected.
+
+> **Status:** alpha (v0.2.0). APIs may change between minor versions.
+
+## Features
+
+- **Planner-worker harness**: plan once with a capable model, execute many steps with a cheap one
+- **Guardrails**: `minimal` / `standard` / `strict` policies, bash command analysis, prompt-injection checks, rate and cost limits, progressive trust
+- **Multi-provider**: Anthropic Claude, OpenAI, Google Gemini, Ollama (local), or LiteLLM
+- **Skills**: capabilities defined in `SKILL.md` files, loaded on demand to save context (filesystem, git, GitHub, web, Claude Code, spec-kit, social media)
+- **Memory**: optional local vector memory with automatic context compaction
+- **Harness artifacts**: `PLAN.md`, `PROGRESS.md`, state checkpoints, cost tracking, append-only audit log
+- **Credentials**: OS keyring, encrypted file, or AWS Secrets Manager storage
+- **CLI and dashboard**: interactive chat, onboarding wizard, and a web dashboard for monitoring agents
 
 ## Installation
 
-### From Source (Current)
+```bash
+pip install "teotl[anthropic]"
+```
+
+Pick the extras you need:
+
+| Extra | Adds |
+|-------|------|
+| `anthropic` | Claude models |
+| `openai` | OpenAI models |
+| `google` | Gemini models |
+| `ollama` | Local models via Ollama |
+| `litellm` | Any provider via LiteLLM |
+| `memory` | Vector memory (sentence-transformers, sqlite-vec) |
+| `security` | OS keyring and encrypted credential storage |
+| `web` | Web dashboard |
+| `browser` | Browser automation (browser-use) |
+| `aws` | AWS Secrets Manager credential backend |
+| `all` | Everything above |
+
+Requires Python 3.11 or newer.
+
+## Quick start
+
+Set an API key:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+### A single agent
+
+```python
+import asyncio
+
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
+
+
+async def main():
+    agent = Agent(
+        provider=AnthropicProvider(model="claude-sonnet-5-5"),
+        instructions="You are a careful code reviewer.",
+        skills=["filesystem", "git"],
+        policy="standard",  # or "strict" / "minimal"
+    )
+    response = await agent.run("Summarize the last 5 commits in this repo.")
+    print(response.text)
+    print(f"Cost: ${response.cost:.4f}")
+
+
+asyncio.run(main())
+```
+
+### Planner-worker
+
+```python
+import asyncio
+from pathlib import Path
+
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import PlannerWorkerHarness
+
+
+async def main():
+    harness = PlannerWorkerHarness(
+        agent_id="code-quality",
+        planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),        # plans once
+        worker_provider=AnthropicProvider(model="claude-haiku-4-5-20251001"),  # executes each step
+        workspace_dir=Path(".teotl/code-quality"),
+        worker_skills=["filesystem", "git"],
+    )
+
+    plan = await harness.plan(goals="Add type hints and docstrings to public functions in src/.")
+    print(f"Plan has {plan.total_steps} steps (see PLAN.md)")
+
+    while not harness.is_complete():
+        result = await harness.execute_next_step()
+        print(f"Step {result.step.number}: {'ok' if result.success else result.error}")
+
+
+asyncio.run(main())
+```
+
+The harness writes `PLAN.md` and `PROGRESS.md` into the workspace, so you can read, edit, or resume a plan at any point. By default it asks for approval before starting each new execution cycle.
+
+### Other providers
+
+```python
+from teotl.core.provider import GeminiProvider, OllamaProvider, OpenAIProvider
+
+GeminiProvider(model="gemini-2.5-flash")   # GOOGLE_API_KEY
+OpenAIProvider(model="gpt-4.1")            # OPENAI_API_KEY
+OllamaProvider(model="llama3.1")           # local, no key
+```
+
+You can mix providers, for example a Claude planner with a local Ollama worker.
+
+## Command line
+
+```bash
+teotl --help
+teotl onboard      # interactive setup wizard: provider, skills, policy, planner-worker config
+teotl chat         # interactive chat with an agent
+teotl security     # manage credentials and security settings
+```
+
+## Guardrails
+
+Every tool call is classified and checked against a policy **before** it executes. This happens outside the model's context, so a prompt can't talk its way past it.
+
+- `strict`: read-only by default; writes and shell commands need approval
+- `standard`: common development actions allowed; destructive or sensitive actions need approval
+- `minimal`: for trusted sandboxes
+
+Built-in protections include bash command analysis (for example blocking `rm -rf /` and piping remote scripts to a shell), prompt-injection checks on instructions and incoming messages, per-agent rate and cost limits, and a trust score that grows with repeated safe behavior. See [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
+
+## Skills
+
+A skill is a folder containing a `SKILL.md` file (YAML frontmatter plus instructions). Only each skill's short description sits in context until the agent activates it, which keeps prompts small.
+
+Teotl looks for skills in:
+
+1. the skills bundled with the package
+2. `~/.forge/skills/` (your own skills)
+3. any directories listed in `TEOTL_SKILLS_PATH` (colon-separated)
+
+See [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md) and [docs/CUSTOM_SKILLS_QUICKSTART.md](docs/CUSTOM_SKILLS_QUICKSTART.md).
+
+## Examples
+
+| Example | What it shows |
+|---------|---------------|
+| [`examples/planner_worker_demo.py`](examples/planner_worker_demo.py) | Planner-worker plan and execute loop |
+| [`examples/devops_agent/`](examples/devops_agent/) | Agent that triages GitHub issues and proposes fixes |
+| [`examples/supervisor_demo.py`](examples/supervisor_demo.py) | Supervised execution with approvals |
+| [`examples/custom_skill_example.py`](examples/custom_skill_example.py) | Writing your own skill |
+| [`examples/full_config_reference.yaml`](examples/full_config_reference.yaml) | Every YAML configuration option |
+| [`examples/social_media_agent.yaml`](examples/social_media_agent.yaml) | Browser-driven social media skills |
+
+## Documentation
+
+- [Getting started](docs/GETTING_STARTED.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Guardrails](docs/GUARDRAILS.md) and [security guide](docs/SECURITY_GUIDE.md)
+- [Memory](docs/MEMORY.md)
+- [Model strategy](docs/MODEL_STRATEGY.md)
+- [Multi-agent guide](docs/MULTI_AGENT_GUIDE.md)
+
+## Roadmap
+
+- [x] Planner-worker harness
+- [x] Guardrails, credential storage, audit log, cost tracking
+- [x] Anthropic, OpenAI, Gemini, Ollama, LiteLLM providers
+- [x] YAML configuration for multi-agent setups
+- [x] Browser automation and social media skills
+- [ ] Published benchmark results (GAIA and cost comparisons)
+- [ ] More end-to-end examples (code review, test generation)
+- [ ] Deeper MCP integration
+
+## Contributing
+
+Bug reports, ideas, and pull requests are welcome.
+
+- Questions and ideas: [Discussions](https://github.com/keithdit4e/teotl/discussions)
+- Bugs and feature requests: [Issues](https://github.com/keithdit4e/teotl/issues)
+- Code: see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ```bash
 git clone https://github.com/keithdit4e/teotl
 cd teotl
-pip install -e .
+pip install -e ".[dev,anthropic]"
+pytest
 ```
 
-> **Note:** PyPI package coming soon. For now, install from source as shown above.
-
-### Verify Installation
-
-\`\`\`bash
-teotl --version
-# teotl 0.1.0
-
-teotl --help
-\`\`\`
-
----
-
-## Configuration
-
-### API Keys
-
-\`\`\`bash
-# Anthropic Claude (recommended)
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Or OpenAI
-export OPENAI_API_KEY="sk-..."
-\`\`\`
-
-### Create Your First Agent
-
-\`\`\`bash
-# Interactive wizard
-teotl init my-agent
-
-# Creates:
-# my-agent/
-# ├── config.yaml      # Agent configuration
-# ├── missions/        # Mission definitions
-# └── skills/          # Custom skills (optional)
-\`\`\`
-
----
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Setup
-
-\`\`\`bash
-# Clone repository
-git clone https://github.com/keithdit4e/teotl
-cd teotl
-
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest tests/ -v
-
-# Format code
-ruff format .
-\`\`\`
-
-### Running Tests
-
-\`\`\`bash
-# Full test suite
-pytest tests/ -v
-
-# With coverage
-pytest tests/ --cov=teotl --cov-report=html
-
-# Quick test (stop on first failure)
-pytest tests/ -x
-\`\`\`
-
-**Current Status:** Run `pytest tests/ -v` to see current test results
-
----
-
-## Roadmap
-
-### v0.1.0 (Current)
-- ✅ Planner-worker architecture
-- ✅ Autonomous missions
-- ✅ Built-in guardrails
-- ✅ Credential management
-- ✅ Skills system
-- ✅ Cost tracking
-- ✅ DevOps agent example
-
-### v0.2.0 (Planned)
-- 🚧 GAIA benchmark validation
-- 🚧 Additional examples (code review, testing)
-- 🚧 Web dashboard
-- 🚧 Multi-agent orchestration
-- 🚧 Enhanced MCP integration
-
-### v1.0.0 (Future)
-- 🔮 GCP Marketplace listing
-- 🔮 Gemini Enterprise support
-- 🔮 Production case studies
-- 🔮 Advanced monitoring
-
----
-
-## Community
-
-- **GitHub Issues:** [Report bugs or request features](https://github.com/keithdit4e/teotl/issues)
-- **Discussions:** [Ask questions, share ideas](https://github.com/keithdit4e/teotl/discussions)
-
----
+Report security issues privately. See [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-Built with:
-- [Anthropic Claude](https://www.anthropic.com/) - Strategic planning and execution
-- [Rich](https://github.com/Textualize/rich) - Beautiful terminal output
-- [Click](https://click.palletsprojects.com/) - CLI framework
-- [Pytest](https://pytest.org/) - Testing framework
-
-Inspired by the need for production-ready autonomous agents that are both powerful and cost-efficient.
-
----
-
-## Citation
-
-If you use Teotl in your research or project, please cite:
-
-```bibtex
-@software{teotl2026,
-  title = {Teotl: Production-Ready Autonomous Agent Framework},
-  author = {Foster, Keith},
-  year = {2026},
-  url = {https://github.com/keithdit4e/teotl},
-  note = {Open-source autonomous agent framework with planner-worker architecture}
-}
-```
-
----
-
-<div align="center">
-
-**[Get Started](docs/quickstart.md)** • **[Examples](examples/)** • **[Documentation](docs/)**
-
-</div>
+[MIT](LICENSE) © Keith Foster

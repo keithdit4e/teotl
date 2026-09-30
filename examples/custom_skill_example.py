@@ -153,7 +153,7 @@ psql $DATABASE_URL -c "SELECT u.email, COUNT(o.id) as order_count FROM users u L
 
 
 def verify_skill_discovered():
-    """Verify the custom skill is discovered by Forge."""
+    """Verify the custom skill is discovered by Teotl."""
     from teotl.primitives.skills.registry import SkillRegistry
 
     print("\n" + "=" * 60)
@@ -224,12 +224,12 @@ async def use_custom_skill():
 
 
 def show_skill_locations():
-    """Show where Forge looks for skills."""
+    """Show where Teotl looks for skills."""
     print("\n" + "=" * 60)
     print("Skill Discovery Locations")
     print("=" * 60)
 
-    print("\n📁 Forge searches for skills in this order:")
+    print("\n📁 Teotl searches for skills in this order:")
     print("\n1. User Skills (highest priority)")
     print("   ~/.forge/skills/")
     print("   └── your-custom-skill/")

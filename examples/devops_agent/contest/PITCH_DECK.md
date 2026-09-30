@@ -258,7 +258,7 @@ result = mcp_execute("github", "get_file_contents", {...})
 
 ## Slide 9: Comparison to Existing Tools
 
-| Feature | Dependabot | GitHub Copilot | **Forge Agent** |
+| Feature | Dependabot | GitHub Copilot | **Teotl Agent** |
 |---------|------------|----------------|-----------------|
 | **Finds Bugs** | No (deps only) | No | ✅ **Yes** |
 | **Investigates** | No | No | ✅ **Yes** |

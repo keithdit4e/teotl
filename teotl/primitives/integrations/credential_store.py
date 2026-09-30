@@ -320,7 +320,7 @@ class AWSSecretsBackend(CredentialBackend):
             logger.info(f"Using AWS Secrets Manager in {self.region}")
         except ImportError as e:
             raise ImportError(
-                "AWSSecretsBackend requires 'boto3'. Install with: pip install boto3"
+                "AWSSecretsBackend requires 'boto3'. Install with: pip install teotl[aws]"
             ) from e
 
     def save(self, service: str, data: dict[str, Any]) -> None:

@@ -409,8 +409,6 @@ Once both keys are set and verified, you're ready to:
 
 **Next Steps:**
 - See `README.md` for full usage guide
-- See `GOOGLE_CHALLENGE_PLAN.md` for Day 11 testing plan
-- See `SESSION_SUMMARY.md` for current status
 
 ---
 

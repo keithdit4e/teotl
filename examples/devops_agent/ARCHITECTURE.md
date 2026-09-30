@@ -308,7 +308,7 @@ Tool Call → Guardrails → Decision (ALLOW/CONFIRM/BLOCK)
 
 ## Comparison to Existing Tools
 
-| Feature | Dependabot | GitHub Copilot | **Forge Agent** |
+| Feature | Dependabot | GitHub Copilot | **Teotl Agent** |
 |---------|------------|----------------|-----------------|
 | **Autonomy** | Limited | Requires human | **Fully autonomous** |
 | **Scope** | Dependencies | Code suggestions | **Full bug lifecycle** |

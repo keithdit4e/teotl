@@ -4,25 +4,26 @@ build-backend = "hatchling.build"
 
 [project]
 name = "teotl"
-version = "0.1.0"
-description = "Production-ready autonomous agent framework with 40% cost savings via planner-worker architecture."
+version = "0.2.0"
+description = "Autonomous agent framework with a planner-worker architecture, built-in guardrails, and multi-provider support (Claude, GPT, Gemini, Ollama)."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [
-    { name = "Teotl Contributors" },
+    { name = "Keith Foster" },
 ]
 maintainers = [
-    { name = "Teotl Contributors" },
+    { name = "Keith Foster" },
 ]
 keywords = [
     "ai", "agent", "llm", "autonomous", "framework",
     "guardrails", "memory", "planner-worker", "cost-optimization",
-    "production", "claude", "openai", "anthropic", "gemini", "google"
+    "claude", "openai", "anthropic", "gemini", "ollama", "ai-agents", "mcp"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -61,8 +62,11 @@ web = [
 browser = [
     "browser-use>=0.1",
 ]
+aws = [
+    "boto3>=1.34",
+]
 all = [
-    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,browser]",
+    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,browser,aws]",
 ]
 dev = [
     "pytest>=8.0",
@@ -77,14 +81,23 @@ dev = [
 teotl = "teotl.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/teotl"
-Documentation = "https://github.com/yourusername/teotl/blob/main/docs"
-Repository = "https://github.com/yourusername/teotl"
-Issues = "https://github.com/yourusername/teotl/issues"
-Changelog = "https://github.com/yourusername/teotl/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/keithdit4e/teotl"
+Documentation = "https://github.com/keithdit4e/teotl/blob/main/docs"
+Repository = "https://github.com/keithdit4e/teotl"
+Issues = "https://github.com/keithdit4e/teotl/issues"
+Changelog = "https://github.com/keithdit4e/teotl/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["teotl"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/teotl",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
 
 [tool.ruff]
 target-version = "py311"

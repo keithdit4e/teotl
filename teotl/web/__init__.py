@@ -1,4 +1,4 @@
-"""Web dashboard for Forge agents."""
+"""Web dashboard for Teotl agents."""
 
 from teotl.web.server import DashboardServer
 

@@ -1,9 +1,10 @@
-"""CLI commands for Forge agent framework."""
+"""CLI commands for Teotl agent framework."""
 
 import sys
 
 import click
 
+from teotl import __version__
 from teotl.cli.memory import memory
 from teotl.cli.security import main as security_main
 from teotl.cli.wizard import OnboardingWizard
@@ -13,9 +14,9 @@ __all__ = ["memory", "OnboardingWizard", "wizard_main", "security_main", "main"]
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="teotl")
+@click.version_option(version=__version__, prog_name="teotl")
 def main():
-    """Forge - AI Agent Framework
+    """Teotl - AI Agent Framework
 
     Build safe, memory-aware, context-efficient AI agents.
     """

@@ -65,7 +65,7 @@ def filter_agents(discovered: dict[str, Path], agent_filter: str | None) -> dict
 def main():
     """Run the dashboard server."""
     parser = argparse.ArgumentParser(
-        description="Forge Agent Dashboard - Monitor multiple agents",
+        description="Teotl Agent Dashboard - Monitor multiple agents",
         epilog="""
 Examples:
   # Auto-detect and monitor all agents
@@ -161,7 +161,7 @@ Examples:
 
     # Create and run server
     print("")
-    print("🚀 Starting Forge Dashboard")
+    print("🚀 Starting Teotl Dashboard")
     print(f"📊 Monitoring {len(agents)} agent(s): {', '.join(agents.keys())}")
     print(f"🌐 Dashboard: http://{args.host}:{args.port}")
     print("")

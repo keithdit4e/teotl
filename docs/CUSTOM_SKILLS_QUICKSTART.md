@@ -398,8 +398,8 @@ asyncio.run(test_my_skill())
 
 See working examples:
 - **[examples/custom_skill_example.py](../examples/custom_skill_example.py)** - Complete walkthrough
-- **[skills/filesystem/SKILL.md](../skills/filesystem/SKILL.md)** - Built-in skill example
-- **[skills/git/SKILL.md](../skills/git/SKILL.md)** - Another built-in example
+- **[teotl/skills/filesystem/SKILL.md](../teotl/skills/filesystem/SKILL.md)** - Built-in skill example
+- **[teotl/skills/git/SKILL.md](../teotl/skills/git/SKILL.md)** - Another built-in example
 
 ## Resources
 

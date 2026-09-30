@@ -1,4 +1,4 @@
-"""Core type definitions used throughout Forge."""
+"""Core type definitions used throughout Teotl."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 """
-Forge Cloud: paid services that enhance but never gate the core experience.
+Teotl Cloud: paid services that enhance but never gate the core experience.
 
 Free tier: everything works locally.
 Paid: sync, analytics, teams, compliance.

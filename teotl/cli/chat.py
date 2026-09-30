@@ -1,4 +1,4 @@
-"""Interactive chat mode for Forge agents.
+"""Interactive chat mode for Teotl agents.
 
 Provides a CLI interface to chat with agents in real-time.
 """
@@ -100,9 +100,9 @@ class ChatSession:
     def _display_welcome(self):
         """Display welcome message."""
         welcome_text = """
-# 💬 Forge Interactive Chat
+# 💬 Teotl Interactive Chat
 
-Welcome! You're now chatting with a Forge agent.
+Welcome! You're now chatting with a Teotl agent.
 
 **Commands:**
 - Type your message and press Enter

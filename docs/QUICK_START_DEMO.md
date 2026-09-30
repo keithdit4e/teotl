@@ -44,7 +44,7 @@ pip install -e .
 
 ```bash
 # Start the interactive setup wizard
-python teotl_onboard.py
+teotl onboard
 ```
 
 The wizard will guide you through setup:

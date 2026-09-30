@@ -53,7 +53,7 @@ class _HeadlessUI:
 
 class Agent:
     """
-    The Forge agent loop.
+    The Teotl agent loop.
 
     Thin by design — the loop coordinates between:
     - Provider (LLM API)

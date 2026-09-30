@@ -1,4 +1,4 @@
-"""Event bus and hook system. The nervous system of Forge."""
+"""Event bus and hook system. The nervous system of Teotl."""
 
 from __future__ import annotations
 

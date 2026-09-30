@@ -42,7 +42,7 @@ We're building a welcoming community. Harassment, trolling, or discriminatory be
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/teotl
+git clone https://github.com/keithdit4e/teotl
 cd teotl
 
 # Create virtual environment
@@ -118,10 +118,9 @@ We welcome:
 
 ### Areas That Need Help
 
-Check our [GitHub Issues](https://github.com/yourusername/teotl/issues) for:
+Check our [GitHub Issues](https://github.com/keithdit4e/teotl/issues) for:
 - Issues labeled `good first issue` (great for newcomers)
 - Issues labeled `help wanted` (community contributions welcome)
-- TODO.md for documented future enhancements
 
 ---
 
@@ -448,9 +447,8 @@ Include:
 
 ### Get Help
 
-- **GitHub Discussions:** [Ask questions, share ideas](https://github.com/yourusername/teotl/discussions)
-- **GitHub Issues:** [Report bugs, request features](https://github.com/yourusername/teotl/issues)
-- **Twitter:** [@yourusername](https://twitter.com/yourusername)
+- **GitHub Discussions:** [Ask questions, share ideas](https://github.com/keithdit4e/teotl/discussions)
+- **GitHub Issues:** [Report bugs, request features](https://github.com/keithdit4e/teotl/issues)
 
 ### Stay Updated
 

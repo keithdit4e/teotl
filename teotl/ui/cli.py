@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class CliUI:
     """
-    Rich terminal interface for Forge agents.
+    Rich terminal interface for Teotl agents.
 
     Provides:
     - Markdown-rendered responses

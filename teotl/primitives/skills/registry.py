@@ -44,16 +44,17 @@ class SkillRegistry:
         """Scan skill directories for SKILL.md files."""
         search_paths = [
             Path.home() / ".forge" / "skills",  # User skills
-            Path(__file__).parent.parent.parent.parent / "skills",  # Package skills (repo/skills/)
+            Path(__file__).parent.parent.parent / "skills",  # Bundled skills (teotl/skills/)
         ]
 
-        # Also check FORGE_SKILLS_PATH env var
+        # Also check TEOTL_SKILLS_PATH (and legacy FORGE_SKILLS_PATH) env vars
         import os
 
-        extra_paths = os.environ.get("FORGE_SKILLS_PATH", "")
-        if extra_paths:
-            for p in extra_paths.split(":"):
-                search_paths.append(Path(p))
+        for env_var in ("TEOTL_SKILLS_PATH", "FORGE_SKILLS_PATH"):
+            extra_paths = os.environ.get(env_var, "")
+            if extra_paths:
+                for p in extra_paths.split(":"):
+                    search_paths.append(Path(p))
 
         for search_path in search_paths:
             if not search_path.exists():

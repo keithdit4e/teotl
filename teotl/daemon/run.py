@@ -1,5 +1,5 @@
 """
-Command-line runner for Forge agent daemon.
+Command-line runner for Teotl agent daemon.
 
 This module provides a CLI entry point to start an agent daemon from a config file.
 """
@@ -163,7 +163,7 @@ async def run_daemon(config_path: Path, agent_id: str | None = None):
 
     agent_config = agents_config[agent_id]
 
-    logger.info("🤖 Forge Agent Daemon Starting...")
+    logger.info("🤖 Teotl Agent Daemon Starting...")
     logger.info("")
     logger.info("Configuration:")
     logger.info(f"  Agent ID: {agent_id}")
@@ -349,7 +349,7 @@ async def run_daemon(config_path: Path, agent_id: str | None = None):
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="Run Forge agent daemon")
+    parser = argparse.ArgumentParser(description="Run Teotl agent daemon")
     parser.add_argument(
         "--config",
         type=Path,

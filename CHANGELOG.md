@@ -7,16 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- DevOps Automation Agent (Days 6-17)
-- Web dashboard for monitoring
-- Multi-agent orchestration
-- GAIA benchmark validation
-- GCP Marketplace listing
+## [0.2.0] - 2026-09-30
+
+First release published to PyPI (`pip install teotl`).
+
+### Added
+- Google Gemini provider (`GeminiProvider`, `teotl[google]`)
+- Expanded YAML configuration for multi-agent, planner-worker, and harness settings
+- Browser automation tool (`teotl[browser]`) and social media skills (LinkedIn, Medium, Substack, Twitter/X)
+- `TEOTL_SKILLS_PATH` environment variable for extra skill directories (`FORGE_SKILLS_PATH` still works)
+- GitHub Actions CI and PyPI trusted-publishing workflows
+
+### Changed
+- Built-in skills now ship inside the package (`teotl/skills/`), so they're available after `pip install`
+- `teotl --version` now reads the package version
+- Renamed remaining "Forge" branding in CLI output and docstrings to Teotl
+- Rewrote the README with working examples
+- Moved internal planning notes and ad-hoc scripts out of the repository root
+
+### Removed
+- Unused `teotl/cli.py` module (shadowed by the `teotl/cli/` package)
 
 ---
 
-## [0.1.0] - 2025-05-14
+## [0.1.0] - 2026-06-11
 
 ### 🎉 Initial Release
 

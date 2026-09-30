@@ -15,6 +15,7 @@ from teotl.daemon.heartbeat import HeartbeatDaemon
 from teotl.daemon.executor import create_simple_executor
 from teotl.primitives.missions import Mission, MissionInterval
 from teotl.primitives.tasks import Priority, Task
+from teotl.core.paths import teotl_home
 
 # Configure logging
 logging.basicConfig(
@@ -52,7 +53,7 @@ async def main():
     )
 
     # Create data directory
-    data_dir = Path.home() / ".forge" / "examples" / "email-agent"
+    data_dir = teotl_home() / "examples" / "email-agent"
     data_dir.mkdir(parents=True, exist_ok=True)
 
     # Create heartbeat daemon

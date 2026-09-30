@@ -16,8 +16,9 @@ from typing import Any
 
 import yaml
 
-from teotl.daemon.executor import create_simple_executor
+from teotl.core.paths import teotl_home_display
 from teotl.daemon.agent_daemon import AgentDaemon
+from teotl.daemon.executor import create_simple_executor
 from teotl.primitives.discovery import LocalDiscovery
 from teotl.primitives.missions import Mission, MissionInterval
 from teotl.primitives.tasks import Priority, Task
@@ -174,7 +175,7 @@ async def run_daemon(config_path: Path, agent_id: str | None = None):
 
     # Get data directory
     workspace = agent_config.get("workspace") or config.get("daemon", {}).get(
-        "data_dir", f"~/.forge/{agent_id}"
+        "data_dir", f"{teotl_home_display()}/{agent_id}"
     )
     data_dir = Path(workspace).expanduser()
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -274,7 +275,7 @@ async def run_daemon(config_path: Path, agent_id: str | None = None):
     # Start daemon
     logger.info("")
     logger.info("=" * 70)
-    logger.info("✅ FORGE AGENT DAEMON STARTED SUCCESSFULLY")
+    logger.info("✅ TEOTL AGENT DAEMON STARTED SUCCESSFULLY")
     logger.info("=" * 70)
     logger.info(f"Agent ID:        {agent_id}")
     logger.info(f"Process ID:      {os.getpid()}")

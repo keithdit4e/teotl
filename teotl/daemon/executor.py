@@ -238,7 +238,7 @@ class AgentExecutorFactory:
     Usage:
         factory = AgentExecutorFactory(
             provider=AnthropicProvider(),
-            workspace_dir=Path("~/.forge/agents/my-agent")
+            workspace_dir=Path("~/.teotl/agents/my-agent")
         )
 
         # Create executor - automatically loads workspace files
@@ -529,7 +529,7 @@ def create_simple_executor(
         # With workspace files
         executor = create_simple_executor(
             provider=AnthropicProvider(),
-            workspace_dir=Path("~/.forge/agents/my-agent"),
+            workspace_dir=Path("~/.teotl/agents/my-agent"),
             skills=["filesystem"]
         )
 

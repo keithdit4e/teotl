@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from teotl.core.paths import teotl_home
+
 
 @dataclass
 class ProgressState:
@@ -63,14 +65,14 @@ class ProgressTracker:
 
         Args:
             agent_id: Agent identifier
-            workspace_dir: Optional workspace directory (defaults to ~/.forge/agents/{agent_id})
+            workspace_dir: Optional workspace directory (defaults to ~/.teotl/agents/{agent_id})
         """
         self.agent_id = agent_id
 
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.path = self.workspace_dir / "PROGRESS.md"
 

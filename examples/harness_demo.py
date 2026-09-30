@@ -8,6 +8,7 @@ import asyncio
 from pathlib import Path
 
 from teotl.primitives.harness import ContextJanitor, ProgressTracker, StateManager
+from teotl.core.paths import teotl_home
 
 
 async def main():
@@ -17,7 +18,7 @@ async def main():
     print()
 
     agent_id = "demo-agent"
-    workspace = Path.home() / ".forge" / "agents" / agent_id
+    workspace = teotl_home() / "agents" / agent_id
 
     # -------------------------------------------------------------------
     # 1. ProgressTracker Demo

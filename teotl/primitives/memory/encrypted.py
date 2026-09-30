@@ -44,7 +44,7 @@ class EncryptedMemory(LocalMemory):
         Initialize encrypted memory store.
 
         Args:
-            path: Database file path (default: ~/.forge/memory.db)
+            path: Database file path (default: ~/.teotl/memory.db)
             encryption_key: Optional explicit key (for testing/custom backends)
                           If None, retrieves from credential store
         """

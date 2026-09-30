@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from teotl.core.paths import teotl_home_display
+
 
 class PolicyMode(StrEnum):
     """Policy enforcement modes."""
@@ -143,7 +145,7 @@ class FilesystemPolicy:
         Supports:
         - Exact paths: /tmp/file.txt
         - Wildcards: /tmp/**/*.txt
-        - Home dir: ~/.forge/**
+        - Home dir: ~/.teotl/**
         """
         for pattern in patterns:
             pattern_path = Path(pattern).expanduser().resolve()
@@ -426,7 +428,7 @@ class SecurityPolicy:
             ),
             filesystem=FilesystemPolicy(
                 mode=PolicyMode.RESTRICTED,
-                allowed_paths=[f"~/.forge/agents/{agent_id}/**", "/tmp/**"],
+                allowed_paths=[f"{teotl_home_display()}/agents/{agent_id}/**", "/tmp/**"],
                 blocked_paths=["~/.ssh/**", "~/.aws/**", "/etc/**", "~/.config/**"],
             ),
             tools=ToolPolicy(
@@ -436,7 +438,7 @@ class SecurityPolicy:
             cost_limits=CostLimits(max_per_hour=1.0, max_per_day=10.0),
             sandbox=SandboxConfig(
                 enabled=True,
-                allowed_paths=[f"~/.forge/agents/{agent_id}/**", "/tmp/**"],
+                allowed_paths=[f"{teotl_home_display()}/agents/{agent_id}/**", "/tmp/**"],
                 allowed_domains=["*.anthropic.com", "*.openai.com"],
                 max_memory_mb=512,  # Lower memory limit for strict
                 max_cpu_seconds=180,  # 3 minutes
@@ -461,7 +463,7 @@ class SecurityPolicy:
             ),
             filesystem=FilesystemPolicy(
                 mode=PolicyMode.RESTRICTED,
-                allowed_paths=[f"~/.forge/agents/{agent_id}/**", "/tmp/**"],
+                allowed_paths=[f"{teotl_home_display()}/agents/{agent_id}/**", "/tmp/**"],
                 readonly_paths=["~/Documents/**"],
                 blocked_paths=["~/.ssh/**", "~/.aws/**", "/etc/**"],
             ),
@@ -472,7 +474,7 @@ class SecurityPolicy:
             cost_limits=CostLimits(max_per_hour=5.0, max_per_day=50.0),
             sandbox=SandboxConfig(
                 enabled=True,
-                allowed_paths=[f"~/.forge/agents/{agent_id}/**", "/tmp/**", "~/Documents/**"],
+                allowed_paths=[f"{teotl_home_display()}/agents/{agent_id}/**", "/tmp/**", "~/Documents/**"],
                 allowed_domains=[
                     "*.anthropic.com",
                     "*.openai.com",
@@ -536,7 +538,7 @@ class SecurityPolicy:
             filesystem=FilesystemPolicy(
                 mode=PolicyMode.RESTRICTED,
                 allowed_paths=[
-                    f"~/.forge/agents/{agent_id}/**",
+                    f"{teotl_home_display()}/agents/{agent_id}/**",
                     "~/Documents/**",
                     "~/workspace/**",
                 ],
@@ -556,7 +558,7 @@ class SecurityPolicy:
             sandbox=SandboxConfig(
                 enabled=True,
                 allowed_paths=[
-                    f"~/.forge/agents/{agent_id}/**",
+                    f"{teotl_home_display()}/agents/{agent_id}/**",
                     "~/Documents/**",
                     "~/workspace/**",
                 ],

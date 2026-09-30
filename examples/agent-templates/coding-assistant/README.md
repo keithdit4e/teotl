@@ -526,7 +526,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: AI Review
         run: |
-          forge chat --agent coding-assistant << EOF
+          teotl chat --agent coding-assistant << EOF
           Review PR changes and comment on potential issues
           EOF
 ```

@@ -9,7 +9,7 @@
     "deny": [
       "~/.ssh/**",
       "~/.aws/**",
-      "~/.forge/auth/**"
+      "~/.teotl/auth/**"
     ],
     "confirm_write_outside_scope": true
   },

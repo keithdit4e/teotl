@@ -29,7 +29,7 @@ Monthly:  $500.00 USD
 
 ## Cost Storage
 
-**Location:** `~/.forge/devops-agent/<repo-name>/costs.json`
+**Location:** `~/.teotl/devops-agent/<repo-name>/costs.json`
 
 **Data Tracked:**
 ```json
@@ -66,7 +66,7 @@ The agent automatically tracks:
 
 ```bash
 # Check costs file
-cat ~/.forge/devops-agent/<repo-name>/costs.json
+cat ~/.teotl/devops-agent/<repo-name>/costs.json
 
 # Calculate current period totals
 # (automatically done by CostTracker)

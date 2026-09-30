@@ -91,7 +91,7 @@ $ python3 autonomous_mode.py --repo keithdit4e/devops-agent-test
 
 🚀 Initializing Autonomous DevOps Agent
 
-   ✓ Data directory: ~/.forge/devops-agent/keithdit4e-devops-agent-test
+   ✓ Data directory: ~/.teotl/devops-agent/keithdit4e-devops-agent-test
    ✓ DevOps executor created
    ✓ Heartbeat daemon initialized
 
@@ -124,7 +124,7 @@ $ python3 autonomous_mode.py --repo keithdit4e/devops-agent-test
 
 ## Data Storage
 
-The agent stores data in `~/.forge/devops-agent/<repo>/`:
+The agent stores data in `~/.teotl/devops-agent/<repo>/`:
 - `tasks.db` - Task queue and history
 - `missions.db` - Mission schedules
 - `agent.log` - Detailed execution logs

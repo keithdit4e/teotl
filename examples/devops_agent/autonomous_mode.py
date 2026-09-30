@@ -35,6 +35,7 @@ from teotl.primitives.tasks import Priority, Task
 
 # Custom executor
 from autonomous_executor import DevOpsExecutor
+from teotl.core.paths import teotl_home
 
 # Configure logging
 logging.basicConfig(
@@ -71,7 +72,7 @@ class AutonomousDevOpsAgent:
         console.print("\n[bold blue]🚀 Initializing Autonomous DevOps Agent[/bold blue]\n")
 
         # Create data directory
-        data_dir = Path.home() / ".forge" / "devops-agent" / self.repo.replace("/", "-")
+        data_dir = teotl_home() / "devops-agent" / self.repo.replace("/", "-")
         data_dir.mkdir(parents=True, exist_ok=True)
         console.print(f"   [green]✓[/green] Data directory: {data_dir}")
 

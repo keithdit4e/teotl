@@ -15,6 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from teotl.core.paths import teotl_home
 from teotl.core.provider import Provider
 from teotl.core.security.policy import SecurityPolicy
 from teotl.primitives.harness.advanced_janitor import AdvancedContextJanitor
@@ -122,7 +123,7 @@ class PlannerWorkerHarness:
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.workspace_dir.mkdir(parents=True, exist_ok=True)
 

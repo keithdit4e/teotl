@@ -148,7 +148,7 @@ A skill is a folder containing a `SKILL.md` file (YAML frontmatter plus instruct
 Teotl looks for skills in:
 
 1. the skills bundled with the package
-2. `~/.forge/skills/` (your own skills)
+2. `~/.teotl/skills/` (your own skills; the data directory can be moved with `TEOTL_HOME`)
 3. any directories listed in `TEOTL_SKILLS_PATH` (colon-separated)
 
 See [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md) and [docs/CUSTOM_SKILLS_QUICKSTART.md](docs/CUSTOM_SKILLS_QUICKSTART.md).

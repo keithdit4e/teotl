@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import ulid
 
+from teotl.core.paths import teotl_home
 from teotl.primitives.guardrails.classifier import classify
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ class UndoExtension:
     version = "1.0.0"
 
     def __init__(self, snapshot_dir: Path | None = None, max_snapshots: int = 50) -> None:
-        self.snapshot_dir = snapshot_dir or Path.home() / ".forge" / "snapshots"
+        self.snapshot_dir = snapshot_dir or teotl_home() / "snapshots"
         self.snapshot_dir.mkdir(parents=True, exist_ok=True)
         self.max_snapshots = max_snapshots
         self.snapshots: list[Snapshot] = []

@@ -20,7 +20,7 @@ filesystem:
     # User's Downloads folder (for saving attachments)
     - "~/Downloads"
     # Temporary directory for processing
-    - "/tmp/forge-email-bot"
+    - "/tmp/teotl-email-bot"
 
   # Blocked paths (even if in allowed_paths)
   blocked_paths:
@@ -342,10 +342,10 @@ You can adjust this policy based on your needs:
 Test your security policy:
 ```bash
 # Dry run to check policy
-forge chat --agent email-bot --dry-run
+teotl chat --agent email-bot --dry-run
 
 # Check specific action
-forge security check --agent email-bot --action "send_email"
+teotl security check --agent email-bot --action "send_email"
 ```
 
 ## Monitoring

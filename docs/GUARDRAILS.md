@@ -38,7 +38,7 @@ Guardrails intercept **every tool call** before execution and make a decision:
 ✅ **Enforced in code** - Tool calls go through the guardrail engine before the handler runs
 ✅ **Declarative** - Define policies in JSON/YAML, not code
 ✅ **Progressive Trust** - Auto-approve repeated safe actions
-✅ **Audit Trail** - All decisions logged to `~/.forge/audit.jsonl`
+✅ **Audit Trail** - All decisions logged to `~/.teotl/audit.jsonl`
 ✅ **Event-Driven** - Integrates cleanly via event bus
 
 ### Architecture
@@ -344,7 +344,7 @@ agent = Agent(provider=provider, policy="standard")
 **Characteristics:**
 - Low-risk actions: allow; medium/high: confirm; critical: block
 - Filesystem: `~/projects/**`, `~/Documents/**`, `/tmp/**` allowed (writes confirmed);
-  `~/.ssh`, `~/.aws`, `~/.forge/auth`, `~/.gnupg` denied
+  `~/.ssh`, `~/.aws`, `~/.teotl/auth`, `~/.gnupg` denied
 - Bash: blocks `rm -rf /`, fork bombs, and piping `curl`/`wget` into a shell; confirms
   `rm`, `git push`, `git reset --hard`, `sudo`, `docker`, `pip install`, `chmod`, `kill`, ...;
   allows common read-only commands, `git status/log/diff`, `pytest`, ...
@@ -607,7 +607,7 @@ filesystem:
 
 ```bash
 # View recent guardrail decisions
-tail -f ~/.forge/audit.jsonl
+tail -f ~/.teotl/audit.jsonl
 ```
 
 Look for:
@@ -770,7 +770,7 @@ logs (e.g. an unknown preset name or a policy file that failed to load).
 
 **Check audit log:**
 ```bash
-tail ~/.forge/audit.jsonl
+tail ~/.teotl/audit.jsonl
 ```
 
 Look for `"decision": "blocked"` (or `"blocked_no_ui"`) entries and check the `reason` field.

@@ -21,11 +21,11 @@ available backend automatically, or you can choose one explicitly:
 | Backend name | Storage |
 |--------------|---------|
 | `"keyring"` | OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service) |
-| `"file"` | Fernet-encrypted files in `~/.forge/auth/` (fallback when no keyring) |
-| `"environment"` | Read-only, from environment variables (CI/CD; requires `FORGE_ALLOW_ENV_AUTH=true`) |
+| `"file"` | Fernet-encrypted files in `~/.teotl/auth/` (fallback when no keyring) |
+| `"environment"` | Read-only, from environment variables (CI/CD; requires `TEOTL_ALLOW_ENV_AUTH=true`) |
 | `"aws_secrets"` | AWS Secrets Manager (requires `teotl[aws]`) |
 
-Auto-detection order: environment (if `FORGE_ALLOW_ENV_AUTH=true`) → AWS Secrets Manager
+Auto-detection order: environment (if `TEOTL_ALLOW_ENV_AUTH=true`) → AWS Secrets Manager
 (if `AWS_REGION`/`AWS_DEFAULT_REGION` is set) → OS keyring → encrypted file.
 
 ```python
@@ -165,13 +165,13 @@ credentials from environment variables. It is read-only and must be enabled expl
 
 ```bash
 # Allow environment variable auth (NOT recommended for local development)
-export FORGE_ALLOW_ENV_AUTH=true
-export FORGE_GITHUB_TOKEN=ghp_...          # -> load_credential("github")
-export FORGE_SLACK_API_KEY=xoxb-...        # -> load_credential("slack")
+export TEOTL_ALLOW_ENV_AUTH=true
+export TEOTL_GITHUB_TOKEN=ghp_...          # -> load_credential("github")
+export TEOTL_SLACK_API_KEY=xoxb-...        # -> load_credential("slack")
 ```
 
-Each service is read from `FORGE_<SERVICE>_API_KEY`, `FORGE_<SERVICE>_TOKEN`, or
-`FORGE_<SERVICE>_ACCESS_TOKEN`. (LLM provider keys such as `ANTHROPIC_API_KEY` are read
+Each service is read from `TEOTL_<SERVICE>_API_KEY`, `TEOTL_<SERVICE>_TOKEN`, or
+`TEOTL_<SERVICE>_ACCESS_TOKEN`. (LLM provider keys such as `ANTHROPIC_API_KEY` are read
 by the providers themselves — see [SECURITY_API_KEYS.md](SECURITY_API_KEYS.md).)
 
 ---

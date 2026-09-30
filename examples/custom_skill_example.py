@@ -6,7 +6,7 @@ This example shows how to:
 3. Load and use the skill in your agent
 4. Verify the skill is discovered
 
-Custom skills go in: ~/.forge/skills/your-skill-name/SKILL.md
+Custom skills go in: ~/.teotl/skills/your-skill-name/SKILL.md
 """
 
 import asyncio
@@ -14,12 +14,13 @@ from pathlib import Path
 
 from teotl.core.agent import Agent
 from teotl.core.provider import AnthropicProvider
+from teotl.core.paths import teotl_home, teotl_home_display
 
 
 def create_example_skill():
     """Create an example custom skill: database queries."""
     # User skills directory
-    skills_dir = Path.home() / ".forge" / "skills"
+    skills_dir = teotl_home() / "skills"
     skills_dir.mkdir(parents=True, exist_ok=True)
 
     # Create custom skill directory
@@ -145,7 +146,7 @@ psql $DATABASE_URL -c "SELECT u.email, COUNT(o.id) as order_count FROM users u L
 
     print(f"✅ Created custom skill at: {skill_file}")
     print("\nSkill structure:")
-    print("~/.forge/skills/")
+    print(f"{teotl_home_display()}/skills/")
     print("└── database/")
     print("    └── SKILL.md")
 
@@ -177,7 +178,7 @@ def verify_skill_discovered():
         print(f"   Path: {db_skill.path}")
     else:
         print("\n❌ Custom 'database' skill not found")
-        print("   Make sure it's in: ~/.forge/skills/database/SKILL.md")
+        print(f"   Make sure it's in: {teotl_home_display()}/skills/database/SKILL.md")
 
 
 async def use_custom_skill():
@@ -231,23 +232,23 @@ def show_skill_locations():
 
     print("\n📁 Teotl searches for skills in this order:")
     print("\n1. User Skills (highest priority)")
-    print("   ~/.forge/skills/")
+    print(f"   {teotl_home_display()}/skills/")
     print("   └── your-custom-skill/")
     print("       └── SKILL.md")
 
     print("\n2. Environment Path (optional)")
-    print("   export FORGE_SKILLS_PATH='/opt/company-skills:/path/to/more/skills'")
+    print("   export TEOTL_SKILLS_PATH='/opt/company-skills:/path/to/more/skills'")
 
     print("\n3. Built-in Skills (lowest priority)")
-    print("   forge-agent/skills/")
+    print("   teotl/skills/  (bundled with the package)")
     print("   ├── filesystem/SKILL.md")
     print("   ├── git/SKILL.md")
     print("   └── web/SKILL.md")
 
     print("\n💡 Tips:")
     print("   - Skills in user directory override built-in skills with same name")
-    print("   - Use FORGE_SKILLS_PATH for team/company shared skills")
-    print("   - Clone community skills: git clone <repo> ~/.forge/skills/<name>")
+    print("   - Use TEOTL_SKILLS_PATH for team/company shared skills")
+    print(f"   - Clone community skills: git clone <repo> {teotl_home_display()}/skills/<name>")
 
 
 def show_skill_template():
@@ -300,7 +301,7 @@ How to handle common errors...
 """
 
     print("\n" + template)
-    print("\n💡 Save this as: ~/.forge/skills/my-skill/SKILL.md")
+    print(f"\n💡 Save this as: {teotl_home_display()}/skills/my-skill/SKILL.md")
 
 
 async def main():
@@ -331,7 +332,7 @@ async def main():
     print("Summary: How to Add Your Own Skills")
     print("=" * 60)
     print("\n✅ Step 1: Create directory structure")
-    print("   mkdir -p ~/.forge/skills/my-skill")
+    print(f"   mkdir -p {teotl_home_display()}/skills/my-skill")
     print("\n✅ Step 2: Create SKILL.md file")
     print("   # Add frontmatter (name, version, description)")
     print("   # Add markdown content with bash commands")

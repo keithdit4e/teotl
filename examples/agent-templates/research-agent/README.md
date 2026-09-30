@@ -505,7 +505,7 @@ from teotl.daemon.executor import load_workspace_files
 
 
 async def main():
-    workspace = Path("~/.forge/agents/research-agent").expanduser()
+    workspace = Path("~/.teotl/agents/research-agent").expanduser()
     agent = Agent(
         provider=AnthropicProvider(model="claude-sonnet-5-5"),
         # Combines PERSONALITY.md, USER.md, INSTRUCTIONS.md and SKILLS.md

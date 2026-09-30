@@ -17,6 +17,8 @@ from typing import Any
 import ulid
 from pydantic import BaseModel, Field, field_validator
 
+from teotl.core.paths import teotl_home
+
 # Import Priority from tasks for interrupt_threshold
 from teotl.primitives.tasks.persistent import Priority
 
@@ -175,9 +177,9 @@ class MissionStore:
         """Initialize mission store.
 
         Args:
-            path: Path to SQLite database file (default: ~/.forge/missions.db)
+            path: Path to SQLite database file (default: ~/.teotl/missions.db)
         """
-        self.path = Path(path) if path else Path.home() / ".forge" / "missions.db"
+        self.path = Path(path) if path else teotl_home() / "missions.db"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(str(self.path))
         self.db.row_factory = sqlite3.Row

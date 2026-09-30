@@ -8,7 +8,7 @@ Demonstrates: custom policy, memory isolation, programmatic usage.
 import asyncio
 from pathlib import Path
 
-from forge import Agent
+from teotl import Agent
 
 from teotl.core.provider import AnthropicProvider
 from teotl.primitives.guardrails.policy import Policy

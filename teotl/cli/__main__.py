@@ -1,7 +1,7 @@
 """Main entry point for teotl CLI.
 
 Usage:
-    python -m forge.cli [command]
+    python -m teotl.cli [command]
     teotl [command]
 """
 

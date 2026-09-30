@@ -8,7 +8,7 @@ This package contains client stubs. The free tier implementations are no-ops.
 """
 
 
-class ForgeCloud:
+class TeotlCloud:
     """Cloud service client. No-op in free tier."""
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -18,3 +18,7 @@ class ForgeCloud:
     @property
     def is_connected(self) -> bool:
         return self.enabled
+
+
+# Previous name, kept for compatibility
+ForgeCloud = TeotlCloud

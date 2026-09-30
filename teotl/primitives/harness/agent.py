@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from teotl.core.agent import Agent
+from teotl.core.paths import teotl_home
 from teotl.core.provider import Provider
 from teotl.core.types import UI, Extension, Response, ToolDefinition
 from teotl.primitives.harness.janitor import ContextJanitor
@@ -77,7 +78,7 @@ class HarnessAgent:
             agent_id: Agent identifier (used for workspace)
             provider: LLM provider
             instructions: Agent instructions (can include {artifacts} placeholder)
-            workspace_dir: Workspace directory (defaults to ~/.forge/agents/{agent_id})
+            workspace_dir: Workspace directory (defaults to ~/.teotl/agents/{agent_id})
             skills: List of skills to enable
             policy: Security policy
             memory: Memory system
@@ -99,7 +100,7 @@ class HarnessAgent:
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.workspace_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,6 +1,6 @@
 """File-based local agent discovery.
 
-Simple agent registry using a YAML file (~/.forge/agents-registry.yaml).
+Simple agent registry using a YAML file (~/.teotl/agents-registry.yaml).
 Agents automatically register when they start and unregister when they stop.
 
 This is the simple alternative to enterprise orchestration (ResolutionService).
@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 from pydantic import BaseModel
+
+from teotl.core.paths import teotl_home
 
 
 class AgentInfo(BaseModel):
@@ -31,7 +33,7 @@ class AgentInfo(BaseModel):
 class LocalDiscovery:
     """File-based agent discovery for local multi-agent deployments.
 
-    Agents register themselves in ~/.forge/agents-registry.yaml when they start.
+    Agents register themselves in ~/.teotl/agents-registry.yaml when they start.
     Other agents can discover them by capability or agent_id.
 
     Example:
@@ -55,10 +57,10 @@ class LocalDiscovery:
         """Initialize local discovery.
 
         Args:
-            registry_path: Path to registry file (default: ~/.forge/agents-registry.yaml)
+            registry_path: Path to registry file (default: ~/.teotl/agents-registry.yaml)
         """
         if registry_path is None:
-            registry_path = Path.home() / ".forge" / "agents-registry.yaml"
+            registry_path = teotl_home() / "agents-registry.yaml"
 
         self.registry_path = Path(registry_path)
         self.registry_path.parent.mkdir(parents=True, exist_ok=True)

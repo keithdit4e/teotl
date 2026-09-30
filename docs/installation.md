@@ -297,13 +297,27 @@ git pull origin main
 pip install -e ".[dev,anthropic]"
 ```
 
+### Coming from Forge (the previous name)
+
+Teotl was previously called Forge. Existing setups keep working without changes:
+
+- **Data directory:** Teotl stores memory, missions, tasks, credentials, and agent workspaces in `~/.teotl` (override with `TEOTL_HOME`). If `~/.teotl` doesn't exist but `~/.forge` does, Teotl keeps using `~/.forge`. To switch, stop any running daemons and run:
+
+  ```bash
+  mv ~/.forge ~/.teotl
+  ```
+
+  Configs you created earlier may still contain `~/.forge/...` paths (for example `workspace:` or `daemon.data_dir`); update them after moving.
+- **Environment variables:** use `TEOTL_SKILLS_PATH`, `TEOTL_ALLOW_ENV_AUTH`, and `TEOTL_<SERVICE>_API_KEY` / `_TOKEN` / `_ACCESS_TOKEN`. The `FORGE_*` names still work.
+- **OS keyring:** new entries are stored under `teotl`. Credentials saved under `forge` are still read, and the master key is copied (not moved) the first time.
+
 ## Uninstallation
 
 ```bash
 pip uninstall teotl
 ```
 
-Agent workspaces and data created by the wizard or daemon live under `~/.forge/` by default; remove them manually if you no longer need them.
+Agent workspaces and data created by the wizard or daemon live under `~/.teotl/` by default; remove them manually if you no longer need them.
 
 ## Docker
 

@@ -15,6 +15,7 @@ import logging
 from pathlib import Path
 
 from teotl.core.agent import Agent
+from teotl.core.paths import teotl_home
 from teotl.core.provider import Provider
 from teotl.core.security.policy import SecurityPolicy
 from teotl.primitives.guardrails.presets import guardrail_preset_for
@@ -110,7 +111,7 @@ class Worker:
         if workspace_dir:
             self.workspace_dir = Path(workspace_dir)
         else:
-            self.workspace_dir = Path.home() / ".forge" / "agents" / agent_id
+            self.workspace_dir = teotl_home() / "agents" / agent_id
 
         self.workspace_dir.mkdir(parents=True, exist_ok=True)
 

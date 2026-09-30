@@ -53,7 +53,7 @@ from teotl.core.provider import AnthropicProvider
 from teotl.primitives.memory.local import LocalMemory
 
 # Create memory store
-memory = LocalMemory()  # Defaults to ~/.forge/memory.db
+memory = LocalMemory()  # Defaults to ~/.teotl/memory.db
 
 # Create agent with memory
 agent = Agent(
@@ -116,7 +116,7 @@ await agent.remember(
 
 ### Storage
 
-**Default location:** `~/.forge/memory.db`
+**Default location:** `~/.teotl/memory.db`
 
 **Database schema:**
 ```sql
@@ -555,7 +555,7 @@ EncryptedMemory automatically removes PII from search index:
 ### File Permissions
 
 Teotl does not change the database file's permissions; it is created with your default
-umask. Restrict it yourself if needed (e.g. `chmod 600 ~/.forge/memory.db`).
+umask. Restrict it yourself if needed (e.g. `chmod 600 ~/.teotl/memory.db`).
 
 ---
 

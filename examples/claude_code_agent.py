@@ -11,6 +11,7 @@ import asyncio
 
 from teotl.core.agent import Agent
 from teotl.core.provider import AnthropicProvider
+from teotl.core.paths import teotl_home_display
 
 
 async def main():
@@ -218,8 +219,8 @@ Requirements:
     print()
     print("1. SkillRegistry discovers claude_code skill from:")
     print("   - skills/claude_code/SKILL.md")
-    print("   - ~/.forge/skills/claude_code/SKILL.md")
-    print("   - $FORGE_SKILLS_PATH/claude_code/SKILL.md")
+    print(f"   - {teotl_home_display()}/skills/claude_code/SKILL.md")
+    print("   - $TEOTL_SKILLS_PATH/claude_code/SKILL.md")
     print()
     print("2. Agent receives skill DESCRIPTION in system prompt:")
     print("   '- claude_code: AI-powered coding assistant for refactoring, features, bug fixes'")
@@ -264,7 +265,7 @@ daemon:
 """)
     print()
     print("Or use the wizard:")
-    print("  $ python3 -m forge.cli.wizard")
+    print("  $ python3 -m teotl.cli.wizard")
     print("  Step 4: Select 'Claude_Code' in skills")
     print()
 

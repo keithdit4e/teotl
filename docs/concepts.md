@@ -246,11 +246,11 @@ print(agent.list_skills())
 - **filesystem** - Read, write, search, and navigate files and directories
 - **git** - Version control: status, commits, branches, diffs
 
-If `skills` is omitted, all discovered skills are registered. Skills are discovered from the bundled skills, `~/.forge/skills/`, and any directories listed in `TEOTL_SKILLS_PATH` (colon-separated).
+If `skills` is omitted, all discovered skills are registered. Skills are discovered from the bundled skills, `~/.teotl/skills/`, and any directories listed in `TEOTL_SKILLS_PATH` (colon-separated).
 
 ### Custom Skills
 
-To create a skill, write a folder with a `SKILL.md` and place it in `~/.forge/skills/` (or a directory on `TEOTL_SKILLS_PATH`). See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for details.
+To create a skill, write a folder with a `SKILL.md` and place it in `~/.teotl/skills/` (or a directory on `TEOTL_SKILLS_PATH`). See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for details.
 
 ### Custom Tools
 
@@ -371,7 +371,7 @@ When memory is enabled, the agent recalls relevant memories before each turn and
 
 #### Local Memory
 
-SQLite-based local storage (default path: `~/.forge/memory.db`):
+SQLite-based local storage (default path: `~/.teotl/memory.db`):
 
 ```python
 from teotl.primitives.memory.local import LocalMemory
@@ -540,7 +540,7 @@ services = store.list_services()
 store.delete_credential("github")
 ```
 
-`CredentialStore.create()` auto-detects a backend in this order: environment variables (only if `FORGE_ALLOW_ENV_AUTH=true`), AWS Secrets Manager (if `AWS_REGION` or `AWS_DEFAULT_REGION` is set), OS keyring, then an encrypted file. To choose one explicitly, pass `backend="keyring"`, `"file"`, `"environment"`, or `"aws_secrets"`.
+`CredentialStore.create()` auto-detects a backend in this order: environment variables (only if `TEOTL_ALLOW_ENV_AUTH=true`), AWS Secrets Manager (if `AWS_REGION` or `AWS_DEFAULT_REGION` is set), OS keyring, then an encrypted file. To choose one explicitly, pass `backend="keyring"`, `"file"`, `"environment"`, or `"aws_secrets"`.
 
 ### Storage Backends
 
@@ -559,14 +559,14 @@ store = CredentialStore(LocalKeyringBackend())
 
 #### Encrypted File
 
-Encrypted file storage (fallback). `storage_path` is a directory (default: `~/.forge/auth`) holding one encrypted file per service plus the encryption key:
+Encrypted file storage (fallback). `storage_path` is a directory (default: `~/.teotl/auth`) holding one encrypted file per service plus the encryption key:
 
 ```python
 from pathlib import Path
 
 from teotl.primitives.integrations.credential_store import CredentialStore, FileBackend
 
-store = CredentialStore(FileBackend(storage_path=Path.home() / ".forge" / "auth"))
+store = CredentialStore(FileBackend(storage_path=Path.home() / ".teotl" / "auth"))
 ```
 
 #### AWS Secrets Manager

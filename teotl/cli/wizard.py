@@ -19,7 +19,15 @@ import yaml
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
-from teotl.core.models import DEFAULT_PLANNER_MODEL, DEFAULT_WORKER_MODEL
+from teotl.core.models import (
+    DEFAULT_GEMINI_MODEL,
+    DEFAULT_GEMINI_WORKER_MODEL,
+    DEFAULT_OPENAI_CAPABLE_MODEL,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENAI_WORKER_MODEL,
+    DEFAULT_PLANNER_MODEL,
+    DEFAULT_WORKER_MODEL,
+)
 from teotl.core.paths import teotl_home_display
 from teotl.core.security import SecurityPolicy
 
@@ -376,13 +384,16 @@ class OnboardingWizard:
         print(f"\n{Color.CYAN}OpenAI{Color.END} - GPT models")
         print("  • Cost: ~$0.40-1.20 per session")
         print("  • Best for: General purpose, faster responses")
+        print(f"\n{Color.CYAN}Google{Color.END} - Gemini models")
+        print("  • Cost: lowest per-token prices of the hosted options")
+        print("  • Best for: Long documents, high-volume work")
         print(f"\n{Color.CYAN}Ollama{Color.END} - Local models")
         print("  • Cost: $0 (runs on your machine)")
         print("  • Best for: Privacy, offline work, development")
 
         provider = ask_choice(
             "\nWhich provider would you like to use?",
-            ["anthropic", "openai", "ollama"],
+            ["anthropic", "openai", "google", "ollama"],
             default="anthropic",
         )
 
@@ -392,6 +403,8 @@ class OnboardingWizard:
             self._setup_anthropic()
         elif provider == "openai":
             self._setup_openai()
+        elif provider == "google":
+            self._setup_google()
         elif provider == "ollama":
             self._setup_ollama()
 
@@ -460,8 +473,12 @@ class OnboardingWizard:
 
         model = ask_choice(
             "\nWhich GPT model?",
-            ["gpt-4o (recommended)", "gpt-4-turbo", "gpt-4"],
-            default="gpt-4o (recommended)",
+            [
+                f"{DEFAULT_OPENAI_MODEL} (recommended)",
+                f"{DEFAULT_OPENAI_CAPABLE_MODEL} (most capable)",
+                f"{DEFAULT_OPENAI_WORKER_MODEL} (fastest, cheapest)",
+            ],
+            default=f"{DEFAULT_OPENAI_MODEL} (recommended)",
         )
         model_id = model.split(" ")[0]
 
@@ -507,6 +524,30 @@ class OnboardingWizard:
                             print_info("You can manually add it to your shell profile:")
                             print(f'  export OPENAI_API_KEY="{api_key}"')
 
+    def _setup_google(self) -> None:
+        """Configure Google Gemini provider."""
+        print_info("Setting up Google (Gemini)")
+
+        model = ask_choice(
+            "\nWhich Gemini model?",
+            [
+                f"{DEFAULT_GEMINI_MODEL} (recommended)",
+                f"{DEFAULT_GEMINI_WORKER_MODEL} (fastest, cheapest)",
+            ],
+            default=f"{DEFAULT_GEMINI_MODEL} (recommended)",
+        )
+        self.config["provider"]["model"] = model.split(" ")[0]
+        self.config["provider"]["api_key_env"] = "GOOGLE_API_KEY"
+
+        if os.getenv("GOOGLE_API_KEY"):
+            print_success("Found GOOGLE_API_KEY in environment")
+        else:
+            print_warning("GOOGLE_API_KEY not found in environment")
+            print("\nTo get an API key, go to https://aistudio.google.com/apikey")
+            print("Then set it with:")
+            print('  export GOOGLE_API_KEY="..."')
+        print_info("Requires the Gemini extra: pip install \"teotl[google]\"")
+
     def _setup_ollama(self) -> None:
         """Configure Ollama provider."""
         print_info("Setting up Ollama (Local)")
@@ -532,11 +573,12 @@ class OnboardingWizard:
         print(f"{Color.CYAN}Recommended:{Color.END}")
         print("  • claude-sonnet-5-5 (best quality)")
         print("  • claude-opus-5-5 (most capable, slower)")
-        print("  • gpt-4-turbo (OpenAI alternative)")
+        print(f"  • {DEFAULT_OPENAI_MODEL} (OpenAI alternative)")
+        print(f"  • {DEFAULT_GEMINI_MODEL} (Google alternative)")
         print()
 
         provider_type = ask_choice(
-            "Planner provider type:", ["anthropic", "openai"], default="anthropic"
+            "Planner provider type:", ["anthropic", "openai", "google"], default="anthropic"
         )
 
         if provider_type == "anthropic":
@@ -554,8 +596,26 @@ class OnboardingWizard:
                 "provider": model,
                 "api_key_env": "ANTHROPIC_API_KEY",
             }
+        elif provider_type == "google":
+            model = ask_choice(
+                "Planner model:",
+                [DEFAULT_GEMINI_MODEL, DEFAULT_GEMINI_WORKER_MODEL],
+                default=DEFAULT_GEMINI_MODEL,
+            )
+
+            self._get_api_key("google", "planner")
+
+            self.config["planner_worker"] = self.config.get("planner_worker", {})
+            self.config["planner_worker"]["planner"] = {
+                "provider": model,
+                "api_key_env": "GOOGLE_API_KEY",
+            }
         else:  # openai
-            model = ask_choice("Planner model:", ["gpt-4-turbo", "gpt-4"], default="gpt-4-turbo")
+            model = ask_choice(
+                "Planner model:",
+                [DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_CAPABLE_MODEL],
+                default=DEFAULT_OPENAI_MODEL,
+            )
 
             self._get_api_key("openai", "planner")
 
@@ -576,11 +636,12 @@ class OnboardingWizard:
         print()
         print(f"{Color.CYAN}Recommended:{Color.END}")
         print("  • claude-haiku-4-5 (fastest, cheapest)")
-        print("  • gpt-3.5-turbo (OpenAI alternative)")
+        print(f"  • {DEFAULT_OPENAI_WORKER_MODEL} (OpenAI alternative)")
+        print(f"  • {DEFAULT_GEMINI_WORKER_MODEL} (Google alternative)")
         print()
 
         provider_type = ask_choice(
-            "Worker provider type:", ["anthropic", "openai"], default="anthropic"
+            "Worker provider type:", ["anthropic", "openai", "google"], default="anthropic"
         )
 
         if provider_type == "anthropic":
@@ -597,9 +658,24 @@ class OnboardingWizard:
                 "provider": model,
                 "api_key_env": "ANTHROPIC_API_KEY",
             }
+        elif provider_type == "google":
+            model = ask_choice(
+                "Worker model:",
+                [DEFAULT_GEMINI_WORKER_MODEL, DEFAULT_GEMINI_MODEL],
+                default=DEFAULT_GEMINI_WORKER_MODEL,
+            )
+
+            self._get_api_key("google", "worker")
+
+            self.config["planner_worker"]["worker"] = {
+                "provider": model,
+                "api_key_env": "GOOGLE_API_KEY",
+            }
         else:  # openai
             model = ask_choice(
-                "Worker model:", ["gpt-3.5-turbo", "gpt-4-turbo"], default="gpt-3.5-turbo"
+                "Worker model:",
+                [DEFAULT_OPENAI_WORKER_MODEL, DEFAULT_OPENAI_MODEL],
+                default=DEFAULT_OPENAI_WORKER_MODEL,
             )
 
             self._get_api_key("openai", "worker")
@@ -613,7 +689,10 @@ class OnboardingWizard:
 
     def _get_api_key(self, provider_type: str, role: str = "agent") -> str:
         """Get API key for a provider, reusing if already configured."""
-        env_var = "ANTHROPIC_API_KEY" if provider_type == "anthropic" else "OPENAI_API_KEY"
+        env_var = {
+            "anthropic": "ANTHROPIC_API_KEY",
+            "google": "GOOGLE_API_KEY",
+        }.get(provider_type, "OPENAI_API_KEY")
 
         # Check if already have key from daemon provider
         if "provider" in self.config and self.config["provider"].get("type") == provider_type:
@@ -2275,7 +2354,19 @@ import shutil
 from pathlib import Path
 
 from teotl.primitives.harness import PlannerWorkerHarness
-from teotl.core.provider import AnthropicProvider, OpenAIProvider
+from teotl.core.provider import AnthropicProvider, GeminiProvider, OpenAIProvider
+
+PLANNER_MODEL = "{planner_provider_name}"
+WORKER_MODEL = "{worker_provider_name}"
+
+
+def provider_for(model: str):
+    """Pick the provider class and API key variable from the model name."""
+    if "gemini" in model:
+        return GeminiProvider, "GOOGLE_API_KEY"
+    if model.startswith(("gpt", "o1", "o3", "o4")):
+        return OpenAIProvider, "OPENAI_API_KEY"
+    return AnthropicProvider, "ANTHROPIC_API_KEY"
 
 
 def check_api_keys() -> dict[str, str]:
@@ -2285,20 +2376,13 @@ def check_api_keys() -> dict[str, str]:
         Dict mapping component to error message (empty string if valid)
     """
     errors = {{}}
-
-    # Check planner API key
-    planner_key = os.getenv("ANTHROPIC_API_KEY")
-    if not planner_key:
-        errors["planner"] = "Missing environment variable: ANTHROPIC_API_KEY"
-    elif len(planner_key) < 20:
-        errors["planner"] = "Invalid ANTHROPIC_API_KEY: too short"
-
-    # Check worker API key (may be same as planner)
-    worker_key = os.getenv("ANTHROPIC_API_KEY")
-    if not worker_key:
-        errors["worker"] = "Missing environment variable: ANTHROPIC_API_KEY"
-    elif len(worker_key) < 20:
-        errors["worker"] = "Invalid ANTHROPIC_API_KEY: too short"
+    for role, model in (("planner", PLANNER_MODEL), ("worker", WORKER_MODEL)):
+        env_var = provider_for(model)[1]
+        key = os.getenv(env_var)
+        if not key:
+            errors[role] = f"Missing environment variable: {{env_var}}"
+        elif len(key) < 20:
+            errors[role] = f"Invalid {{env_var}}: too short"
 
     return errors
 
@@ -2441,23 +2525,12 @@ async def main():
         print()
 
     # Provider configuration
-    planner_model = "{planner_provider_name}"
-    worker_model = "{worker_provider_name}"
+    planner_model = PLANNER_MODEL
+    worker_model = WORKER_MODEL
 
-    # Determine provider classes
-    if "claude" in planner_model:
-        planner_provider = AnthropicProvider(model=planner_model)
-    elif "gpt" in planner_model:
-        planner_provider = OpenAIProvider(model=planner_model)
-    else:
-        planner_provider = AnthropicProvider(model=planner_model)
-
-    if "claude" in worker_model:
-        worker_provider = AnthropicProvider(model=worker_model)
-    elif "gpt" in worker_model:
-        worker_provider = OpenAIProvider(model=worker_model)
-    else:
-        worker_provider = AnthropicProvider(model=worker_model)
+    # Determine provider classes from the model names
+    planner_provider = provider_for(planner_model)[0](model=planner_model)
+    worker_provider = provider_for(worker_model)[0](model=worker_model)
 
     # Create harness
     print(f"🚀 Starting Planner-Worker harness...")

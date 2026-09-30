@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from teotl.core.models import provider_for
 from teotl.core.provider import Provider
 from teotl.primitives.guardrails.rate_limiter import (
     RateLimiter,
@@ -133,14 +134,19 @@ class RateLimitedProvider(Provider):
         input_tokens = usage.get("input_tokens", 0)
         output_tokens = usage.get("output_tokens", 0)
 
-        # Determine provider from model name
+        # Determine provider from the model catalogs, then from the model name
         model_name = self.provider.model_name
-        if "claude" in model_name.lower():
-            provider = "anthropic"
-        elif "gpt" in model_name.lower():
-            provider = "openai"
-        else:
-            provider = "unknown"
+        provider = provider_for(model_name)
+        if provider is None:
+            lowered = model_name.lower()
+            if "claude" in lowered:
+                provider = "anthropic"
+            elif lowered.startswith(("gpt", "o1", "o3", "o4")):
+                provider = "openai"
+            elif "gemini" in lowered:
+                provider = "google"
+            else:
+                provider = "unknown"
 
         cost = estimate_cost(
             provider=provider,

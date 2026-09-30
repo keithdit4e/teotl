@@ -207,9 +207,17 @@ class TestRateLimitedProvider:
 
         stats = limiter.get_stats()
 
-        # Cost should be: (100/1000)*0.005 + (50/1000)*0.015
-        # = 0.0005 + 0.00075 = 0.00125
-        assert abs(stats["total_cost"] - 0.00125) < 0.00001
+        # $2.50/$10 per MTok: (100/1000)*0.0025 + (50/1000)*0.010 = 0.00025 + 0.0005
+        assert abs(stats["total_cost"] - 0.00075) < 0.00001
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("model", ["gemini-3.8-flash", "o3", "gpt-5.6-luna"])
+    async def test_non_claude_models_are_cost_tracked(self, model):
+        """Gemini and o-series models used to be treated as unknown (no cost tracking)."""
+        limiter = RateLimiter()
+        provider = RateLimitedProvider(MockProvider(model=model), limiter)
+        await provider.complete(messages=[{"role": "user", "content": "Test"}])
+        assert limiter.get_stats()["total_cost"] > 0
 
     @pytest.mark.asyncio
     async def test_unknown_model_no_cost_tracking(self):

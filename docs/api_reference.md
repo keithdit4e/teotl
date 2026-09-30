@@ -309,14 +309,14 @@ from teotl.core.provider import OpenAIProvider
 class OpenAIProvider(Provider):
     def __init__(
         self,
-        model: str = "gpt-5.4",
+        model: str = "gpt-5.6-terra",
         api_key: str | None = None,
         base_url: str | None = None,
         max_tokens: int = 8192,
     ) -> None: ...
 ```
 
-- `model` (str): Model name (default: `"gpt-5.4"`)
+- `model` (str): Model name (default: `"gpt-5.6-terra"`)
 - `api_key` (str | None): API key (default: the OpenAI SDK reads `OPENAI_API_KEY`)
 - `base_url` (str | None): Custom API base URL, passed to the OpenAI client
 - `max_tokens` (int): Max tokens per response (default: 8192)
@@ -325,10 +325,12 @@ class OpenAIProvider(Provider):
 
 ```python
 provider = OpenAIProvider(
-    model="gpt-5.4",
+    model="gpt-5.6-terra",
     max_tokens=2048,
 )
 ```
+
+**Which model:** `gpt-5.6-terra` (default) for general and planner use, `gpt-5.6-sol` when you need more capability, and `gpt-5.6-luna` as a cheap worker. Teotl uses OpenAI's Chat Completions API. The GPT-6 models (`gpt-6.1-sol`, `gpt-6-luna`, `gpt-6-astra`) don't fully support tool calling there, because OpenAI requires its Responses API for that, so Teotl logs a warning if you give them tools.
 
 ---
 
@@ -346,11 +348,14 @@ from teotl.core.provider import GeminiProvider
 class GeminiProvider(Provider):
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3.8-flash",
         api_key: str | None = None,
         max_tokens: int = 8192,
     ) -> None: ...
 ```
+
+- `model` (str): Model name (default: `"gemini-3.8-flash"`). `gemini-3.5-flash-lite` is the cheap option. Google limits the Gemini 2.5 models to projects that already used them, so new projects should use the 3.x models.
+- `api_key` (str | None): API key (default: the Gemini SDK reads `GOOGLE_API_KEY`)
 
 ---
 

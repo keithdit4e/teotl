@@ -264,8 +264,8 @@ class TestCostEstimation:
             output_tokens=1000,
         )
 
-        # (1000/1000) * 0.005 + (1000/1000) * 0.015 = 0.005 + 0.015 = 0.020
-        assert abs(cost - 0.020) < 0.0001
+        # $2.50/$10 per MTok: (1000/1000) * 0.0025 + (1000/1000) * 0.010 = 0.0125
+        assert abs(cost - 0.0125) < 0.0001
 
     def test_unknown_provider(self):
         """Test that unknown providers return 0 cost."""

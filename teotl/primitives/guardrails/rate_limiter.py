@@ -20,7 +20,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any
 
-from teotl.core.models import CLAUDE_MODELS
+from teotl.core.models import CLAUDE_MODELS, GEMINI_MODELS, OPENAI_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -281,38 +281,19 @@ def estimate_cost(
     Returns:
         Estimated cost in USD
     """
-    # Pricing per 1K tokens (input, output). Claude prices come from teotl.core.models;
-    # OpenAI and Google prices were last updated June 2026.
+    # Pricing per 1K tokens (input, output), from the catalogs in teotl.core.models
     pricing = {
         "anthropic": {
             model_id: (info.input_per_mtok / 1000, info.output_per_mtok / 1000)
             for model_id, info in CLAUDE_MODELS.items()
         },
         "openai": {
-            # GPT-5.x series
-            "gpt-5.5": (0.005, 0.030),
-            "gpt-5.5-pro": (0.030, 0.180),
-            "gpt-5.4": (0.0025, 0.015),
-            # GPT-4.x series
-            "gpt-4.1": (0.002, 0.008),
-            "gpt-4.1-nano": (0.0001, 0.0004),
-            "gpt-4o": (0.005, 0.015),
-            "gpt-4o-mini": (0.00015, 0.0006),
-            # O-series reasoning models
-            "o3": (0.002, 0.008),
-            "o3-pro": (0.150, 0.600),
-            "o4-mini": (0.0011, 0.0044),
+            model_id: (info.input_per_mtok / 1000, info.output_per_mtok / 1000)
+            for model_id, info in OPENAI_MODELS.items()
         },
         "google": {
-            # Gemini 3.x series
-            "gemini-3.5-flash": (0.0015, 0.009),
-            "gemini-3.1-flash-lite": (0.00025, 0.0015),
-            "gemini-3.1-pro-preview": (0.002, 0.012),
-            "gemini-3-flash-preview": (0.0005, 0.003),
-            # Gemini 2.5 series
-            "gemini-2.5-pro": (0.00125, 0.01),
-            "gemini-2.5-flash": (0.0003, 0.0025),
-            "gemini-2.5-flash-lite": (0.0001, 0.0004),
+            model_id: (info.input_per_mtok / 1000, info.output_per_mtok / 1000)
+            for model_id, info in GEMINI_MODELS.items()
         },
     }
 

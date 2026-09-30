@@ -7,7 +7,16 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
-from teotl.core.models import CLAUDE_MODELS, DEFAULT_CONTEXT_WINDOW, DEFAULT_MODEL
+from teotl.core.models import (
+    CLAUDE_MODELS,
+    DEFAULT_CONTEXT_WINDOW,
+    DEFAULT_GEMINI_MODEL,
+    DEFAULT_MODEL,
+    DEFAULT_OPENAI_MODEL,
+    GEMINI_MODELS,
+    OPENAI_CHAT_TOOLS_UNSUPPORTED,
+    OPENAI_MODELS,
+)
 from teotl.core.types import CompletionResult, ToolCall, ToolDefinition
 
 logger = logging.getLogger(__name__)
@@ -297,7 +306,7 @@ class OpenAIProvider(Provider):
 
     def __init__(
         self,
-        model: str = "gpt-5.4",
+        model: str = DEFAULT_OPENAI_MODEL,
         api_key: str | None = None,
         base_url: str | None = None,
         max_tokens: int = 8192,
@@ -312,6 +321,7 @@ class OpenAIProvider(Provider):
         self.model = model
         self.max_tokens = max_tokens
         self.client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self._warned_tools = False
 
     async def complete(
         self,
@@ -335,6 +345,13 @@ class OpenAIProvider(Provider):
 
         if tools:
             kwargs["tools"] = _openai_style_tools(tools)
+            if self.model.startswith(OPENAI_CHAT_TOOLS_UNSUPPORTED) and not self._warned_tools:
+                logger.warning(
+                    f"{self.model} doesn't fully support tool calling in the Chat Completions "
+                    "API that OpenAIProvider uses (OpenAI requires the Responses API). "
+                    "Use gpt-5.6-terra, gpt-5.6-sol or gpt-5.6-luna for agents with tools."
+                )
+                self._warned_tools = True
 
         response = await self.client.chat.completions.create(**kwargs)
         choice = response.choices[0]
@@ -365,22 +382,8 @@ class OpenAIProvider(Provider):
 
     @property
     def context_window(self) -> int:
-        windows = {
-            # GPT-5.x series - 1M context
-            "gpt-5.5": 1_000_000,
-            "gpt-5.5-pro": 1_000_000,
-            "gpt-5.4": 1_000_000,
-            # GPT-4.x series
-            "gpt-4.1": 1_000_000,
-            "gpt-4.1-nano": 128_000,
-            "gpt-4o": 128_000,
-            "gpt-4o-mini": 128_000,
-            # O-series reasoning models
-            "o3": 200_000,
-            "o3-pro": 200_000,
-            "o4-mini": 200_000,
-        }
-        return windows.get(self.model, 1_000_000)
+        info = OPENAI_MODELS.get(self.model)
+        return info.context_window if info else DEFAULT_CONTEXT_WINDOW
 
     @property
     def model_name(self) -> str:
@@ -458,7 +461,7 @@ class GeminiProvider(Provider):
 
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str = DEFAULT_GEMINI_MODEL,
         api_key: str | None = None,
         max_tokens: int = 8192,
     ) -> None:
@@ -578,18 +581,8 @@ class GeminiProvider(Provider):
 
     @property
     def context_window(self) -> int:
-        windows = {
-            # Gemini 3.x series
-            "gemini-3.5-flash": 1_000_000,
-            "gemini-3.1-flash-lite": 1_000_000,
-            "gemini-3.1-pro-preview": 2_000_000,
-            "gemini-3-flash-preview": 1_000_000,
-            # Gemini 2.5 series
-            "gemini-2.5-pro": 2_000_000,
-            "gemini-2.5-flash": 1_000_000,
-            "gemini-2.5-flash-lite": 1_000_000,
-        }
-        return windows.get(self.model, 1_000_000)
+        info = GEMINI_MODELS.get(self.model)
+        return info.context_window if info else DEFAULT_CONTEXT_WINDOW
 
     @property
     def model_name(self) -> str:

@@ -182,19 +182,21 @@ provider = AnthropicProvider(
 from teotl.core.provider import OpenAIProvider
 
 provider = OpenAIProvider(
-    model="gpt-5.4",  # default
+    model="gpt-5.6-terra",  # default
     api_key="sk-...",  # Or set OPENAI_API_KEY
 )
 ```
 
 `OpenAIProvider` also accepts `base_url` for OpenAI-compatible endpoints.
 
+**Which model:** `gpt-5.6-terra` (default) for general and planner use, `gpt-5.6-sol` when you need more capability, and `gpt-5.6-luna` as a cheap worker. Teotl uses OpenAI's Chat Completions API. The GPT-6 models (`gpt-6.1-sol`, `gpt-6-luna`, `gpt-6-astra`) don't fully support tool calling there, because OpenAI requires its Responses API for that, so Teotl logs a warning if you give them tools.
+
 #### Google Gemini
 
 ```python
 from teotl.core.provider import GeminiProvider
 
-provider = GeminiProvider(model="gemini-2.5-flash")
+provider = GeminiProvider(model="gemini-3.8-flash")  # default; gemini-3.5-flash-lite is the cheap option
 ```
 
 #### Ollama (Local)

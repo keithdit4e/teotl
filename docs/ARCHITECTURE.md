@@ -560,7 +560,7 @@ class SkillRegistry:
         lines = ["## Available capabilities"]
         for name, meta in self.skills.items():
             lines.append(f"- **{name}**: {meta.description}")
-        lines.append("\nTo use a capability, just ask. Instructions will be provided.")
+        lines.append("\nCall the load_skill tool with a skill's name to load its instructions.")
         return "\n".join(lines)
 
     async def activate(self, skill_name: str) -> str:

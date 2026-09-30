@@ -16,7 +16,7 @@ Teotl splits agent work between a **planner** (a strong model that runs once to 
 - **Planner-worker harness**: plan once with a capable model, execute many steps with a cheap one
 - **Guardrails**: `minimal` / `standard` / `strict` policies, bash command analysis, prompt-injection checks, rate and cost limits, progressive trust
 - **Multi-provider**: Anthropic Claude, OpenAI, Google Gemini, Ollama (local), or LiteLLM
-- **Skills**: capabilities defined in `SKILL.md` files, loaded on demand to save context (filesystem, git, GitHub, web, Claude Code, spec-kit)
+- **Your own tools and skills**: register Python functions as tools (with per-tool risk levels) and add `SKILL.md` skills with scripts; skills load on demand to keep prompts small
 - **Memory**: optional local vector memory with automatic context compaction
 - **Harness artifacts**: `PLAN.md`, `PROGRESS.md`, state checkpoints, cost tracking, append-only audit log
 - **Credentials**: OS keyring, encrypted file, or AWS Secrets Manager storage
@@ -140,17 +140,63 @@ Every tool call is classified and checked against a policy **before** it execute
 
 Built-in protections include bash command analysis (for example blocking `rm -rf /` and piping remote scripts to a shell), prompt-injection checks on instructions and incoming messages, per-agent rate and cost limits, and a trust score that grows with repeated safe behavior. See [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
 
-## Skills
+## Your own skills and tools
 
-A skill is a folder containing a `SKILL.md` file (YAML frontmatter plus instructions). Only each skill's short description sits in context until the agent activates it, which keeps prompts small.
+Teotl is built to be extended. Add **tools** (Python functions the model can call) and **skills** (instructions, plus optional scripts, that teach the model how to do a task). They work with every provider: Claude, OpenAI, Gemini, and Ollama (with a model that supports tool calling).
+
+### Tools
+
+```python
+def lookup_order(order_id: str) -> str:
+    return f"Order {order_id}: shipped"  # call your database or API here
+
+agent.register_tool(
+    name="lookup_order",
+    description="Look up an order's status by ID",
+    handler=lookup_order,  # a regular or async function
+    parameters={
+        "type": "object",
+        "properties": {"order_id": {"type": "string"}},
+        "required": ["order_id"],
+    },
+    risk="low",  # "medium" or "high" asks for confirmation under the standard policy
+)
+```
+
+Declare `risk="medium"` or higher for anything that changes data or contacts people, so guardrails ask before it runs.
+
+### Skills
+
+A skill is a folder with a `SKILL.md` file (YAML frontmatter plus instructions), and optionally scripts or reference files:
+
+```
+~/.teotl/skills/invoice-report/
+├── SKILL.md
+└── scripts/report.py
+```
+
+```markdown
+---
+name: invoice-report
+description: Summarize unpaid invoices
+triggers: [unpaid invoices]
+---
+Run `python scripts/report.py` from the skill directory, then summarize the output.
+```
+
+```python
+agent = Agent(provider=provider, skills=["invoice-report", "filesystem"])
+```
+
+Only each skill's one-line description is in the prompt until it's needed. The skill's full instructions (with its directory path) are loaded when your message names it or matches a trigger, or when the model calls the built-in `load_skill` tool.
 
 Teotl looks for skills in:
 
-1. the skills bundled with the package
-2. `~/.teotl/skills/` (your own skills; the data directory can be moved with `TEOTL_HOME`)
+1. the skills bundled with the package (`filesystem`, `git`, `github`, `web`, `claude_code`, `spec_kit`)
+2. `~/.teotl/skills/` (move the data directory with `TEOTL_HOME`)
 3. any directories listed in `TEOTL_SKILLS_PATH` (colon-separated)
 
-See [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md) and [docs/CUSTOM_SKILLS_QUICKSTART.md](docs/CUSTOM_SKILLS_QUICKSTART.md).
+See [docs/CUSTOM_SKILLS_QUICKSTART.md](docs/CUSTOM_SKILLS_QUICKSTART.md) and [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md).
 
 ## Examples
 

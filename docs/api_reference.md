@@ -124,10 +124,29 @@ def register_tool(
     description: str,
     handler: Callable,
     parameters: dict[str, Any] | None = None,
+    *,
+    risk: str = "low",
 ) -> None: ...
 ```
 
-Register a custom tool with an async handler. `parameters` is a JSON schema describing the tool's arguments.
+Register a custom tool. `parameters` is a JSON schema describing the tool's arguments.
+
+The handler can be a regular function or an async function. It's called with the tool call's arguments as keyword arguments, and its return value is converted to a string and sent back to the model. If it raises, the error message is sent back instead, so the model can react to it.
+
+Guardrails treat custom tools as low risk unless you say otherwise. Pass `risk=` to change that:
+
+| `risk` | `minimal` policy | `standard` policy | `strict` policy |
+|---|---|---|---|
+| `"low"` (default) | runs | runs | asks first |
+| `"medium"` | runs | asks first | asks first |
+| `"high"` | asks first | asks first | blocked |
+| `"critical"` | asks first | blocked | blocked |
+
+```python
+agent.register_tool("send_invoice", "Email an invoice to a customer", send_invoice, params, risk="medium")
+```
+
+Registering a tool name that already exists replaces the earlier tool. Names may contain letters, digits, `_` and `-` (at most 64 characters).
 
 **Example:**
 

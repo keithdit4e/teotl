@@ -250,11 +250,11 @@ If `skills` is omitted, all discovered skills are registered. Skills are discove
 
 ### Custom Skills
 
-To create a skill, write a folder with a `SKILL.md` and place it in `~/.teotl/skills/` (or a directory on `TEOTL_SKILLS_PATH`). See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for details.
+To create a skill, write a folder with a `SKILL.md` and place it in `~/.teotl/skills/` (or a directory on `TEOTL_SKILLS_PATH`). The skill folder can also hold scripts or reference files: when a skill is loaded, the model is told the skill's directory so it can run them with the built-in `bash` tool. See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for details.
 
 ### Custom Tools
 
-To give the agent a new Python function it can call, register a tool with an async handler:
+To give the agent a new Python function it can call, register it as a tool:
 
 ```python
 from teotl import Agent
@@ -279,7 +279,22 @@ agent.register_tool(
 )
 ```
 
-The handler is called with the tool call's arguments as keyword arguments.
+The handler can be a regular function or an async function. It's called with the tool call's arguments as keyword arguments, and its return value is converted to a string and sent back to the model. If it raises, the error message is sent back instead, so the model can react to it.
+
+Guardrails treat custom tools as low risk unless you say otherwise. Pass `risk=` to change that:
+
+| `risk` | `minimal` policy | `standard` policy | `strict` policy |
+|---|---|---|---|
+| `"low"` (default) | runs | runs | asks first |
+| `"medium"` | runs | asks first | asks first |
+| `"high"` | asks first | asks first | blocked |
+| `"critical"` | asks first | blocked | blocked |
+
+```python
+agent.register_tool("send_invoice", "Email an invoice to a customer", send_invoice, params, risk="medium")
+```
+
+Registering a tool name that already exists replaces the earlier tool. Names may contain letters, digits, `_` and `-` (at most 64 characters).
 
 ---
 

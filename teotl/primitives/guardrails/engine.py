@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from teotl.core.paths import teotl_home
-from teotl.core.types import UI, Action, Decision, EventResult, ToolCall
+from teotl.core.types import UI, Action, Decision, EventResult, RiskLevel, ToolCall
 from teotl.primitives.guardrails.classifier import classify
 from teotl.primitives.guardrails.policy import Policy
 from teotl.primitives.guardrails.trust import TrustTracker
@@ -69,6 +69,12 @@ class GuardrailEngine:
             persist_patterns=trust_config.get("persist_patterns", False),
         )
         self.audit = AuditLog()
+        # Risk levels declared for custom tools (Agent.register_tool(risk=...))
+        self.tool_risk: dict[str, RiskLevel] = {}
+
+    def set_tool_risk(self, tool_name: str, risk: str) -> None:
+        """Set the risk level guardrails use for a custom tool ("low" to "critical")."""
+        self.tool_risk[tool_name] = RiskLevel(risk)
 
     async def evaluate(self, event: EventResult, *, ui: UI = None, **kwargs: Any) -> EventResult:
         """
@@ -80,7 +86,7 @@ class GuardrailEngine:
         tool_call: ToolCall = event.data
 
         # 1. Classify the action
-        action = classify(tool_call)
+        action = classify(tool_call, tool_risk=self.tool_risk)
 
         # 2. Check policy
         decision = self.policy.decide(action)

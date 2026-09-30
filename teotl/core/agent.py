@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 
 import ulid
@@ -30,6 +32,11 @@ if TYPE_CHECKING:
     from teotl.core.provider import Provider
 
 logger = logging.getLogger(__name__)
+
+
+# Tool names accepted by the model APIs (Anthropic/OpenAI/Gemini)
+_TOOL_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+_TOOL_RISKS = ("low", "medium", "high", "critical")
 
 
 class _HeadlessUI:
@@ -172,8 +179,11 @@ class Agent:
             self.skills = SkillRegistry(skills)
             logger.debug(f"Skills initialized: {skills}")
 
-            # Auto-register bash tool for skill execution
+            # Auto-register bash tool for skill execution, and load_skill so the
+            # model can pull in a skill's full instructions when it needs them
             self._register_bash_tool()
+            if self.skills.registered_count:
+                self._register_load_skill_tool()
         except Exception as e:
             logger.debug(f"Skills not initialized: {e}")
             self.skills = None
@@ -289,6 +299,30 @@ class Agent:
         except Exception as e:
             logger.warning(f"Failed to register bash tool: {e}")
 
+    def _register_load_skill_tool(self) -> None:
+        """Register the load_skill tool (progressive disclosure of skill instructions)."""
+
+        async def load_skill(name: str) -> str:
+            try:
+                return await self.skills.activate(name)
+            except Exception as e:
+                available = ", ".join(sorted(self.skills.skills))
+                return f"Could not load skill {name!r}: {e}. Available skills: {available}"
+
+        self.register_tool(
+            name="load_skill",
+            description=(
+                "Load the full instructions for one of the available skills listed in the "
+                "system prompt. Call this before doing a task that a skill covers."
+            ),
+            handler=load_skill,
+            parameters={
+                "type": "object",
+                "properties": {"name": {"type": "string", "description": "Skill name"}},
+                "required": ["name"],
+            },
+        )
+
     # -------------------------------------------------------------------
     # Public API
     # -------------------------------------------------------------------
@@ -334,6 +368,10 @@ class Agent:
                     memory_context = self.memory.format_for_context(memories, token_budget=500)
             except Exception as e:
                 logger.warning(f"Failed to recall memories: {e}")
+
+        # Load skills the user's message names or triggers, so their instructions
+        # are in the system prompt from the first model call
+        await self._auto_activate_skills(message)
 
         # Build context with injection defenses
         system_prompt = self._build_system_prompt(memory_context=memory_context)
@@ -542,8 +580,32 @@ class Agent:
         description: str,
         handler: Callable,
         parameters: dict[str, Any] | None = None,
+        *,
+        risk: str = "low",
     ) -> None:
-        """Register a tool the agent can use."""
+        """Register a tool the agent can use.
+
+        Args:
+            name: Tool name (letters, digits, `_` or `-`; at most 64 characters).
+            description: What the tool does; the model reads this to decide when to call it.
+            handler: Function called with the tool's arguments as keyword arguments.
+                May be a regular function or an async function. Its return value is
+                converted to a string and sent back to the model.
+            parameters: JSON Schema for the arguments.
+            risk: How guardrails treat calls to this tool: "low" (default), "medium",
+                "high", or "critical". Under the `standard` policy, low runs without
+                asking, medium and high ask for confirmation, and critical is blocked.
+
+        Registering a name that already exists replaces the earlier tool.
+        """
+        if not _TOOL_NAME_RE.match(name):
+            raise ValueError(
+                f"Invalid tool name {name!r}: use 1-64 letters, digits, '_' or '-'"
+            )
+        if risk not in _TOOL_RISKS:
+            raise ValueError(f"Invalid risk {risk!r}: use one of {', '.join(_TOOL_RISKS)}")
+
+        self._tools = [t for t in self._tools if t.name != name]
         self._tools.append(
             ToolDefinition(
                 name=name,
@@ -552,6 +614,8 @@ class Agent:
             )
         )
         self._tool_handlers[name] = handler
+        if self.guardrails is not None:
+            self.guardrails.set_tool_risk(name, risk)
 
     def register_command(self, name: str, handler: Callable) -> None:
         """Register a slash command (e.g., /undo, /memory)."""
@@ -966,7 +1030,9 @@ class Agent:
             )
 
         try:
-            output = await handler(**tool_call.args)
+            output = handler(**tool_call.args)
+            if inspect.isawaitable(output):
+                output = await output
             result = ToolResult(call_id=tool_call.id, output=str(output))
         except Exception as e:
             logger.error(f"Tool {tool_call.name} failed: {e}")

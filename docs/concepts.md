@@ -17,27 +17,36 @@ Understanding the key concepts behind Teotl's architecture.
 
 ## Agent
 
-An **Agent** is the core abstraction in Teotl. It represents an autonomous AI entity that can:
+An **Agent** is the core abstraction in Teotl. It wraps an LLM provider in an agent loop that can:
 
 - Understand natural language instructions
-- Use tools and skills to complete tasks
-- Make decisions based on context
-- Learn from past interactions (with memory)
+- Call tools (a built-in `bash` tool plus any you register) guided by skills
+- Keep conversation history within a session
+- Remember facts across sessions (with memory)
 - Follow security policies (with guardrails)
 
 ### Basic Agent
 
 ```python
-from teotl.core.agent import Agent
+import asyncio
+
+from teotl import Agent
 from teotl.core.provider import AnthropicProvider
 
-agent = Agent(
-    provider=AnthropicProvider(),
-    instructions="You are a helpful assistant.",
-)
 
-response = await agent.run("Hello!")
+async def main():
+    agent = Agent(
+        provider=AnthropicProvider(),  # reads ANTHROPIC_API_KEY
+        instructions="You are a helpful assistant.",
+    )
+    response = await agent.run("Hello!")
+    print(response.text)
+
+
+asyncio.run(main())
 ```
+
+`agent.run()` returns a `Response` with `text`, `messages`, `tool_calls_made`, `tokens_used`, and `cost`.
 
 ### Agent Components
 
@@ -47,99 +56,100 @@ response = await agent.run("Hello!")
 ├─────────────────────────────────────────┤
 │ • Provider (LLM)                        │
 │ • Instructions (system prompt)          │
-│ • Skills (tools/capabilities)           │
-│ • Memory (context persistence)          │
-│ • Guardrails (security policies)        │
-│ • History (conversation state)          │
+│ • Skills (SKILL.md instructions)        │
+│ • Tools (bash + registered tools)       │
+│ • Memory (optional, cross-session)      │
+│ • Guardrails (security policy)          │
+│ • Session (conversation history)        │
 └─────────────────────────────────────────┘
 ```
 
 ### Agent Lifecycle
 
-1. **Initialization:** Create agent with configuration
-2. **Input:** User provides task or question
-3. **Processing:** Agent reasons and decides on actions
-4. **Execution:** Agent uses skills to complete task
-5. **Output:** Agent returns response
-6. **Memory:** (Optional) Agent stores context for future
+1. **Initialization:** Create the agent with a provider and configuration
+2. **Input:** The user provides a task or question via `agent.run()`
+3. **Context:** Relevant memories (if memory is enabled) and skill descriptions are added to the prompt
+4. **Execution:** The agent loop calls the LLM and executes tool calls (checked by guardrails) until it has an answer or reaches `max_turns`
+5. **Output:** The agent returns a `Response`
+6. **Memory:** (Optional) Explicit "remember that..." statements are stored for future sessions
 
 ---
 
 ## Planner-Worker Architecture
 
-The **Planner-Worker** pattern is Teotl's key cost optimization strategy, achieving **40% cost savings** compared to single-model approaches.
+The **Planner-Worker** pattern is Teotl's main cost optimization strategy: a capable model plans, and a cheaper model executes the individual steps. With the default models (Sonnet 5.5 planner, Haiku 4.5 worker), worker steps run at about half the per-token price of an all-Sonnet setup.
 
 ### How It Works
 
 ```
 ┌──────────────────────────────────────────────┐
-│          User Request                        │
+│          Goals                               │
 │  "Fix bug in authentication system"          │
 └───────────────┬──────────────────────────────┘
                 │
         ┌───────▼────────┐
-        │    PLANNER     │  Claude Sonnet 5.5 (Capable)
-        │  (Strategic)   │  
-        └───────┬────────┘  • Analyze problem
+        │    PLANNER     │  claude-sonnet-5-5
+        │  (Strategic)   │
+        └───────┬────────┘  • Analyze goals
                 │           • Break into steps
-                │           • Choose approach
-                │           • Delegate to worker
+                │           • Write PLAN.md
         ┌───────▼────────┐
-        │     WORKER     │  Claude Haiku 4.5 (Cheap)
+        │     WORKER     │  claude-haiku-4-5
         │  (Execution)   │
-        └───────┬────────┘  • Execute steps
+        └───────┬────────┘  • Execute one step at a time
                 │           • Use tools/skills
                 │           • Report results
-                │
         ┌───────▼────────┐
-        │     Result     │  40% cheaper!
-        │   + Context    │  Same quality!
+        │     Result     │
+        │  + Progress    │
         └────────────────┘
 ```
 
-### Why It Works
+### Using the Harness
 
-**Traditional Approach (Expensive):**
+Planner-worker execution is provided by `PlannerWorkerHarness`:
+
 ```python
-# Single model does everything
-agent = Agent(provider=claude_sonnet_4)
+import asyncio
+from pathlib import Path
 
-# Costs:
-# - Analysis: $0.10 (Sonnet)
-# - Planning: $0.05 (Sonnet)
-# - Execution: $0.08 (Sonnet)
-# - Validation: $0.06 (Sonnet)
-# Total: $0.29
+from teotl.core.provider import AnthropicProvider
+from teotl.primitives.harness import PlannerWorkerHarness
+
+
+async def main():
+    harness = PlannerWorkerHarness(
+        agent_id="code-quality",
+        planner_provider=AnthropicProvider(model="claude-sonnet-5-5"),
+        worker_provider=AnthropicProvider(model="claude-haiku-4-5"),
+        workspace_dir=Path(".teotl/code-quality"),
+        worker_skills=["filesystem", "git"],
+    )
+
+    await harness.plan(goals="Fix the failing tests in the auth module")  # writes PLAN.md
+
+    while not harness.is_complete():
+        result = await harness.execute_next_step()
+        print(f"Step {result.step.number}: {'ok' if result.success else result.error}")
+
+
+asyncio.run(main())
 ```
 
-**Planner-Worker Approach (Efficient):**
-```python
-# Strategic model for planning, fast model for execution
-agent = Agent.create_planner_worker(
-    planner=claude_sonnet_4,
-    worker=claude_haiku_4
-)
-
-# Costs:
-# - Analysis: $0.10 (Sonnet) ← Strategic
-# - Planning: $0.05 (Sonnet) ← Strategic
-# - Execution: $0.01 (Haiku) ← Fast, cheap
-# - Validation: $0.01 (Haiku) ← Fast, cheap
-# Total: $0.17 (40% savings!)
-```
+Other harness methods include `execute_all_steps()`, `get_progress()`, `refine_plan(feedback)`, `reset()`, and `run_supervised_cycle(goals=...)`. The setup wizard (`teotl onboard`) can generate a `run_planner_worker.py` script for you.
 
 ### When to Use
 
 **Use Planner-Worker when:**
-- ✅ Task has multiple steps
+- ✅ The task has multiple steps
 - ✅ Cost is a concern
-- ✅ Mix of strategic + execution work
-- ✅ Long-running workflows
+- ✅ There is a mix of strategic and execution work
+- ✅ Workflows are long-running
 
-**Use Single Agent when:**
+**Use a single Agent when:**
 - ✅ Simple one-off tasks
-- ✅ Maximum quality needed for everything
-- ✅ Real-time latency critical
+- ✅ Maximum quality is needed for every step
+- ✅ Latency is critical
 
 ---
 
@@ -161,9 +171,10 @@ provider = AnthropicProvider(
 ```
 
 **Models:**
-- `claude-sonnet-5-5` - Balanced (recommended)
-- `claude-opus-5-5` - Most capable (expensive)
-- `claude-haiku-4-5` - Fastest, cheapest
+- `claude-sonnet-5-5` - Balanced (default; $2 / $10 per million input/output tokens)
+- `claude-haiku-4-5` - Fastest, cheapest ($1 / $5)
+- `claude-opus-5-5` - Most capable ($4 / $20)
+- `claude-fable-5-1` - Premium tier ($10 / $50)
 
 #### OpenAI
 
@@ -171,15 +182,20 @@ provider = AnthropicProvider(
 from teotl.core.provider import OpenAIProvider
 
 provider = OpenAIProvider(
-    model="gpt-4o",
+    model="gpt-5.4",  # default
     api_key="sk-...",  # Or set OPENAI_API_KEY
 )
 ```
 
-**Models:**
-- `gpt-4o` - Latest, most capable
-- `gpt-4-turbo` - Fast, capable
-- `gpt-3.5-turbo` - Cheapest
+`OpenAIProvider` also accepts `base_url` for OpenAI-compatible endpoints.
+
+#### Google Gemini
+
+```python
+from teotl.core.provider import GeminiProvider
+
+provider = GeminiProvider(model="gemini-2.5-flash")
+```
 
 #### Ollama (Local)
 
@@ -188,194 +204,135 @@ from teotl.core.provider import OllamaProvider
 
 provider = OllamaProvider(
     model="llama3",
-    base_url="http://localhost:11434"  # Local Ollama
+    host="http://localhost:11434",  # Local Ollama server
 )
 ```
 
-**Models:**
-- `llama3` - Open source, capable
-- `mistral` - Fast, efficient
-- `codellama` - Code-focused
+Any model you have pulled into Ollama can be used.
 
 ### Provider Selection
 
 Choose based on:
-- **Cost:** Haiku < GPT-3.5 < Sonnet < GPT-4 < Opus
-- **Speed:** Haiku < Sonnet < GPT-4
-- **Quality:** Haiku < GPT-3.5 < Sonnet < GPT-4 < Opus
-- **Privacy:** Ollama (local) > Cloud providers
+- **Cost:** Among Claude models, Haiku < Sonnet < Opus < Fable
+- **Quality:** Larger models handle complex planning better; smaller models are well suited to executing well-defined steps
+- **Privacy:** Ollama runs locally; the other providers are cloud services
 
 ---
 
 ## Skills
 
-**Skills** are capabilities that agents can use to interact with the world. Think of them as "tools" or "functions" the agent can call.
+**Skills** are packaged instructions that teach an agent how to do something. Each skill is a folder containing a `SKILL.md` file (YAML frontmatter with a name and description, followed by instructions). The agent executes skill commands through its built-in `bash` tool.
+
+Skills use progressive disclosure: only each skill's short description is always in context, and the full `SKILL.md` is loaded when the skill is activated.
 
 ### Built-in Skills
 
-#### Filesystem Skill
+Teotl bundles these skills: `claude_code`, `filesystem`, `git`, `github`, `social-media`, `spec_kit`, and `web`.
 
-Read and write files:
-
-```python
-registry = SkillRegistry()
-registry.register_builtin("filesystem")
-
-agent = Agent(provider=provider, skills=registry)
-
-# Agent can now:
-# - Read files
-# - Write files
-# - List directories
-# - Check file existence
-```
-
-#### Git Skill
-
-Repository operations:
+Enable skills by passing their names to the agent:
 
 ```python
-registry.register_builtin("git")
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
 
-# Agent can now:
-# - Clone repositories
-# - Commit changes
-# - Create branches
-# - Push/pull
-# - View diffs
+agent = Agent(
+    provider=AnthropicProvider(),
+    skills=["filesystem", "git"],
+)
+
+print(agent.list_skills())
 ```
 
-#### Bash Skill
+- **filesystem** - Read, write, search, and navigate files and directories
+- **git** - Version control: status, commits, branches, diffs
 
-Execute shell commands:
-
-```python
-registry.register_builtin("bash")
-
-# Agent can now:
-# - Run commands
-# - Install dependencies
-# - Start servers
-# - Run tests
-```
-
-#### Python REPL Skill
-
-Execute Python code dynamically:
-
-```python
-registry.register_builtin("python_repl")
-
-# Agent can now:
-# - Run Python code
-# - Import libraries
-# - Analyze data
-# - Generate outputs
-```
+If `skills` is omitted, all discovered skills are registered. Skills are discovered from the bundled skills, `~/.forge/skills/`, and any directories listed in `TEOTL_SKILLS_PATH` (colon-separated).
 
 ### Custom Skills
 
-Create your own skills:
+To create a skill, write a folder with a `SKILL.md` and place it in `~/.forge/skills/` (or a directory on `TEOTL_SKILLS_PATH`). See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for details.
+
+### Custom Tools
+
+To give the agent a new Python function it can call, register a tool with an async handler:
 
 ```python
-from teotl.primitives.skills import Skill
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
 
-class WeatherSkill(Skill):
-    """Get weather information."""
-    
-    name = "weather"
-    
-    async def get_weather(self, location: str) -> str:
-        """Get current weather for a location.
-        
-        Args:
-            location: City name or coordinates
-            
-        Returns:
-            Weather description
-        """
-        # Your implementation
-        return f"Weather in {location}: Sunny, 72°F"
 
-# Register and use
-registry = SkillRegistry()
-registry.register(WeatherSkill())
+async def get_weather(location: str) -> str:
+    # Your implementation
+    return f"Weather in {location}: Sunny, 72°F"
 
-agent = Agent(provider=provider, skills=registry)
+
+agent = Agent(provider=AnthropicProvider())
+agent.register_tool(
+    name="get_weather",
+    description="Get current weather for a location.",
+    handler=get_weather,
+    parameters={
+        "type": "object",
+        "properties": {"location": {"type": "string", "description": "City name"}},
+        "required": ["location"],
+    },
+)
 ```
 
-See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for details.
+The handler is called with the tool call's arguments as keyword arguments.
 
 ---
 
 ## Missions
 
-A **Mission** is a high-level autonomous workflow that can run for minutes, hours, or days without human intervention.
+A **Mission** is recurring, scheduled work that the Teotl daemon executes autonomously. Missions are stored in a SQLite-backed `MissionStore`, so they survive daemon restarts.
 
-### Mission Structure
+### Defining Missions
+
+Missions are defined in the daemon config YAML:
 
 ```yaml
-# missions/devops_agent.yaml
-name: devops_automation
-objective: "Investigate GitHub issues and create fixes"
-
-execution_pattern: planner_worker
-
-planner_worker:
-  planner:
-    provider: claude-sonnet-5-5
-    
-  worker:
-    provider: claude-haiku-4-5
-    skills:
-      - filesystem
-      - git
-      - bash
-
-guardrails:
-  policy: standard
-  
-memory:
-  enabled: true
+missions:
+  - description: "Weekly code quality review"
+    interval: WEEKLY           # HOURLY, DAILY, WEEKLY
+    can_be_interrupted: true
+    interrupt_threshold: URGENT
 ```
+
+See [examples/full_config_reference.yaml](../examples/full_config_reference.yaml) for the full config schema.
 
 ### Running Missions
 
-```python
-from teotl.primitives.missions import Mission
+Start the daemon with your config:
 
-mission = Mission.from_file("missions/devops_agent.yaml")
-
-result = await mission.run(context={
-    "repository": "owner/repo",
-    "issue_number": 42
-})
-
-print(f"Status: {result.status}")
-print(f"Summary: {result.summary}")
+```bash
+python -m teotl.daemon.run --config config.yaml
 ```
+
+The daemon checks for due missions and executes each one through the agent loop. Immediate tasks take priority, and a mission marked `can_be_interrupted` can be paused for tasks at or above its `interrupt_threshold` priority.
 
 ### Mission Features
 
-- **Autonomous Execution:** Runs without human intervention
-- **Error Recovery:** Automatically handles and retries failures
-- **Context Management:** Maintains state across long workflows
-- **Cost Tracking:** Monitors and optimizes costs
-- **Progress Reporting:** Real-time status updates
+The `Mission` model (`teotl.primitives.missions`) supports:
+
+- **Scheduling:** Intervals from every few minutes to weekly, or manual
+- **Persistence:** Missions and their execution history are stored in SQLite
+- **Budgets:** Optional per-execution limits on API calls, cost, and duration (`MissionBudget`)
+- **Lifecycle:** Pause, resume, and cancel
+- **Execution tracking:** Execution, success, and failure counts
+- **Interruption:** High-priority tasks can interrupt a running mission
 
 ### Use Cases
 
-- **DevOps Automation:** Monitor, investigate, fix issues
-- **Code Review:** Analyze PRs, suggest improvements
-- **Testing:** Generate tests, find edge cases
-- **Research:** Multi-hour investigation tasks
-- **Data Pipelines:** ETL, validation, transformation
+- **Code Review:** Periodic code quality reviews
+- **DevOps Automation:** Scheduled checks and investigations
+- **Research:** Recurring monitoring or summarization tasks
 
 ---
 
 ## Memory
 
-**Memory** gives agents the ability to remember past interactions and context across conversations.
+**Memory** gives agents the ability to remember context within and across conversations.
 
 ### Types of Memory
 
@@ -388,12 +345,12 @@ agent = Agent(provider=provider)
 
 await agent.run("My name is Alice")
 await agent.run("What's my name?")
-# Agent remembers: "Alice"
+# The earlier message is still in the session history
 ```
 
-#### Long-Term Memory (Explicit)
+#### Long-Term Memory (Opt-in)
 
-Persistent storage across sessions:
+Persistent storage across sessions. Requires `pip install "teotl[memory]"`:
 
 ```python
 from teotl.primitives.memory.local import LocalMemory
@@ -402,75 +359,88 @@ memory = LocalMemory()
 agent = Agent(provider=provider, memory=memory)
 
 # First session
-await agent.run("I prefer Python over JavaScript")
+await agent.run("Remember that I prefer Python over JavaScript")
 
-# Later session (different day)
+# Later session
 await agent.run("What programming language do I prefer?")
-# Agent remembers: "Python"
 ```
+
+When memory is enabled, the agent recalls relevant memories before each turn and stores explicit "remember that..." statements. You can also manage memories directly with `agent.remember()`, `agent.recall()`, `agent.forget()`, and `agent.list_memories()`.
 
 ### Memory Backends
 
 #### Local Memory
 
-SQLite-based local storage:
+SQLite-based local storage (default path: `~/.forge/memory.db`):
 
 ```python
+from teotl.primitives.memory.local import LocalMemory
+
 memory = LocalMemory(
-    path="~/.teotl/memory.db",
+    path="memory.db",
     max_memories=10000,
 )
 ```
 
 #### Encrypted Memory
 
-Encrypted local storage:
+Local storage with encrypted memory content:
 
 ```python
 from teotl.primitives.memory.encrypted import EncryptedMemory
 
 memory = EncryptedMemory(
-    path="~/.teotl/memory.db",
-    encryption_key=None,  # Auto-generated
+    path="memory.db",
+    encryption_key=None,  # None = key is retrieved from / created in the credential store
 )
 ```
 
 ### Memory Operations
 
 ```python
-# Store memory
-await memory.remember("User prefers dark mode")
+# Store memory (returns the memory ID)
+memory_id = await memory.remember("User prefers dark mode")
 
 # Recall memories
 results = await memory.recall("user preferences", limit=5)
+for m in results:
+    print(m.content)
 
-# List all memories
+# List memories
 memories = await memory.list_all(limit=10)
 
-# Forget specific memory
+# Forget a specific memory
 await memory.forget(memory_id)
 
 # Count memories
 count = await memory.count()
+
+# Close the database when done
+memory.close()
 ```
+
+See [MEMORY.md](MEMORY.md) for more.
 
 ---
 
 ## Guardrails
 
-**Guardrails** are security policies that protect your system from dangerous operations.
+**Guardrails** are security policies that check every tool call before it runs. Each call is **allowed**, **blocked**, or requires **confirmation**.
 
 ### Policy Levels
 
-#### Permissive (Low Security)
+Set the policy with the `policy` argument (default: `"standard"`). The built-in presets are `"minimal"`, `"standard"`, and `"strict"`. You can also pass a `Policy` object or a path to a policy file.
 
-Minimal restrictions, trust agent:
+#### Minimal (Low Security)
+
+Few restrictions:
 
 ```python
-agent = Agent(provider=provider, policy="permissive")
+agent = Agent(provider=provider, policy="minimal")
 
-# Allows most operations
-# Use when: Agent is fully trusted, testing, development
+# Blocks only catastrophic commands (e.g. rm -rf /, fork bombs)
+# Denies access to ~/.ssh and ~/.aws
+# Use when: the agent is trusted, local development
 ```
 
 #### Standard (Balanced)
@@ -480,21 +450,22 @@ Recommended for most use cases:
 ```python
 agent = Agent(provider=provider, policy="standard")
 
-# Blocks dangerous operations
-# Requests confirmation for risky actions
-# Use when: Production, general use
+# Blocks dangerous commands (e.g. rm -rf /, curl ... | bash)
+# Requires confirmation for risky commands (rm, git push, sudo, pip install, ...)
+# Limits outbound network access to a small allowlist
+# Use when: general use
 ```
 
 #### Strict (High Security)
 
-Maximum security, confirmation required:
+Maximum security:
 
 ```python
 agent = Agent(provider=provider, policy="strict")
 
-# Blocks many operations
-# Requires explicit confirmation
-# Use when: Critical systems, untrusted agents
+# Also blocks sudo and docker
+# Requires confirmation for every command not on a short read-only allowlist
+# Use when: critical systems, untrusted agents
 ```
 
 ### How Guardrails Work
@@ -511,10 +482,9 @@ agent = Agent(provider=provider, policy="strict")
        └───────┬────────┘
                │
         ┌──────▼───────┐
-        │   Analyze    │
-        │  • Risk      │
-        │  • Impact    │
-        │  • Trust     │
+        │   Classify   │
+        │  vs. policy  │
+        │  + trust     │
         └──────┬───────┘
                │
      ┌─────────▼──────────┐
@@ -526,89 +496,77 @@ agent = Agent(provider=provider, policy="strict")
      └────────────────────┘
 ```
 
-### Trust Building
+Confirmations are sent to the UI passed to `agent.run(message, ui=...)`. When no UI is passed, `agent.run()` uses a headless UI that auto-approves confirmations, so supply a UI if you want to approve actions interactively. Every decision is written to an audit log.
 
-Guardrails learn to trust the agent over time:
+### Progressive Trust
 
-```python
-# First time: Requires confirmation
-await agent.run("Write to config.json")
-# Confirmation: Allow agent to write to config.json? [y/N]
-
-# After 3 approvals: Auto-approved
-await agent.run("Write to config.json")
-# Automatically allowed (trust established)
-```
+To reduce confirmation fatigue, guardrails track approvals per action pattern (for example, a specific command, or writes to a directory). After a pattern has been approved enough times, similar actions are auto-approved: after 1 approval with `minimal`, 3 with `standard`, and 5 with `strict`. Trust is session-scoped by default.
 
 ### Blocked Operations
 
-Standard policy blocks:
+The standard policy blocks:
 - `rm -rf /` - Delete system
-- `dd if=/dev/zero of=/dev/sda` - Wipe disk
-- `chmod -R 777 /` - Open permissions
-- `curl | bash` - Arbitrary code execution
-- Access to sensitive files (passwords, keys)
+- `:(){ :|:& };:` - Fork bomb
+- `curl * | bash`, `wget * | sh` (and similar) - Arbitrary code execution
+- Access to sensitive paths such as `~/.ssh`, `~/.aws`, and `~/.gnupg`
 
-See [GUARDRAILS.md](GUARDRAILS.md) for complete list.
+See [GUARDRAILS.md](GUARDRAILS.md) for details.
 
 ---
 
 ## Credentials
 
-**Credentials** are securely stored API keys, passwords, and secrets.
+**Credentials** are securely stored API keys, tokens, and secrets.
 
 ### Credential Storage
-
-Teotl stores credentials securely using OS-level keyrings:
 
 ```python
 from teotl.primitives.integrations.credential_store import CredentialStore
 
-# Auto-detect best backend (OS keyring, file, AWS)
+# Auto-detect the best available backend
 store = CredentialStore.create()
+print(store.backend_name)
 
-# Save credential
-await store.save_credential(
-    key="github_token",
-    value="ghp_...",
-    description="GitHub API token"
-)
+# Save a credential (data is a dict)
+store.save_credential("github", {"token": "ghp_..."})
 
-# Load credential
-token = await store.load_credential("github_token")
+# Load a credential
+token = store.load_credential("github")["token"]
 
-# List credentials
-creds = await store.list_credentials()
+# List services (not supported by the keyring backend, which returns [])
+services = store.list_services()
 
-# Delete credential
-await store.delete_credential("github_token")
+# Delete a credential
+store.delete_credential("github")
 ```
+
+`CredentialStore.create()` auto-detects a backend in this order: environment variables (only if `FORGE_ALLOW_ENV_AUTH=true`), AWS Secrets Manager (if `AWS_REGION` or `AWS_DEFAULT_REGION` is set), OS keyring, then an encrypted file. To choose one explicitly, pass `backend="keyring"`, `"file"`, `"environment"`, or `"aws_secrets"`.
 
 ### Storage Backends
 
-#### OS Keyring (Default)
+#### OS Keyring
 
-Uses system credential manager:
+Uses the system credential manager (credentials are also encrypted before storage):
 - **macOS:** Keychain
 - **Windows:** Credential Manager
 - **Linux:** Secret Service (GNOME Keyring, KWallet)
 
 ```python
-from teotl.primitives.integrations.credential_store import LocalKeyringBackend
+from teotl.primitives.integrations.credential_store import CredentialStore, LocalKeyringBackend
 
-backend = LocalKeyringBackend()
-store = CredentialStore(backend)
+store = CredentialStore(LocalKeyringBackend())
 ```
 
 #### Encrypted File
 
-Encrypted file storage (fallback):
+Encrypted file storage (fallback). `storage_path` is a directory (default: `~/.forge/auth`) holding one encrypted file per service plus the encryption key:
 
 ```python
-from teotl.primitives.integrations.credential_store import FileBackend
+from pathlib import Path
 
-backend = FileBackend(storage_path="~/.teotl/credentials.enc")
-store = CredentialStore(backend)
+from teotl.primitives.integrations.credential_store import CredentialStore, FileBackend
+
+store = CredentialStore(FileBackend(storage_path=Path.home() / ".forge" / "auth"))
 ```
 
 #### AWS Secrets Manager
@@ -616,23 +574,20 @@ store = CredentialStore(backend)
 Cloud-based credential storage:
 
 ```python
-from teotl.primitives.integrations.credential_store import AWSSecretsBackend
+from teotl.primitives.integrations.credential_store import AWSSecretsBackend, CredentialStore
 
-backend = AWSSecretsBackend(region="us-west-2")
-store = CredentialStore(backend)
+store = CredentialStore(AWSSecretsBackend(region="us-west-2"))
 ```
 
 ### Security Best Practices
 
 ✅ **DO:**
-- Use OS keyring when possible
+- Use the OS keyring when possible
 - Rotate credentials regularly
 - Use separate credentials per environment
-- Encrypt credential files
 
 ❌ **DON'T:**
 - Store credentials in code
-- Use environment variables (visible in logs)
 - Share credentials across systems
 - Commit credentials to git
 
@@ -640,62 +595,45 @@ store = CredentialStore(backend)
 
 ## Putting It All Together
 
-A complete example using all concepts:
+A complete example combining a provider, skills, memory, and guardrails:
 
 ```python
 import asyncio
-from teotl.core.agent import Agent
+
+from teotl import Agent
 from teotl.core.provider import AnthropicProvider
-from teotl.primitives.skills.registry import SkillRegistry
 from teotl.primitives.memory.local import LocalMemory
-from teotl.primitives.integrations.credential_store import CredentialStore
+
 
 async def main():
-    # Setup credentials
-    store = CredentialStore.create()
-    api_key = await store.load_credential("anthropic_api_key")
-    
-    # Setup providers (planner-worker)
-    planner = AnthropicProvider(model="claude-sonnet-5-5", api_key=api_key)
-    worker = AnthropicProvider(model="claude-haiku-4-5", api_key=api_key)
-    
-    # Setup skills
-    registry = SkillRegistry()
-    registry.register_builtin("filesystem")
-    registry.register_builtin("git")
-    registry.register_builtin("bash")
-    
-    # Setup memory
     memory = LocalMemory()
-    
-    # Create agent with all features
-    agent = Agent.create_planner_worker(
-        planner=planner,
-        worker=worker,
+
+    agent = Agent(
+        provider=AnthropicProvider(model="claude-sonnet-5-5"),  # reads ANTHROPIC_API_KEY
         instructions="You are a DevOps automation agent.",
-        skills=registry,
+        skills=["filesystem", "git"],
         memory=memory,
         policy="standard",
     )
-    
-    # Run autonomous task
-    response = await agent.run(
-        "Investigate failing tests and create fixes"
-    )
-    
+
+    response = await agent.run("Investigate the failing tests and summarize the cause")
     print(response.text)
-    
-    # Cleanup
+    print(f"Tokens: {response.tokens_used}, cost: {response.cost}")
+
     memory.close()
+
 
 asyncio.run(main())
 ```
+
+For multi-step work with a cheaper worker model, use [`PlannerWorkerHarness`](#planner-worker-architecture); for scheduled work, use [missions](#missions) with the daemon.
 
 ---
 
 ## Next Steps
 
-- [API Reference](api_reference.md) - Complete API documentation
+- [API Reference](api_reference.md) - API documentation
+- [Architecture](ARCHITECTURE.md) - How the pieces fit together
 - [Examples](../examples/) - Real-world examples
 - [Security Guide](SECURITY_GUIDE.md) - Production security
 - [Custom Skills](CUSTOM_SKILLS_QUICKSTART.md) - Build your own skills
@@ -704,12 +642,10 @@ asyncio.run(main())
 
 ## Key Takeaways
 
-1. **Agents** are autonomous AI entities with capabilities
-2. **Planner-Worker** saves 40% cost vs single-model
-3. **Skills** give agents real-world capabilities
-4. **Missions** enable long-running autonomous workflows
-5. **Memory** provides context persistence
-6. **Guardrails** protect against dangerous operations
-7. **Credentials** store secrets securely
-
-**Teotl makes it easy to build production-ready autonomous agents.** 🚀
+1. **Agents** run an LLM tool loop with instructions, skills, and tools
+2. **Planner-Worker** (`PlannerWorkerHarness`) lowers cost by running steps on a cheaper model
+3. **Skills** are `SKILL.md` folders; custom Python tools use `agent.register_tool()`
+4. **Missions** are recurring work scheduled by the daemon
+5. **Memory** provides cross-session context persistence (opt-in)
+6. **Guardrails** check every tool call against a policy
+7. **Credentials** are stored in the OS keyring, an encrypted file, or a cloud secrets manager

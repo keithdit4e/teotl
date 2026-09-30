@@ -191,6 +191,28 @@ class TestCreateAgentFromConfig:
         assert agent is not None
         assert agent.agent_id == "minimal-agent"
 
+    @pytest.mark.parametrize(
+        "preset,level",
+        [(None, "standard"), ("strict", "strict"), ("moderate", "standard"),
+         ("autonomous-dev", "standard"), ("permissive", "minimal")],
+    )
+    def test_security_preset_enables_guardrails(self, preset, level):
+        """Configured security presets must map to working tool-call guardrails."""
+        from teotl.config import SecurityConfig
+
+        config = AgentConfig(
+            agent_id="secure-agent",
+            instructions="Be careful",
+            security=SecurityConfig(preset=preset) if preset else None,
+        )
+        provider = MagicMock()
+        provider.model = "claude-sonnet-5-5"
+
+        agent = create_agent_from_config(config, provider)
+
+        assert agent.guardrails is not None
+        assert agent.guardrails.policy.level == level
+
     def test_agent_with_memory(self):
         """Test creating agent with memory enabled."""
         with tempfile.TemporaryDirectory() as tmpdir:

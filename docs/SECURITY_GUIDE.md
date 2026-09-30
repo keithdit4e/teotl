@@ -2,6 +2,11 @@
 
 Complete guide to securing your Teotl agents with features designed for compliance frameworks.
 
+> **Scope:** This guide covers the `SecurityPolicy` system (`security.yaml`, presets
+> `moderate`, `strict`, `permissive`, and `autonomous-dev`). It is separate from the agent
+> guardrail policy passed as `Agent(policy="minimal" | "standard" | "strict")` — see
+> [GUARDRAILS.md](GUARDRAILS.md).
+
 > **Note:** Teotl has not undergone formal compliance audits. The features described here are designed with GDPR, SOC2, and HIPAA practices in mind, but users requiring certified compliance should conduct their own assessments.
 
 ## Table of Contents
@@ -34,10 +39,12 @@ The wizard will ask you to:
 
 ### After Setup
 
-Your agent workspace will contain a `security.yaml` file:
+Your agent workspace will contain a `security.yaml` file. The workspace is
+`~/.forge/my-agent/` for a single agent (configurable via `daemon.data_dir`) or
+`~/.forge/agents/<agent-id>/` for multi-agent setups:
 
 ```
-~/.teotl/agents/my-agent/
+~/.forge/agents/my-agent/
 ├── security.yaml          # Security policy
 ├── audit/                 # Audit logs (JSONL)
 │   └── 2026-03.jsonl
@@ -57,7 +64,10 @@ Teotl provides **defense-in-depth security** with three layers:
 - Tool usage control (allowed/blocked tools)
 - Cost and rate limiting
 
-**When it runs:** Before every tool call
+**When it runs:** Whenever `SecurityEnforcer.enforce_tool_call()` is called, before the tool
+executes. Note that `SecurityEnforcer` is not invoked automatically by `Agent.run()` — see
+[Programmatic Enforcement](#programmatic-enforcement). `Agent.run()` always applies the
+agent's guardrail policy ([GUARDRAILS.md](GUARDRAILS.md)).
 
 ### 2. Sandbox Layer (OS-level Enforcement)
 
@@ -90,14 +100,14 @@ When an agent tries to read `/etc/passwd`:
    → Blocked (in blocked_patterns: ["/etc/**"])
 
 3. Audit Layer logs the violation
-   → {"event_type": "policy_violation", "path": "/etc/passwd"}
+   → {"event_type": "policy_violation", "tool": "/etc/passwd", "policy_violated": "filesystem", ...}
 ```
 
 Both layers must approve for an operation to succeed. This prevents bypasses and provides multiple security controls.
 
 ## Security Presets
 
-Teotl provides three security presets to get you started quickly.
+Teotl provides three general-purpose security presets to get you started quickly. A fourth, `autonomous-dev`, is auto-selected by the wizard for goals-based autonomous development agents (allows `execute_shell` and `git`, workspace/`~/Documents`/`~/workspace` paths, $5/hour and $25/day).
 
 ### Moderate (Recommended)
 
@@ -135,7 +145,7 @@ network:
 filesystem:
   mode: "restricted"
   allowed_paths:
-    - "~/.teotl/agents/my-agent/**"
+    - "~/.forge/agents/my-agent/**"
     - "/tmp/**"
   readonly_paths:
     - "~/Documents/**"
@@ -175,7 +185,7 @@ rate_limits:
 **Sandbox Layer:**
 - 🔒 Strict filesystem isolation (workspace + /tmp only)
 - 🔒 Strict network filtering (AI providers only)
-- 🔒 Lower resource limits: 512MB RAM, 3min CPU, 128 file descriptors
+- 🔒 Lower resource limits: 512MB RAM, 3min CPU
 
 **Audit Layer:**
 - 🔒 Detailed logging (includes PII redaction)
@@ -236,7 +246,7 @@ network:
 ```
 
 **Wildcards:**
-- `*.github.com` - Matches api.github.com, raw.githubusercontent.com
+- `*.github.com` - Matches api.github.com, gist.github.com (not github.com itself)
 - `github.*` - Matches github.com, github.io
 
 ### Filesystem Policy
@@ -249,7 +259,7 @@ filesystem:
 
   # Read and write access
   allowed_paths:
-    - "~/.teotl/agents/my-agent/**"
+    - "~/.forge/agents/my-agent/**"
     - "/tmp/**"
     - "~/projects/**"
 
@@ -372,7 +382,7 @@ sandbox:
 
   # Paths accessible by the agent (OS-level enforcement)
   allowed_paths:
-    - "~/.teotl/agents/my-agent/**"
+    - "~/.forge/agents/my-agent/**"
     - "/tmp/**"
     - "~/Documents/**"
 
@@ -459,7 +469,8 @@ sandbox:
 
 **How it works:**
 - Uses Unix `resource.setrlimit()` to enforce hard limits
-- Limits are applied when the agent process starts
+- Limits are applied when `SandboxManager.apply_resource_limits()` runs (a `SecurityEnforcer`
+  constructed with a `sandbox` calls it automatically)
 - OS will kill the process if limits are exceeded
 - Prevents:
   - Memory bombs
@@ -485,37 +496,42 @@ sandbox:
 Check sandbox enforcement status:
 
 ```python
-from teotl.core.security import create_enforcer
+from pathlib import Path
 
-enforcer = create_enforcer(workspace_dir)
+from teotl.core.security import SecurityEnforcer, SecurityPolicy
 
-if enforcer:
-    status = enforcer.get_security_status()
+# Build `sandbox` as shown in Programmatic Enforcement below
+workspace_dir = Path("~/.forge/agents/my-agent").expanduser()
+policy = SecurityPolicy.from_file(workspace_dir / "security.yaml")
+enforcer = SecurityEnforcer(policy, workspace_dir, sandbox=sandbox)
 
-    if "sandbox" in status:
-        print(f"Filesystem sandbox: {status['sandbox']['enabled']['filesystem']}")
-        print(f"Network sandbox: {status['sandbox']['enabled']['network']}")
-        print(f"Resource limits: {status['sandbox']['enabled']['resources']}")
+status = enforcer.get_security_status()
 
-        if "resource_usage" in status['sandbox']:
-            usage = status['sandbox']['resource_usage']
-            print(f"CPU time: {usage['cpu_time_seconds']}s")
-            print(f"Memory: {usage['memory_mb']}MB")
-            print(f"File descriptors: {usage['file_descriptors']}")
+if "sandbox" in status:
+    print(f"Filesystem sandbox: {status['sandbox']['enabled']['filesystem']}")
+    print(f"Network sandbox: {status['sandbox']['enabled']['network']}")
+    print(f"Resource limits: {status['sandbox']['enabled']['resources']}")
+
+    if "resource_usage" in status['sandbox']:
+        usage = status['sandbox']['resource_usage']
+        print(f"CPU time: {usage['cpu_time_seconds']}s")
+        print(f"Memory: {usage['memory_mb']}MB")
+        print(f"File descriptors: {usage['file_descriptors']}")
 ```
 
 ### Sandbox Violations
 
 When sandbox blocks an operation:
 
-```jsonl
+```json
 {
-  "timestamp": "2026-03-26T14:30:00Z",
+  "timestamp": "2026-03-26T14:30:00",
+  "agent_id": "my-agent",
   "event_type": "policy_violation",
-  "violation_type": "sandbox",
   "tool": "read_file",
-  "path": "/etc/passwd",
-  "reason": "Sandbox violation: Access to '/etc/passwd' blocked by pattern '/etc/**'"
+  "allowed": false,
+  "policy_violated": "sandbox",
+  "violation_reason": "Sandbox violation: ..."
 }
 ```
 
@@ -533,7 +549,7 @@ sandbox:
 
   # Filesystem
   allowed_paths:
-    - "~/.teotl/agents/my-agent/**"
+    - "~/.forge/agents/my-agent/**"
     - "/tmp/**"
     - "~/Documents/**"
   max_file_size_mb: 100
@@ -595,7 +611,7 @@ Logs are stored as JSONL (one JSON object per line):
 ### Log Location
 
 ```
-~/.teotl/agents/my-agent/audit/
+~/.forge/agents/my-agent/audit/
 ├── 2026-01.jsonl    # January logs
 ├── 2026-02.jsonl    # February logs
 └── 2026-03.jsonl    # March logs
@@ -667,11 +683,13 @@ compliance:
 
 ## Management Tools
 
+All `teotl security` subcommands take `--workspace/-w` (default: `~/.forge/my-agent`).
+
 ### View Audit Logs
 
 ```bash
 # View recent logs
-teotl security logs --workspace ~/.teotl/agents/my-agent
+teotl security logs --workspace ~/.forge/agents/my-agent
 
 # Last 7 days
 teotl security logs --days 7
@@ -693,7 +711,7 @@ teotl security logs --type tool_call,policy_violation
 
 ```bash
 # Last 30 days (default)
-teotl security report --workspace ~/.teotl/agents/my-agent
+teotl security report --workspace ~/.forge/agents/my-agent
 
 # Last 7 days
 teotl security report --days 7
@@ -712,7 +730,7 @@ teotl security report --output report.json
 ### Check Security Status
 
 ```bash
-teotl security status --workspace ~/.teotl/agents/my-agent
+teotl security status --workspace ~/.forge/agents/my-agent
 ```
 
 **Shows:**
@@ -724,18 +742,17 @@ teotl security status --workspace ~/.teotl/agents/my-agent
 ### Programmatic Access
 
 ```python
-from pathlib import Path
 from teotl.ui import show_security_status, show_security_logs
 
 # Show status in rich terminal UI
-show_security_status("~/.teotl/agents/my-agent")
+show_security_status("~/.forge/agents/my-agent")
 
 # Show recent logs
-show_security_logs("~/.teotl/agents/my-agent", limit=20)
+show_security_logs("~/.forge/agents/my-agent", limit=20)
 
 # Show summary
 from teotl.ui import show_security_summary
-show_security_summary("~/.teotl/agents/my-agent", days=7)
+show_security_summary("~/.forge/agents/my-agent", days=7)
 ```
 
 ## Best Practices
@@ -808,7 +825,7 @@ Before deploying, test your policy:
 
 ```bash
 # Backup audit logs
-tar -czf audit-backup-$(date +%Y%m%d).tar.gz ~/.teotl/agents/*/audit/
+tar -czf audit-backup-$(date +%Y%m%d).tar.gz ~/.forge/agents/*/audit/
 ```
 
 Store backups securely for compliance.
@@ -846,14 +863,16 @@ Even if your policy is permissive, sandbox provides OS-level safety:
 Before deploying, test sandbox enforcement:
 
 ```bash
-# Try accessing blocked path
-teotl test-security read-file /etc/passwd
-
-# Try accessing private network
-teotl test-security http-request http://192.168.1.1
-
-# Try exceeding resource limits
-teotl test-security allocate-memory 2048  # MB
+# Planned (not yet available): a `teotl test-security` command.
+# For now, exercise the sandbox directly from Python:
+python -c "
+from teotl.core.security import FilesystemSandbox, FilesystemSandboxConfig, SandboxViolation
+fs = FilesystemSandbox(FilesystemSandboxConfig(allowed_paths=['/tmp/**']))
+try:
+    fs.validate_path('/etc/passwd', 'read')
+except SandboxViolation as e:
+    print('Blocked:', e)
+"
 ```
 
 Verify sandbox blocks these operations.
@@ -924,7 +943,7 @@ Verify sandbox blocks these operations.
 1. Check if `security.yaml` exists
 2. Verify agent has write permissions:
    ```bash
-   ls -la ~/.teotl/agents/my-agent/
+   ls -la ~/.forge/agents/my-agent/
    ```
 3. Check log level isn't `minimal` (might not log much)
 
@@ -950,7 +969,7 @@ Verify sandbox blocks these operations.
 **Solution:**
 1. Check file exists:
    ```bash
-   ls ~/.teotl/agents/my-agent/security.yaml
+   ls ~/.forge/agents/my-agent/security.yaml
    ```
 2. Verify YAML syntax:
    ```bash
@@ -1079,7 +1098,7 @@ policy.cost_limits.max_per_hour = 10.0
 policy.compliance.gdpr_enabled = True
 
 # Save
-workspace = Path("~/.teotl/agents/my-agent").expanduser()
+workspace = Path("~/.forge/agents/my-agent").expanduser()
 policy.to_yaml(workspace / "security.yaml")
 ```
 
@@ -1100,14 +1119,7 @@ from teotl.core.security import (
 )
 
 # Load policy
-policy = SecurityPolicy.from_file("security.yaml")
-workspace = Path("~/.teotl/agents/my-agent").expanduser()
-
-# Option 1: Auto-create enforcer with sandbox from policy
-from teotl.core.security.enforcement import create_enforcer
-enforcer = create_enforcer(workspace)  # Reads security.yaml, builds sandbox automatically
-
-# Option 2: Manual enforcer + sandbox creation
+workspace = Path("~/.forge/agents/my-agent").expanduser()
 policy = SecurityPolicy.from_file(workspace / "security.yaml")
 
 # Build sandbox components
@@ -1146,7 +1158,7 @@ if not allowed:
     # Reason could be from policy OR sandbox layer
 else:
     # Execute tool...
-    result = execute_web_search()
+    result = await execute_web_search()  # your tool implementation
 
     # Record execution
     await enforcer.record_execution(
@@ -1161,15 +1173,15 @@ else:
 
 ```bash
 # Agent 1: Strict (handles sensitive data)
-~/.teotl/agents/secure-agent/
+~/.forge/agents/secure-agent/
 ├── security.yaml    # preset: strict
 
 # Agent 2: Permissive (development)
-~/.teotl/agents/dev-agent/
+~/.forge/agents/dev-agent/
 ├── security.yaml    # preset: permissive
 
 # Agent 3: Custom (specific requirements)
-~/.teotl/agents/custom-agent/
+~/.forge/agents/custom-agent/
 ├── security.yaml    # custom configuration
 ```
 
@@ -1180,12 +1192,10 @@ Each agent has its own independent security policy.
 - **Architecture:** See `docs/SECURITY_ARCHITECTURE.md` for technical details
 - **Policy Reference:** See `teotl/core/security/policy.py` for all options
 - **Audit Reference:** See `teotl/core/security/audit.py` for log fields
-- **Examples:** See `examples/security/` for complete examples
 
 ## Support
 
 Questions? Issues?
 
-1. Check the [FAQ](docs/FAQ.md)
-2. Review audit logs: `teotl security logs`
-3. Report issues: [GitHub Issues](https://github.com/yourusername/teotl/issues)
+1. Review audit logs: `teotl security logs`
+2. Report issues: [GitHub Issues](https://github.com/keithdit4e/teotl/issues)

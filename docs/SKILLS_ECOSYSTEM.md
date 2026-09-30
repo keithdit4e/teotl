@@ -1,25 +1,15 @@
 # Skills Ecosystem & Compatibility
 
-Teotl uses the **Anthropic Agent Skills standard** (SKILL.md format), making it compatible with thousands of community-created skills.
+Teotl uses the **Anthropic Agent Skills standard** (SKILL.md format), so skills written for other SKILL.md-compatible tools can generally be used with Teotl.
 
 ## Overview
 
-As of March 2026, the Anthropic skills ecosystem includes:
-- **Official Anthropic skills** - Verified, production-ready
-- **Third-party verified skills** - Reviewed and approved
-- **Community skills** - Thousands of user-contributed skills
-
-**All use the same SKILL.md format** that works across:
-- Teotl (this framework)
-- Claude Code
-- Cursor
-- Gemini CLI
-- Codex CLI
-- Antigravity IDE
+The SKILL.md format is shared by Teotl and other agent tools (for example Claude Code).
+A skill is a folder containing a `SKILL.md` file: YAML frontmatter plus Markdown instructions.
 
 ## SKILL.md Format (Anthropic Standard)
 
-Teotl is **fully compatible** with Anthropic's SKILL.md format:
+Teotl reads the standard SKILL.md format:
 
 ```markdown
 ---
@@ -48,18 +38,19 @@ Examples and instructions...
 
 ### Frontmatter Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | ✅ | Unique identifier (lowercase, kebab-case) |
-| `version` | ✅ | Semantic version (1.0.0) |
-| `description` | ✅ | One-line description (used for discovery) |
-| `author` | Recommended | Creator name or organization |
-| `repository` | Recommended | Source code URL |
-| `license` | Recommended | License (MIT, Apache-2.0, etc.) |
-| `tags` | Optional | Discovery keywords |
-| `allowed-tools` | Optional | Restrict which tools can be used |
-| `dependencies` | Optional | Other skills this depends on |
-| `auth` | Optional | Authentication type (none, token, oauth) |
+Teotl reads these fields (see `teotl/primitives/skills/loader.py`):
+
+| Field | Default if omitted | Description |
+|-------|--------------------|-------------|
+| `name` | Folder name | Unique identifier used in `skills=[...]` |
+| `description` | `""` | One-line description, always in context (used for discovery) |
+| `version` | `0.1.0` | Semantic version |
+| `auth` | `none` | Authentication type (informational) |
+| `triggers` | `[]` | Keywords associated with the skill |
+
+Other fields (`author`, `repository`, `license`, `tags`, `allowed-tools`, `dependencies`, ...)
+are accepted for compatibility with other tools but are **ignored by Teotl** — in particular,
+`allowed-tools` does not restrict anything in Teotl. Always include a `description`.
 
 ## Skill Discovery
 
@@ -67,7 +58,7 @@ Teotl discovers skills from multiple sources:
 
 ### 1. Local User Skills
 ```
-~/.teotl/skills/
+~/.forge/skills/
 ├── my-custom-skill/
 │   └── SKILL.md
 ├── database-queries/
@@ -79,47 +70,48 @@ Teotl discovers skills from multiple sources:
 ### 2. Package Built-in Skills
 ```
 teotl/skills/
+├── claude_code/SKILL.md
 ├── filesystem/SKILL.md
 ├── git/SKILL.md
+├── github/SKILL.md
+├── social-media/SKILL.md
+├── spec_kit/SKILL.md
 └── web/SKILL.md
 ```
 
 ### 3. Environment Path
 ```bash
 export TEOTL_SKILLS_PATH="/opt/company-skills:/home/user/projects/skills"
+# (legacy FORGE_SKILLS_PATH is also read)
 ```
 
-### 4. Git Repositories (Recommended for Community Skills)
-```bash
-# Clone Anthropic verified skills
-git clone https://github.com/anthropics/agent-skills ~/.teotl/skills/anthropic
-
-# Clone community skills
-git clone https://github.com/user/awesome-skills ~/.teotl/skills/awesome
-
-# Teotl auto-discovers all SKILL.md files in subdirectories
-```
+Discovery looks **one level deep**: each search directory must directly contain skill
+folders, each with its own `SKILL.md` (`<search-dir>/<skill-name>/SKILL.md`). A repository
+that nests several skills in subfolders should be added to `TEOTL_SKILLS_PATH` at the
+level that directly contains the skill folders.
 
 ## Using Community Skills
 
 ### Method 1: Clone Skill Repository
 
 ```bash
-# Example: Using a community database skill
-cd ~/.teotl/skills
-git clone https://github.com/community/postgres-skill
+# Example: installing a (hypothetical) community database skill
+mkdir -p ~/.forge/skills
+cd ~/.forge/skills
+git clone <skill-repo-url> postgres    # folder must contain SKILL.md at its top level
 
-# Teotl automatically discovers it
-teotl skills list
-# Output:
-#   postgres — Execute PostgreSQL queries safely
+# Teotl discovers it automatically. To check, start a chat with it and use /skills:
+teotl chat --skills postgres
 ```
 
 Then in your agent:
 ```python
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
+
 agent = Agent(
     provider=AnthropicProvider(),
-    skills=["filesystem", "git", "postgres"],  # ✅ Works!
+    skills=["filesystem", "git", "postgres"],
 )
 ```
 
@@ -127,57 +119,35 @@ agent = Agent(
 
 ```bash
 # Link to skills from another project
-ln -s /path/to/project/skills/custom-skill ~/.teotl/skills/custom-skill
+ln -s /path/to/project/skills/custom-skill ~/.forge/skills/custom-skill
 
 # Or link entire skill collection
-ln -s /opt/company/skills/* ~/.teotl/skills/
+ln -s /opt/company/skills/* ~/.forge/skills/
 ```
 
 ### Method 3: Environment Variable
 
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-export TEOTL_SKILLS_PATH="/opt/company-skills:~/projects/ml-skills"
+export TEOTL_SKILLS_PATH="/opt/company-skills:$HOME/projects/ml-skills"
 
 # Teotl searches all paths
 ```
 
-## Skill Marketplace (Future)
+## Skill Marketplace (Planned — not yet available)
 
-**Coming soon:**
-```bash
-# Discover skills
-teotl skills search postgres
-# Output:
-#   postgres-admin (official) - Database administration
-#   postgres-query (community) ⭐ 1.2k - Safe query execution
-#   postgres-migrate (verified) - Schema migrations
-
-# Install from marketplace
-teotl skills install postgres-query
-
-# Update installed skills
-teotl skills update
-
-# Show skill info
-teotl skills info postgres-query
-# Output:
-#   Name: postgres-query
-#   Author: @dbexpert
-#   Version: 2.1.0
-#   Downloads: 15k
-#   Rating: 4.8/5
-#   Repository: https://github.com/dbexpert/postgres-skill
-```
+A skill marketplace with search/install/update commands is planned but does not exist yet.
+There is currently no `teotl skills` CLI command; install skills by copying or cloning
+their folders into `~/.forge/skills/` or a directory on `TEOTL_SKILLS_PATH`.
 
 ## Creating Compatible Skills
 
 ### Quick Start
 
-```bash
+````bash
 # Create skill directory
-mkdir ~/.teotl/skills/my-skill
-cd ~/.teotl/skills/my-skill
+mkdir -p ~/.forge/skills/my-skill
+cd ~/.forge/skills/my-skill
 
 # Create SKILL.md
 cat > SKILL.md << 'EOF'
@@ -200,9 +170,9 @@ What this skill does...
 ## Operations
 
 ### Operation 1
-\`\`\`bash
+```bash
 command example
-\`\`\`
+```
 
 **Usage:**
 When to use this...
@@ -211,9 +181,9 @@ When to use this...
 Safety considerations...
 EOF
 
-# Test it
-teotl skills list | grep my-skill
-```
+# Test it (type /skills inside the chat to see enabled skills)
+teotl chat --skills my-skill
+````
 
 ### Best Practices
 
@@ -221,10 +191,9 @@ teotl skills list | grep my-skill
 - ✅ Write clear, concise descriptions (Claude uses this for discovery)
 - ✅ Include security considerations
 - ✅ Provide concrete examples
-- ✅ List dependencies explicitly
 - ✅ Use semantic versioning
 - ✅ Include author and license info
-- ✅ Tag appropriately for discovery
+- ✅ Add `triggers` keywords for discovery
 
 **Don't:**
 - ❌ Assume prior knowledge
@@ -237,9 +206,9 @@ teotl skills list | grep my-skill
 
 ### 1. Publish to GitHub
 
-```bash
+````bash
 # Create repository
-cd ~/.teotl/skills/my-skill
+cd ~/.forge/skills/my-skill
 git init
 git add SKILL.md
 git commit -m "Initial skill"
@@ -255,38 +224,22 @@ Agent skill for [purpose].
 ## Installation
 
 ```bash
-cd ~/.teotl/skills
+cd ~/.forge/skills
 git clone https://github.com/you/my-skill
 ```
 
 ## Usage
 
 ```python
-agent = Agent(skills=["my-skill"])
+agent = Agent(provider=provider, skills=["my-skill"])
 ```
 EOF
-```
+````
 
-### 2. Submit to Anthropic Verified Skills
+### 2. Share with the Community
 
-Follow guidelines at: https://agentskills.io/contribute
-
-**Requirements:**
-- Comprehensive documentation
-- Security review passed
-- Examples and tests included
-- Actively maintained
-- Open source license
-
-### 3. List in Community Registry
-
-Submit PR to: https://github.com/anthropics/agent-skills
-
-**Benefits:**
-- Discoverable via `teotl skills search`
-- Installation via `teotl skills install`
-- Automatic updates
-- Usage analytics
+Publish your skill repository and let others clone it into their `~/.forge/skills/` directory.
+See the Agent Skills standard at https://agentskills.io for format guidance.
 
 ## Compatibility Testing
 
@@ -295,15 +248,11 @@ Submit PR to: https://github.com/anthropics/agent-skills
 Your skill should work across all SKILL.md-compatible platforms:
 
 ```bash
-# Test with Teotl
-teotl skills list | grep my-skill
-
-# Test with Claude Code (if installed)
-claude skills list | grep my-skill
-
-# Test with Cursor (if installed)
-cursor --list-skills | grep my-skill
+# Test with Teotl (type /skills inside the chat)
+teotl chat --skills my-skill
 ```
+
+Check the other tools' own documentation for how they discover skills.
 
 ### Validation Script
 
@@ -320,7 +269,7 @@ if content.startswith('---'):
     parts = content.split('---', 2)
     frontmatter = yaml.safe_load(parts[1])
 
-    required = ['name', 'version', 'description']
+    required = ['name', 'description']  # Teotl defaults the rest
     for field in required:
         assert field in frontmatter, f'Missing {field}'
 
@@ -334,15 +283,22 @@ else:
 
 ### From MCP Tools
 
-If you have MCP tools, convert to SKILL.md:
+If you have MCP tools, you can generate a SKILL.md skeleton from a tool definition and
+then fill in the usage instructions by hand:
 
 ```python
 # mcp_to_skill.py
 import json
+from pathlib import Path
+
+FENCE = "`" * 3  # Markdown code fence
 
 # Read MCP tool definition
-with open('mcp-tool.json') as f:
+with open("mcp-tool.json") as f:
     mcp = json.load(f)
+
+skill_dir = Path.home() / ".forge" / "skills" / mcp["name"]
+skill_dir.mkdir(parents=True, exist_ok=True)
 
 # Generate SKILL.md
 skill_md = f"""---
@@ -355,89 +311,26 @@ description: "{mcp['description']}"
 
 ## Usage
 
-\`\`\`bash
-# Convert MCP tool parameters to bash command
-{generate_bash_example(mcp)}
-\`\`\`
+{FENCE}bash
+# TODO: describe the equivalent CLI command(s) for this tool
+{FENCE}
 """
 
-with open('SKILL.md', 'w') as f:
-    f.write(skill_md)
-```
-
-### From LangChain Tools
-
-LangChain tools can be wrapped:
-
-```python
-from langchain.tools import Tool
-
-# Existing LangChain tool
-langchain_tool = Tool(
-    name="calculator",
-    description="Perform calculations",
-    func=lambda x: eval(x)
-)
-
-# Create SKILL.md wrapper
-with open('~/.teotl/skills/calculator/SKILL.md', 'w') as f:
-    f.write(f"""---
-name: {langchain_tool.name}
-version: 1.0.0
-description: "{langchain_tool.description}"
----
-
-# {langchain_tool.name.title()}
-
-Uses Python for calculations.
-
-## Usage
-
-\`\`\`bash
-python -c "print({langchain_tool.name}('expression'))"
-\`\`\`
-""")
+(skill_dir / "SKILL.md").write_text(skill_md)
 ```
 
 ## Skill Collections
-
-### Official Anthropic Skills
-
-```bash
-# Clone official collection
-git clone https://github.com/anthropics/agent-skills ~/.teotl/skills/anthropic
-
-# Available skills:
-# - web-search
-# - database-query
-# - file-operations
-# - git-workflow
-# - api-client
-# - data-analysis
-# [and many more]
-```
-
-### Awesome Agent Skills
-
-Community-curated collection:
-
-```bash
-# Clone awesome-agent-skills
-git clone https://github.com/awesome-skills/agent-skills ~/.teotl/skills/awesome
-
-# Browse at: https://github.com/awesome-skills/agent-skills
-```
 
 ### Company/Team Collections
 
 Share skills across your organization:
 
 ```bash
-# Company skills repository
-git clone https://github.com/company/internal-skills ~/.teotl/skills/company
+# Company skills repository (folder that directly contains skill folders)
+git clone <company-skills-repo-url> ~/company-skills
 
-# Set as default for all agents
-export TEOTL_SKILLS_PATH="~/.teotl/skills/company:~/.teotl/skills/anthropic"
+# Make it available to all agents
+export TEOTL_SKILLS_PATH="$HOME/company-skills"
 ```
 
 ## Troubleshooting
@@ -446,36 +339,39 @@ export TEOTL_SKILLS_PATH="~/.teotl/skills/company:~/.teotl/skills/anthropic"
 
 ```bash
 # Check if skill exists
-ls ~/.teotl/skills/my-skill/SKILL.md
+ls ~/.forge/skills/my-skill/SKILL.md
 
-# Check if discovered
-teotl skills list | grep my-skill
+# Check if discovered (type /skills inside the chat)
+teotl chat --skills my-skill
 
-# Check frontmatter is valid
-python -m yaml ~/.teotl/skills/my-skill/SKILL.md
+# Check frontmatter is valid (see the validation script above)
 ```
 
 ### Duplicate Skills
 
-If multiple skills have the same name, the first one found wins:
+Directories are scanned in this order, and if multiple skills have the same name, the
+**last one found wins**:
 
-1. User skills (`~/.teotl/skills/`)
-2. Environment path (`$TEOTL_SKILLS_PATH`)
-3. Package skills (`teotl/skills/`)
+1. User skills (`~/.forge/skills/`)
+2. Package skills (`teotl/skills/`)
+3. Environment path (`$TEOTL_SKILLS_PATH`, then legacy `$FORGE_SKILLS_PATH`)
 
-Override by placing your version in `~/.teotl/skills/`.
+To override a bundled skill, put your version in a directory on `TEOTL_SKILLS_PATH`
+(a same-named skill in `~/.forge/skills/` is overridden by the bundled one).
 
 ### Version Conflicts
 
 Skills don't version-conflict - agents load by name only. To use multiple versions:
 
 ```bash
-# Rename skill directories
+# Rename skill directories and give each a distinct `name:` in its SKILL.md frontmatter
 mv postgres-skill postgres-skill-v1
 mv postgres-skill-new postgres-skill-v2
+```
 
+```python
 # Reference in agent
-agent = Agent(skills=["postgres-skill-v2"])
+agent = Agent(provider=provider, skills=["postgres-skill-v2"])
 ```
 
 ## Security Considerations
@@ -486,43 +382,42 @@ Before using community skills:
 
 1. **Review SKILL.md** - Check what commands it runs
 2. **Check repository** - Verify author and stars/reviews
-3. **Test in sandbox** - Run with strict security policy first
-4. **Limit scope** - Use `allowed-tools` to restrict capabilities
+3. **Test with a strict policy** - Run with `policy="strict"` first
+4. **Limit scope** - Enable only the skills you need via `skills=[...]`
 
-### Sandboxing
+### Guardrails
 
-All skill commands run through Teotl's sandbox:
+Skill instructions are carried out through the agent's tools (e.g. `bash`), and every tool
+call passes through Teotl's guardrails. Use the strict preset for untrusted skills:
 
 ```python
-from teotl.core.security import SecurityPolicy
-
-# Strict policy for untrusted skills
-policy = SecurityPolicy.create_default("agent", "strict")
-policy.sandbox.allowed_paths = ["~/.teotl/agents/agent/**"]
-policy.sandbox.allowed_domains = []  # Block network
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
 
 agent = Agent(
+    provider=AnthropicProvider(),
     skills=["untrusted-skill"],
-    policy=policy  # Sandboxed execution
+    policy="strict",  # minimal | standard (default) | strict
 )
 ```
+
+See [GUARDRAILS.md](GUARDRAILS.md) for custom policies.
 
 ## Resources
 
 - **Anthropic Agent Skills Docs:** https://platform.claude.com/docs/en/agents-and-tools/agent-skills
 - **Agent Skills Standard:** https://agentskills.io
 - **Skills Guide (PDF):** https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf
-- **Awesome Agent Skills:** https://github.com/awesome-skills/agent-skills (community)
 - **Teotl Skills Guide:** [SKILLS_GUIDE.md](SKILLS_GUIDE.md)
 
 ## Next Steps
 
 1. **Browse community skills** - Find what you need
-2. **Clone to ~/.teotl/skills/** - Install locally
+2. **Clone to ~/.forge/skills/** - Install locally
 3. **Enable in agent** - Add to `skills=[]` parameter
 4. **Test with simple task** - Verify it works
 5. **Create your own** - Share with community
 
 ---
 
-**Key Takeaway:** Teotl is fully compatible with the Anthropic Agent Skills ecosystem. You can use any SKILL.md-compatible skill from the community without modification!
+**Key Takeaway:** Teotl uses the standard SKILL.md format, so most community skills can be used by dropping their folder into `~/.forge/skills/`. Review a skill's instructions before enabling it.

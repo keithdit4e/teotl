@@ -127,16 +127,16 @@ triggers:                 # Optional: auto-activate keywords
 
 ### Content Structure
 
-```markdown
+````markdown
 # Skill Name
 
 ## Overview
 Brief description...
 
 ## Operation 1
-\`\`\`bash
+```bash
 command here
-\`\`\`
+```
 
 **Usage:** When to use this
 **Best practices:**
@@ -151,11 +151,11 @@ Safety notes...
 
 ## Error Handling
 How to handle errors...
-```
+````
 
 ## Real Example: Database Skill
 
-```markdown
+````markdown
 ---
 name: database
 version: 1.0.0
@@ -175,9 +175,9 @@ triggers:
 
 ## Query Data
 
-\`\`\`bash
+```bash
 psql $DATABASE_URL -c "SELECT * FROM users LIMIT 10;"
-\`\`\`
+```
 
 **Best practices:**
 - Always use LIMIT
@@ -186,16 +186,16 @@ psql $DATABASE_URL -c "SELECT * FROM users LIMIT 10;"
 
 ## List Tables
 
-\`\`\`bash
+```bash
 psql $DATABASE_URL -c "\\dt"
-\`\`\`
+```
 
 ## Security
 
 - Default to read-only
 - Require confirmation for writes
 - Use environment variables for credentials
-```
+````
 
 ## Skill Discovery Locations
 
@@ -311,55 +311,55 @@ print(f"Instructions length: {len(full.instructions)} chars")
 
 ### Command Safety
 
-```markdown
+````markdown
 ## Safe Operation
 
-\`\`\`bash
+```bash
 # Read-only, safe command
 cat /path/to/file
-\`\`\`
+```
 
 ## Dangerous Operation (Requires Confirmation)
 
-\`\`\`bash
+```bash
 # Destructive - user must approve
 rm -rf /path/to/directory
-\`\`\`
+```
 
 **Security:** This operation is destructive. Always:
 - Backup first
 - Verify path is correct
 - Use with caution
-```
+````
 
 ### Credential Handling
 
-```markdown
+````markdown
 ## Setup
 
 Set credentials via environment variable (never hardcode):
 
-\`\`\`bash
+```bash
 export API_KEY="your-key-here"
 export DATABASE_URL="postgresql://..."
-\`\`\`
+```
 
 ## Usage
 
-\`\`\`bash
+```bash
 # Good: Uses environment variable
 curl -H "Authorization: Bearer $API_KEY" https://api.example.com
 
 # Bad: Hardcoded credential (never do this)
 # curl -H "Authorization: Bearer sk-abc123..." https://...
-\`\`\`
+```
 
 **Security:** Never expose credentials in:
 - Skill documentation
 - Command output
 - Error messages
 - Logs
-```
+````
 
 ## Testing Your Skill
 

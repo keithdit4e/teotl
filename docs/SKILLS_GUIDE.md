@@ -12,73 +12,31 @@ Skills provide progressive disclosure for agent capabilities - keeping context c
 
 ## Built-in Skills
 
-Teotl includes three production-ready skills:
+Teotl bundles these skills in `teotl/skills/`:
 
-### 1. Filesystem Skill
-Read, write, search, and navigate files and directories.
+| Skill | Description |
+|-------|-------------|
+| `filesystem` | Read, write, search, and navigate files and directories |
+| `git` | Version control with Git: status, commits, branches, diffs |
+| `github` | Interact with GitHub repositories, issues, and pull requests |
+| `web` | Fetch web pages, download files, make HTTP requests (via `curl`) |
+| `claude_code` | Coding assistant via the Claude Code CLI |
+| `spec_kit` | Formal specification creation for structured planning |
+| `social-media` | Cross-post and manage content across LinkedIn, X, Medium, Substack |
 
-**Capabilities:**
-- Read/write files with safety checks
-- Search file contents (grep)
-- Find files by name/size/date
-- Create/delete directories
-- File metadata and permissions
-- Archive operations (tar, zip)
-
-**Security:**
-- Filesystem sandboxing enforced
-- Blocked patterns (`/etc`, `~/.ssh`, etc.)
-- Confirmation required for deletions
-- Backup recommendations before overwrites
+A skill is a set of instructions, not code. The agent carries them out with its built-in
+`bash` tool (registered automatically), so every command still passes through the agent's
+guardrail policy. For example, with the default `standard` policy, `rm` and `git push`
+require confirmation and piping `curl` output into a shell is blocked.
+See [GUARDRAILS.md](GUARDRAILS.md).
 
 **Example:**
 ```python
-agent = Agent(skills=["filesystem"])
+from teotl import Agent
+from teotl.core.provider import AnthropicProvider
+
+agent = Agent(provider=AnthropicProvider(), skills=["filesystem"])
 response = await agent.run("Find all Python files larger than 1MB")
-```
-
-### 2. Git Skill
-Version control operations with safety guardrails.
-
-**Capabilities:**
-- Status, diff, log
-- Add, commit, push
-- Branch management
-- Stash operations
-- Merge and rebase
-
-**Security:**
-- Push requires confirmation
-- Force push blocked
-- No rewriting published history
-- Validates clean working tree
-
-**Example:**
-```python
-agent = Agent(skills=["git"])
-response = await agent.run("Create a commit with all changes")
-```
-
-### 3. Web Skill
-Web search and content fetching.
-
-**Capabilities:**
-- Search web (via search provider API)
-- Fetch webpage content
-- Parse HTML/markdown
-- Follow redirects
-- Cache results
-
-**Security:**
-- Domain allowlist enforced
-- HTTPS required
-- Response size limited
-- Rate limits applied
-
-**Example:**
-```python
-agent = Agent(skills=["web"])
-response = await agent.run("Search for Python async best practices")
 ```
 
 ## Using Skills
@@ -111,9 +69,10 @@ Available capabilities:
 ```
 Cost: ~150 tokens (3 skills × 50 tokens)
 
-**Step 2: Agent determines relevance**
-User asks: "List all TODO comments in Python files"
-Agent thinks: "I need filesystem skill for searching"
+**Step 2: Skill is activated when relevant**
+When the model's response mentions a skill's name or one of its `triggers`, the agent
+activates that skill and loads its full instructions for the next turn. You can also
+activate a skill manually (see below).
 
 **Step 3: Full instructions loaded on-demand**
 ```
@@ -122,12 +81,13 @@ Agent thinks: "I need filesystem skill for searching"
 ## Search File Contents
 grep -rn "TODO" *.py
 
-[... 398 lines of detailed instructions ...]
+[... rest of the skill's instructions ...]
 ```
-Cost: ~2000 tokens (temporary)
+Cost: depends on the size of the SKILL.md (typically a few thousand tokens)
 
-**Step 4: Task completed, skill deactivated**
-Instructions removed from context → back to ~150 tokens
+**Step 4: Deactivate when done**
+Active skills stay loaded until deactivated. Call `agent.deactivate_skill(name)` to remove
+a skill's instructions and return to the descriptions-only baseline.
 
 ### Manual Activation
 
@@ -143,10 +103,13 @@ agent.deactivate_skill("filesystem")
 ### List Available Skills
 
 ```python
-# Get all registered skills
+# Get all registered skills (dict of name -> description)
 skills = agent.list_skills()
 for name, description in skills.items():
     print(f"{name}: {description}")
+
+# Currently active skills
+print(agent.list_active_skills())
 ```
 
 ## Creating Custom Skills
@@ -154,17 +117,18 @@ for name, description in skills.items():
 ### Directory Structure
 
 ```
-~/.teotl/skills/my-skill/
+~/.forge/skills/my-skill/
 ├── SKILL.md          # Required: Frontmatter + instructions
-└── scripts/          # Optional: Executable tools
+└── scripts/          # Optional: helper scripts your instructions reference
     ├── action.sh
-    ├── helper.py
-    └── README.md
+    └── helper.py
 ```
+
+See [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) for a step-by-step walkthrough.
 
 ### SKILL.md Format
 
-```markdown
+````markdown
 ---
 name: my-skill
 version: 1.0.0
@@ -183,9 +147,9 @@ Full documentation loaded on-demand.
 ## Operations
 
 ### Operation 1
-\`\`\`bash
+```bash
 command example
-\`\`\`
+```
 
 **Best practices:**
 - Practice 1
@@ -199,21 +163,21 @@ command example
 
 ## Error Handling
 ...
-```
+````
 
 ### Frontmatter Fields
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | Yes | Unique identifier (lowercase, no spaces) |
-| `version` | Yes | Semantic version (1.0.0) |
-| `description` | Yes | One-line description (always in context) |
-| `auth` | No | Authentication type: `none`, `token`, `oauth` |
-| `triggers` | No | Keywords that should auto-activate this skill |
+| `name` | No (defaults to folder name) | Unique identifier (lowercase, no spaces) |
+| `version` | No (defaults to `0.1.0`) | Semantic version (1.0.0) |
+| `description` | Recommended | One-line description (always in context) |
+| `auth` | No (defaults to `none`) | Authentication type: `none`, `token`, `oauth` (informational) |
+| `triggers` | No | Keywords that auto-activate this skill when they appear in the model's response |
 
 ### Example: Database Skill
 
-```markdown
+````markdown
 ---
 name: database
 version: 1.0.0
@@ -233,17 +197,17 @@ Safe database querying with read-only defaults.
 
 ## Connection
 
-\`\`\`bash
+```bash
 # Set connection via environment variable
 export DATABASE_URL="postgresql://user:pass@localhost/dbname"
-\`\`\`
+```
 
 ## Query Data
 
-\`\`\`bash
+```bash
 # Read-only query
 psql $DATABASE_URL -c "SELECT * FROM users LIMIT 10;"
-\`\`\`
+```
 
 **Security:**
 - Default to read-only transactions
@@ -258,22 +222,23 @@ psql $DATABASE_URL -c "SELECT * FROM users LIMIT 10;"
 3. Use transactions for multiple operations
 4. Backup before destructive operations
 5. Validate user input to prevent injection
-```
+````
 
 ## Skills Discovery
 
-Skills are discovered from multiple locations:
+Skills are discovered from these locations, scanned in this order (if two skills share a
+name, the one found last wins):
 
-1. **Package skills** (built-in)
-   - Location: `teotl/skills/`
-   - Includes: filesystem, git, web
-
-2. **User skills** (custom)
-   - Location: `~/.teotl/skills/`
+1. **User skills** (custom)
+   - Location: `~/.forge/skills/`
    - Your custom skills
 
+2. **Package skills** (built-in)
+   - Location: `teotl/skills/`
+   - Includes: filesystem, git, github, web, claude_code, spec_kit, social-media
+
 3. **Environment path**
-   - Set `TEOTL_SKILLS_PATH=/path1:/path2`
+   - Set `TEOTL_SKILLS_PATH=/path1:/path2` (legacy `FORGE_SKILLS_PATH` also works)
    - Additional skill directories
 
 ### Discovery Process
@@ -290,16 +255,14 @@ registry = SkillRegistry(enabled=["filesystem", "git"])
 print(f"Loaded {registry.registered_count} skills")
 ```
 
-## CLI Commands
+## CLI
 
 ```bash
-# List all available skills
-teotl skills list
+# Start a chat with specific skills enabled
+teotl chat --skills filesystem,git,web
 
-# Output:
-#   filesystem — Read, write, search files and directories
-#   git — Version control operations
-#   web — Web search and URL fetching
+# Inside the chat, list enabled skills
+/skills
 ```
 
 ## Cost Analysis
@@ -310,7 +273,7 @@ teotl skills list
 |-------|--------|------|
 | Descriptions | ~500 | Always in context |
 | Full instructions | ~2000 | Temporarily when activated |
-| After task | ~500 | Deactivated, back to descriptions |
+| After deactivation | ~500 | Back to descriptions only |
 
 **Example: 10 skills enabled**
 - Baseline: 500 tokens (descriptions)
@@ -330,7 +293,7 @@ teotl skills list
 - Peak: 30,000+ tokens
 - Average: 30,000+ tokens
 
-**Savings:** ~97% reduction in context usage
+**Result:** a much smaller baseline context cost — actual savings depend on your skills and MCP servers.
 
 ## Best Practices
 
@@ -387,13 +350,13 @@ Don't create a skill for:
 
 # Check if skill exists
 from pathlib import Path
-skill_path = Path.home() / ".teotl" / "skills" / "my-skill" / "SKILL.md"
+skill_path = Path.home() / ".forge" / "skills" / "my-skill" / "SKILL.md"
 print(f"Exists: {skill_path.exists()}")
 
 # List all discovered skills
 from teotl.primitives.skills.registry import SkillRegistry
 registry = SkillRegistry()
-print(registry.skills.keys())
+print(list(registry.skills.keys()))
 ```
 
 ### Skill Not Auto-Activating
@@ -425,30 +388,19 @@ Target: ~500-2000 tokens per skill
 
 ### Permission Errors
 
-```bash
-# Error: Permission denied accessing /etc/config
+If a command is blocked or needs confirmation, it is the agent's guardrail policy at work,
+not the skill. Use a custom policy that allows the paths/commands you need — see
+[GUARDRAILS.md](GUARDRAILS.md) — or, for daemon/wizard agents, adjust the `security`
+section of the agent's config (see [SECURITY_GUIDE.md](SECURITY_GUIDE.md)).
 
-# Check security policy
-cat ~/.teotl/agents/my-agent/security.yaml
+## Planned: Skills Marketplace (not yet available)
 
-# Add path to allowed_paths:
-sandbox:
-  allowed_paths:
-    - "~/.teotl/agents/my-agent/**"
-    - "/path/to/allow/**"
-```
-
-## Future: Skills Marketplace
-
-Coming soon:
-- `teotl skills install <name>` - Install from marketplace
-- `teotl skills search <query>` - Discover skills
-- `teotl skills update` - Update installed skills
-- Skill ratings and reviews
-- Skill dependencies and versioning
+A marketplace for discovering, installing, and updating skills is planned. Until then,
+install a skill by copying its folder into `~/.forge/skills/` or a directory on
+`TEOTL_SKILLS_PATH`. See [SKILLS_ECOSYSTEM.md](SKILLS_ECOSYSTEM.md).
 
 ## See Also
 
-- [WORKSPACE_FILES.md](WORKSPACE_FILES.md) - Customizing agent behavior
+- [CUSTOM_SKILLS_QUICKSTART.md](CUSTOM_SKILLS_QUICKSTART.md) - Build your first skill
 - [SECURITY_GUIDE.md](SECURITY_GUIDE.md) - Security policies
 - [examples/workspace_files/SKILLS.md](../examples/workspace_files/SKILLS.md) - Example SKILLS.md file

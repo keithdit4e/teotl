@@ -17,6 +17,7 @@ from pathlib import Path
 from teotl.core.agent import Agent
 from teotl.core.provider import Provider
 from teotl.core.security.policy import SecurityPolicy
+from teotl.primitives.guardrails.presets import guardrail_preset_for
 from teotl.primitives.harness.checkpoint import CheckpointManager
 from teotl.primitives.harness.plan import ExecutionPlan, PlanManager, PlanStep
 from teotl.primitives.harness.progress import ProgressTracker
@@ -154,7 +155,8 @@ class Worker:
             provider=provider,
             instructions=self.instructions,
             skills=skills or [],
-            policy=self.policy if self.policy else policy,  # Use policy object or fallback
+            # Tool-call guardrails need a guardrail preset, not a SecurityPolicy
+            policy=guardrail_preset_for(policy),
             session_dir=self.workspace_dir / "sessions" / "worker",
             # Pass harness components to agent
             cost_tracker=cost_tracker,

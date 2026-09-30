@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-30
+
+### Security
+- **Planner-worker workers now run with guardrails.** `PlannerWorkerHarness` passed its `SecurityPolicy` into the agent's guardrail slot, which failed to load, so the worker executed tools with no guardrails at all (silently, since v0.2.0). Security presets now map to guardrail presets: `strict`→`strict`, `moderate`/`autonomous-dev`→`standard`, `permissive`→`minimal`
+- **Config-built agents now run with guardrails.** The same bug affected any agent created from a config file with `security.preset` or `policy_file` (daemon and wizard configs)
+- An unknown `policy=` name (e.g. `"permissive"`) now logs a warning that guardrails are disabled, instead of a debug message
+
+### Fixed
+- `python -m teotl.daemon.run` crashed on import (`teotl.daemon.heartbeat` no longer existed); it now uses `AgentDaemon`, so missions can run again
+- `teotl security logs|report|status` rejected its subcommands; arguments are now passed through
+- `teotl memory` commands existed but weren't registered with the CLI; they now are
+- Remaining `forge.` imports and CLI usage strings renamed to `teotl`
+
+### Documentation
+- Rewrote examples across the docs to use the real API. Removed `Agent.create_planner_worker`, `Mission.from_file`/`from_dict`/`run`, `SkillRegistry.register_builtin`, the `Skill` base class, `secure_store`, and CLI commands that don't exist (`teotl init`, `run`, `skills`, `auth`, `audit`, `policy`, `compliance`, `test-security`)
+- Planner-worker docs now use `PlannerWorkerHarness`; missions are documented as daemon-scheduled work defined in config YAML
+- Policy docs list only the real presets (`minimal`, `standard`, `strict`)
+- Credential docs use the real backends (`keyring`, `file`, `environment`, `aws_secrets`) and synchronous API
+- `docs/api_reference.md` signatures checked against the code
+- Installation docs lead with `pip install teotl`
+- Removed unverifiable marketing numbers and fabricated sample outputs; the one-pager no longer includes competitor claims or an enterprise tier
+- Fixed escaped code fences in `docs/CUSTOM_SKILLS_QUICKSTART.md` and an example
+- Example agent templates: replaced old `forge.` imports and invented APIs (`Agent.load`, `MissionStore.get_default_store`, a Slack integration, `Mission(instructions=, tools=)`) with the real API and daemon mission config
+
 ## [0.2.1] - 2026-09-30
 
 ### Fixed

@@ -141,7 +141,8 @@ class Agent:
             self.events.on("tool_call", self.guardrails.evaluate, priority=-100)
             logger.debug(f"Guardrails initialized with policy: {policy}")
         except Exception as e:
-            logger.debug(f"Guardrails not initialized: {e}")
+            # Loud on purpose: a bad policy name must not silently disable guardrails
+            logger.warning(f"Guardrails DISABLED - could not load policy {policy!r}: {e}")
             self.guardrails = None
 
     def _init_memory(self, memory: Any | None) -> None:

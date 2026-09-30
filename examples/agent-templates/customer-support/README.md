@@ -297,21 +297,16 @@ customer-support/
 
 Auto-respond to common questions:
 
-```python
-from forge.primitives.mission import Mission, MissionInterval
+```yaml
+missions:
+  - description: "Check support inbox for new tickets: check for new support emails; categorize by issue type; auto-respond to common questions; flag urgent issues for escalation"
+    interval: HOURLY
+```
 
-# Monitor support inbox
-mission = Mission(
-    description="Check support inbox for new tickets",
-    interval=MissionInterval.HOURLY,
-    instructions="""
-    1. Check for new support emails
-    2. Categorize by issue type
-    3. Auto-respond to common questions
-    4. Flag urgent issues for escalation
-    """,
-    tools=["filesystem", "web"],
-)
+Missions are run by the agent daemon:
+
+```bash
+python -m teotl.daemon.run --config config.yaml
 ```
 
 ---

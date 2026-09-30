@@ -252,10 +252,11 @@ class TestGuardrailsIntegration:
         assert len(ui.confirmations) > 0
 
     @pytest.mark.asyncio
-    async def test_permissive_policy_allows_writes(self):
-        """Test that permissive policy allows write operations."""
+    async def test_minimal_policy_allows_writes(self):
+        """Test that the minimal policy allows write operations."""
         provider = MockProvider(command="echo 'test' > file.txt")
-        agent = Agent(provider=provider, policy="permissive")
+        agent = Agent(provider=provider, policy="minimal")
+        assert agent.guardrails is not None
         ui = MockUI(auto_approve=True)
 
         call_count = 0
@@ -281,8 +282,8 @@ class TestGuardrailsIntegration:
         # Tool should have been called
         assert call_count > 0
 
-        # With permissive policy, writes don't require confirmation
-        # (unless they're particularly dangerous)
+        # The minimal policy confirms a new write pattern once, then trusts it
+        assert len(ui.confirmations) <= 1
 
     @pytest.mark.asyncio
     async def test_trust_building(self):

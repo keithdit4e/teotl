@@ -147,3 +147,23 @@ PRESETS: dict[str, dict] = {
         },
     },
 }
+
+
+# SecurityPolicy presets (teotl.core.security) mapped to the closest tool-call
+# guardrail preset. A SecurityPolicy object can't be passed to Agent(policy=...):
+# the guardrail engine fails to load it and the agent runs with no guardrails.
+_GUARDRAIL_FOR_SECURITY_PRESET = {
+    "strict": "strict",
+    "moderate": "standard",
+    "autonomous-dev": "standard",
+    "permissive": "minimal",
+}
+
+
+def guardrail_preset_for(preset: object) -> str:
+    """Return the guardrail preset to use for a guardrail or SecurityPolicy preset name."""
+    if isinstance(preset, str):
+        if preset in PRESETS:
+            return preset
+        return _GUARDRAIL_FOR_SECURITY_PRESET.get(preset, "standard")
+    return "standard"

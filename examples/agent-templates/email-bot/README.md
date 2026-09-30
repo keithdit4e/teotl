@@ -189,24 +189,21 @@ teotl chat --agent email-bot --skills gmail,calendar,web,git
 
 Set up recurring email tasks:
 
-```python
-from forge.primitives.mission import Mission, MissionInterval
-from forge.primitives.mission.store import MissionStore
+Missions are scheduled by the agent daemon. Add them to your daemon config:
 
-# Create daily morning email scan
-mission = Mission(
-    description="Morning email scan and summary",
-    interval=MissionInterval.DAILY,
-    instructions="Check inbox, categorize emails, notify about urgent items",
-    tools=["gmail", "calendar"],
-)
-
-# Store mission
-store = MissionStore.get_default_store()
-await store.save(mission)
+```yaml
+missions:
+  - description: "Morning email scan: check inbox, categorize emails, flag urgent items"
+    interval: DAILY   # HOURLY, DAILY, WEEKLY
 ```
 
-Then the email bot will automatically scan your inbox every morning!
+Then run the daemon:
+
+```bash
+python -m teotl.daemon.run --config config.yaml
+```
+
+The daemon then runs the scan once a day.
 
 ## Use Cases
 
@@ -410,18 +407,6 @@ Add your own templates to `INSTRUCTIONS.md`:
 Is there anything else I can help clarify?
 
 Best regards,"
-```
-
-### Integration with Other Tools
-
-Connect email bot to other services:
-
-```python
-# Slack notifications for urgent emails
-from forge.integrations.slack import SlackNotifier
-
-notifier = SlackNotifier(webhook_url="...")
-await notifier.send(f"Urgent email from {sender}: {subject}")
 ```
 
 ### Custom Email Filters

@@ -4,9 +4,9 @@ Provides commands for viewing audit logs, generating compliance reports,
 and managing security policies.
 
 Usage:
-    forge security logs [options]
-    forge security report [options]
-    forge security status <agent-id>
+    teotl security logs [options]
+    teotl security report [options]
+    teotl security status <agent-id>
 """
 
 import argparse
@@ -429,9 +429,10 @@ def show_status(args: argparse.Namespace) -> None:
     print(f"  HIPAA: {'✅ Enabled' if comp['hipaa'] else '❌ Disabled'}")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """Main entry point for security CLI."""
     parser = argparse.ArgumentParser(
+        prog="teotl security",
         description="Teotl Agent Security Management",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -514,7 +515,7 @@ def main() -> None:
         help="Agent workspace directory (default: ~/.forge/my-agent)",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not args.command:
         parser.print_help()

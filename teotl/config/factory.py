@@ -428,8 +428,11 @@ def create_agent_from_config(
         if isinstance(harness.audit, AuditConfig):
             audit_logger = _create_audit_logger(harness.audit, agent_config.agent_id, workspace_dir)
 
-    # Create security policy
-    policy = _create_security_policy(agent_config.security, agent_config.agent_id)
+    # Tool-call guardrails take a guardrail preset; map the configured security preset
+    # (passing the SecurityPolicy object itself silently disabled guardrails)
+    from teotl.primitives.guardrails.presets import guardrail_preset_for
+
+    policy = guardrail_preset_for(agent_config.security.preset if agent_config.security else None)
 
     # Get janitor settings
     enable_auto_compact = None

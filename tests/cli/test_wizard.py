@@ -82,7 +82,7 @@ class TestOnboardingWizard:
         assert "model" in wizard.config["provider"]
         assert wizard.config["provider"]["api_key_env"] == "ANTHROPIC_API_KEY"
 
-    @patch("builtins.input", side_effect=["1"])  # Choose gpt-4o
+    @patch("builtins.input", side_effect=["1"])  # Choose the recommended GPT model
     @patch("os.getenv", return_value="test-key")
     @patch("builtins.print")
     def test_setup_openai(self, mock_print, mock_getenv, mock_input):
@@ -92,8 +92,20 @@ class TestOnboardingWizard:
         wizard._setup_openai()
 
         assert wizard.config["provider"]["type"] == "openai"
-        assert "model" in wizard.config["provider"]
+        assert wizard.config["provider"]["model"] == "gpt-5.6-terra"
         assert wizard.config["provider"]["api_key_env"] == "OPENAI_API_KEY"
+
+    @patch("builtins.input", side_effect=["1"])  # Choose the recommended Gemini model
+    @patch("os.getenv", return_value="test-key")
+    @patch("builtins.print")
+    def test_setup_google(self, mock_print, mock_getenv, mock_input):
+        """Test setting up Google Gemini provider."""
+        wizard = OnboardingWizard()
+        wizard.config["provider"] = {"type": "google"}
+        wizard._setup_google()
+
+        assert wizard.config["provider"]["model"] == "gemini-3.8-flash"
+        assert wizard.config["provider"]["api_key_env"] == "GOOGLE_API_KEY"
 
     @patch("builtins.input", side_effect=["llama3.1"])  # Model name
     @patch("builtins.print")

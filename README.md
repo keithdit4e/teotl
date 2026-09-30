@@ -114,12 +114,12 @@ The harness writes `PLAN.md` and `PROGRESS.md` into the workspace, so you can re
 ```python
 from teotl.core.provider import GeminiProvider, OllamaProvider, OpenAIProvider
 
-GeminiProvider(model="gemini-2.5-flash")   # GOOGLE_API_KEY
-OpenAIProvider(model="gpt-4.1")            # OPENAI_API_KEY
-OllamaProvider(model="llama3.1")           # local, no key
+OpenAIProvider(model="gpt-5.6-terra")        # OPENAI_API_KEY
+GeminiProvider(model="gemini-3.8-flash")     # GOOGLE_API_KEY
+OllamaProvider(model="llama3.1")             # local, no key
 ```
 
-You can mix providers, for example a Claude planner with a local Ollama worker.
+You can mix providers, for example a Claude planner with a local Ollama worker. For a cheap worker, use `claude-haiku-4-5`, `gpt-5.6-luna` or `gemini-3.5-flash-lite`.
 
 ## Command line
 

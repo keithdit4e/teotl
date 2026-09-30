@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-09-30
+
+### Changed
+- **OpenAI defaults:** `OpenAIProvider` now defaults to `gpt-5.6-terra` (was `gpt-5.4`). The wizard offers `gpt-5.6-terra`, `gpt-5.6-sol` (most capable) and `gpt-5.6-luna` (cheap worker), replacing `gpt-4o`, `gpt-4-turbo`, `gpt-4` and `gpt-3.5-turbo`
+- **Gemini default:** `GeminiProvider` now defaults to `gemini-3.8-flash`, with `gemini-3.5-flash-lite` as the cheap option. The previous default, `gemini-2.5-flash`, is limited by Google to projects that already used it, so it likely failed for new users
+- **One model catalog:** OpenAI and Gemini models now live in `teotl.core.models` next to Claude (`OPENAI_MODELS`, `GEMINI_MODELS`), with context windows and prices from the official pricing and model pages (September 2026). Prices and context windows were corrected: `gpt-4o` is $2.50/$10, and Gemini Pro models have a 1,048,576-token window, not 2M
+- **Gemini in the wizard:** the onboarding wizard now offers Google Gemini for single agents and for planner-worker setups, using `GOOGLE_API_KEY`
+
+### Fixed
+- **Cost tracking:** Gemini and OpenAI o-series models were never cost-tracked, so cost limits didn't apply to them. `RateLimitedProvider` now finds the provider from the model catalog
+- **Context compaction:** the agent's threshold now uses the provider's context window. GPT-5.x and Gemini models used to fall through to a 10K-token threshold
+- **Generated `run_planner_worker.py`:** it always required `ANTHROPIC_API_KEY` and treated Gemini models as Claude. It now checks the right key for each model and picks OpenAI or Gemini providers correctly
+
+### Added
+- **GPT-6 warning:** a warning is logged when a GPT-6 model is used with tools. OpenAI supports GPT-6 tool calling only through its Responses API, and `OpenAIProvider` uses Chat Completions
+
 ## [0.2.3] - 2026-09-30
 
 ### Removed

@@ -255,6 +255,12 @@ class Agent:
         Returns:
             Recommended max context tokens before compaction
         """
+        # Prefer the provider's known context window: compact at half of it, capped at
+        # 100K tokens (every current Claude, GPT-5.x and Gemini model has 200K+)
+        window = getattr(self.provider, "context_window", None)
+        if isinstance(window, int) and window > 0:
+            return min(window // 2, 100_000)
+
         model = self.provider.model.lower()
 
         # Claude models (200K-1M context)

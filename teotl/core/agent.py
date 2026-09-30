@@ -123,6 +123,14 @@ class Agent:
 
         # Harness components (optional, for production safety)
         self.cost_tracker = cost_tracker
+        self._cost_warned = False
+        # Health state for the heartbeat monitor (model calls, progress, tool errors)
+        self._health: dict[str, Any] = {
+            "current_turn": 0,
+            "last_progress_turn": 0,
+            "consecutive_errors": 0,
+            "last_error": None,
+        }
         self.audit_logger = audit_logger
         self.checkpoint_manager = checkpoint_manager
         self.heartbeat = heartbeat_monitor
@@ -399,13 +407,19 @@ class Agent:
         all_tool_results: list[ToolResult] = []
         turns = 0
 
+        run_input_tokens = 0
+        run_output_tokens = 0
+        run_cost = 0.0
+        last_call_cost = 0.0
+        halted_reason: str | None = None
+
         while turns < self.max_turns:
             turns += 1
 
-            # Cost tracking: Check budget before LLM call
+            # Cost tracking: check the budget before the call, estimating from the
+            # previous call's real cost (can_spend raises BudgetExceededError)
             if self.cost_tracker:
-                # Estimate cost based on input tokens (rough estimate)
-                estimated_cost = 0.01  # Simple estimate, real impl would count tokens
+                estimated_cost = last_call_cost or 0.01
                 if not self.cost_tracker.can_spend(estimated_cost):
                     logger.error("Budget exceeded, halting execution")
                     break
@@ -416,14 +430,17 @@ class Agent:
                 tools=self._tools if self._tools else None,
             )
 
-            # Cost tracking: Record actual cost
-            cost = 0.0
-            if self.cost_tracker and hasattr(result, "usage"):
-                # Calculate cost from usage (model-dependent)
-                input_tokens = result.usage.get("input_tokens", 0)
-                output_tokens = result.usage.get("output_tokens", 0)
-                # Simple cost calculation (would be model-specific in real impl)
-                cost = (input_tokens * 0.000003) + (output_tokens * 0.000015)
+            # Cost: price this call from the model catalog and add it to the run totals
+            usage = getattr(result, "usage", None) or {}
+            input_tokens = usage.get("input_tokens", 0) or 0
+            output_tokens = usage.get("output_tokens", 0) or 0
+            cost = self._call_cost(input_tokens, output_tokens)
+            run_input_tokens += input_tokens
+            run_output_tokens += output_tokens
+            run_cost += cost
+            last_call_cost = cost
+            self._health["current_turn"] += 1
+            if self.cost_tracker:
                 self.cost_tracker.record(cost, f"turn_{turns}")
 
             # Audit logging: Log LLM interaction
@@ -441,7 +458,8 @@ class Agent:
                 )
 
             if result.done:
-                # No tool calls — final response
+                # No tool calls — final response (counts as progress)
+                self._health["last_progress_turn"] = self._health["current_turn"]
                 self.session.add_assistant(result.content)
 
                 # Auto-activate skills mentioned in response
@@ -480,6 +498,7 @@ class Agent:
                 all_tool_calls.append(tool_call)
                 tool_result = await self._handle_tool_call(tool_call, ui=ui)
                 all_tool_results.append(tool_result)
+                self._record_tool_health(tool_result)
 
                 tool_result_content.append(
                     {
@@ -503,29 +522,16 @@ class Agent:
             # Auto-activate skills mentioned in assistant response
             await self._auto_activate_skills(result.content)
 
+            # Heartbeat: stop a run that's stuck or failing repeatedly
+            halted_reason = await self._run_heartbeat(ui=ui)
+            if halted_reason:
+                break
+
         else:
             logger.warning(f"Agent hit max turns ({self.max_turns})")
 
         # Emit turn end
         await self.events.emit("turn_end", {"message": message, "response": result}, ui=ui)
-
-        # Heartbeat monitoring: Check agent health
-        if self.heartbeat:
-            try:
-                # Update heartbeat state
-                state = {
-                    "current_turn": turns,
-                    "last_progress_turn": turns,
-                    "consecutive_errors": 0,
-                }
-                escalations = await self.heartbeat.check(state)
-                if escalations:
-                    for escalation in escalations:
-                        logger.warning(
-                            f"Heartbeat escalation: {escalation.title} - {escalation.message}"
-                        )
-            except Exception as e:
-                logger.warning(f"Heartbeat monitoring failed: {e}")
 
         # State management: Update persistent state
         if self.state_manager:
@@ -577,11 +583,60 @@ class Agent:
                 logger.warning(f"Context compaction failed: {e}")
 
         return Response(
-            text=result.content,
+            text=halted_reason or result.content,
             tool_calls_made=all_tool_calls,
-            tokens_used=result.usage.get("input_tokens", 0) + result.usage.get("output_tokens", 0),
+            tokens_used=run_input_tokens + run_output_tokens,
+            cost=run_cost,
             tool_results=all_tool_results,
+            input_tokens=run_input_tokens,
+            output_tokens=run_output_tokens,
         )
+
+    def _call_cost(self, input_tokens: int, output_tokens: int) -> float:
+        """USD cost of one model call, from the model catalog (0.0 if unknown)."""
+        from teotl.core.models import provider_for
+        from teotl.primitives.guardrails.rate_limiter import estimate_cost
+
+        model = getattr(self.provider, "model", "") or ""
+        provider = provider_for(model)
+        if provider is None:
+            if not self._cost_warned:
+                logger.warning(f"No pricing for model {model!r}; its cost is reported as $0")
+                self._cost_warned = True
+            return 0.0
+        return estimate_cost(provider, model, input_tokens, output_tokens)
+
+    def _record_tool_health(self, tool_result: ToolResult) -> None:
+        """Update heartbeat state: a successful tool call is progress, errors accumulate."""
+        if tool_result.is_error:
+            self._health["consecutive_errors"] += 1
+            self._health["last_error"] = (tool_result.error or "")[:200]
+        else:
+            self._health["consecutive_errors"] = 0
+            self._health["last_progress_turn"] = self._health["current_turn"]
+
+    async def _run_heartbeat(self, *, ui: UI) -> str | None:
+        """Run the heartbeat monitor when due. Returns a halt message on critical issues."""
+        if not self.heartbeat:
+            return None
+        try:
+            if not self.heartbeat.should_run_heartbeat(self._health["current_turn"]):
+                return None
+            result = self.heartbeat.heartbeat(state=self._health)
+        except Exception as e:
+            logger.warning(f"Heartbeat monitoring failed: {e}")
+            return None
+
+        critical = []
+        for escalation in result.get("escalations", []):
+            logger.warning(f"Heartbeat escalation: {escalation.title} - {escalation.message}")
+            await self.events.emit("heartbeat_escalation", escalation, ui=ui)
+            if escalation.severity == "critical":
+                critical.append(escalation)
+        if critical:
+            reasons = "; ".join(f"{e.title}: {e.message}" for e in critical)
+            return f"Stopped by heartbeat monitor ({reasons})"
+        return None
 
     def register_tool(
         self,

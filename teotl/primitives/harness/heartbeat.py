@@ -122,13 +122,12 @@ class StuckDetectionCheck(HealthCheck):
     def check(self, **context) -> HealthStatus:
         """Check if agent is stuck."""
         state: StateManager = context.get("state")
-        progress: ProgressTracker = context.get("progress")
 
-        if not state or not progress:
+        if not state:
             return HealthStatus(
                 healthy=True,
                 check_name=self.name,
-                message="Skipped (no state or progress available)",
+                message="Skipped (no state available)",
                 severity="info",
             )
 

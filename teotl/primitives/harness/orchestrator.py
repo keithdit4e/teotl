@@ -204,7 +204,9 @@ class PlannerWorkerHarness:
             cost_tracker=self.cost_tracker,
             audit_logger=None,  # Worker doesn't need audit (orchestrator logs it)
             state_manager=self.state,
-            heartbeat_monitor=self.heartbeat,
+            # The harness runs the heartbeat per step with its own state; passing the
+            # monitor to the worker's agent too would run every check twice
+            heartbeat_monitor=None,
         )
 
         # Initialize evaluator (uses same provider as planner)
@@ -212,6 +214,7 @@ class PlannerWorkerHarness:
             agent_id=agent_id,
             provider=planner_provider,  # Same strategic model as planner
             workspace_dir=self.workspace_dir,
+            cost_tracker=self.cost_tracker,
         )
 
         # Initialize advanced janitor (uses worker provider for extraction)
@@ -224,6 +227,7 @@ class PlannerWorkerHarness:
                 compact_every=janitor_compact_every,
                 max_context_tokens=janitor_max_tokens,
                 use_llm_extraction=True,
+                cost_tracker=self.cost_tracker,
             )
 
         # Approval settings
@@ -394,19 +398,8 @@ class PlannerWorkerHarness:
                 last_error=result.error or "Unknown error",
             )
 
-        # Record cost after execution
-        if self.cost_tracker:
-            # Estimate actual cost based on tools used
-            actual_cost = result.tools_used * 0.25 if result.tools_used else 0.10
-            self.cost_tracker.record(
-                cost=actual_cost,
-                operation="execution",
-                metadata={
-                    "step": result.step.number,
-                    "success": result.success,
-                    "tools_used": result.tools_used,
-                },
-            )
+        # Cost: the worker's agent records the real cost of each model call in the
+        # shared cost tracker (result.cost has this step's total)
 
         # Run heartbeat check if enabled
         critical_escalations = []
@@ -650,14 +643,7 @@ class PlannerWorkerHarness:
 
                 logger.info(f"✅ Plan created: {plan.total_steps} steps")
 
-                # Record planning cost
-                if self.cost_tracker:
-                    actual_cost = self.cost_tracker.estimate_operation_cost("planning")
-                    self.cost_tracker.record(
-                        cost=actual_cost,
-                        operation="planning",
-                        metadata={"cycle": cycle, "steps": plan.total_steps},
-                    )
+                # Planning cost is recorded per model call by the planner's agent
 
             except Exception as e:
                 logger.error(f"Planning failed: {e}")
@@ -771,18 +757,7 @@ class PlannerWorkerHarness:
 
                 evaluations.append(evaluation)
 
-                # Record evaluation cost
-                if self.cost_tracker:
-                    actual_cost = self.cost_tracker.estimate_operation_cost("evaluation")
-                    self.cost_tracker.record(
-                        cost=actual_cost,
-                        operation="evaluation",
-                        metadata={
-                            "cycle": cycle,
-                            "goals_achieved": evaluation.goals_achieved,
-                            "confidence": evaluation.confidence,
-                        },
-                    )
+                # Evaluation cost is recorded per model call by the evaluator's agent
 
                 logger.info(
                     f"{'✅ COMPLETE' if evaluation.goals_achieved else '🔄 CONTINUE'} "

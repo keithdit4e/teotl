@@ -69,6 +69,7 @@ class WorkerResult:
         response: str,
         tools_used: int = 0,
         error: str | None = None,
+        cost: float = 0.0,
     ):
         """Initialize worker result.
 
@@ -78,12 +79,14 @@ class WorkerResult:
             response: Worker's response text
             tools_used: Number of tools called
             error: Error message if failed
+            cost: USD cost of the model calls for this attempt
         """
         self.success = success
         self.step = step
         self.response = response
         self.tools_used = tools_used
         self.error = error
+        self.cost = cost
 
 
 class Worker:
@@ -487,6 +490,7 @@ Fix the problem and try again.
                 response=response.text,
                 tools_used=tools_used,
                 error=None if success else reason,
+                cost=getattr(response, "cost", 0.0) or 0.0,
             )
 
         except Exception as e:

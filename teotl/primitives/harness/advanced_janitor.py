@@ -90,6 +90,7 @@ class AdvancedContextJanitor(ContextJanitor):
         compact_every: int = 10,
         max_context_tokens: int = 10000,
         use_llm_extraction: bool = True,
+        cost_tracker=None,
     ):
         """Initialize advanced janitor.
 
@@ -100,6 +101,7 @@ class AdvancedContextJanitor(ContextJanitor):
             compact_every: Compact every N turns
             max_context_tokens: Max context size before forced compaction
             use_llm_extraction: Use LLM for decision extraction (vs keywords)
+            cost_tracker: Optional shared CostTracker (records extraction calls' cost)
         """
         # Initialize base janitor
         super().__init__(
@@ -127,6 +129,7 @@ class AdvancedContextJanitor(ContextJanitor):
                 provider=provider,
                 instructions=self._extraction_instructions(),
                 session_dir=self.workspace_dir / "sessions" / "janitor",
+                cost_tracker=cost_tracker,
             )
             logger.info(f"AdvancedContextJanitor using LLM extraction: {provider.model}")
         else:

@@ -2,7 +2,7 @@
 Teotl — A Python framework for building safe, memory-aware, context-efficient AI agents.
 """
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 
 from teotl.core.agent import Agent
 from teotl.core.events import EventBus

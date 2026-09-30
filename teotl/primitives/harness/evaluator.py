@@ -150,6 +150,7 @@ class Evaluator:
         provider: Provider,
         workspace_dir: Path | None = None,
         instructions: str | None = None,
+        cost_tracker=None,
     ):
         """Initialize evaluator.
 
@@ -158,6 +159,7 @@ class Evaluator:
             provider: Provider with expensive model (Sonnet, Opus)
             workspace_dir: Workspace directory
             instructions: Optional custom evaluation instructions
+            cost_tracker: Optional shared CostTracker (records each model call's cost)
         """
         self.agent_id = agent_id
         self.provider = provider
@@ -182,6 +184,7 @@ class Evaluator:
             provider=provider,
             instructions=self.instructions,
             session_dir=self.workspace_dir / "sessions" / "evaluator",
+            cost_tracker=cost_tracker,
         )
 
         logger.info(f"Evaluator initialized with model: {provider.model}")

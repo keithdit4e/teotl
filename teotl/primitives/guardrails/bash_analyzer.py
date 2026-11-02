@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -176,6 +177,37 @@ class BashAnalyzer:
                     return True
         return False
 
+    # Targets whose recursive deletion is never a reasonable agent action
+    _CRITICAL_RM_TARGETS = frozenset(
+        {"/", "/*", "~", "~/", "~/*", "..", "../"}
+        | {"$HOME", "$HOME/", "$HOME/*", "${HOME}", "${HOME}/"}
+    )
+
+    @classmethod
+    def _wipes_root_or_home(cls, raw_command: str) -> bool:
+        """True for `rm -r`/`-rf` (any flag order) aimed at /, ~, $HOME or the parent dir."""
+        import shlex
+
+        for segment in re.split(r"&&|\|\||;|\|", raw_command):
+            try:
+                tokens = shlex.split(segment, posix=True)
+            except ValueError:
+                tokens = segment.split()
+            if tokens[:1] == ["sudo"]:
+                tokens = tokens[1:]
+            if not tokens or tokens[0] != "rm":
+                continue
+            flags = [t for t in tokens[1:] if t.startswith("-")]
+            recursive = any(
+                f in ("--recursive", "-r", "-R")
+                or (not f.startswith("--") and ("r" in f or "R" in f))
+                for f in flags
+            )
+            targets = [t for t in tokens[1:] if not t.startswith("-")]
+            if recursive and any(t in cls._CRITICAL_RM_TARGETS for t in targets):
+                return True
+        return False
+
     @classmethod
     def _assess_risk(cls, analysis: BashAnalysis, raw_command: str) -> RiskLevel:
         """Assess overall risk level."""
@@ -189,8 +221,10 @@ class BashAnalyzer:
         if pipe_to_shell and analysis.accesses_network:
             return RiskLevel.CRITICAL
 
-        # Critical: fork bombs, disk wipers
+        # Critical: fork bombs, disk wipers, recursive deletes of / or the home folder
         if ":()" in raw_command or cmd == "dd" or (cmd == "rm" and "-rf /" in raw_command):
+            return RiskLevel.CRITICAL
+        if cls._wipes_root_or_home(raw_command):
             return RiskLevel.CRITICAL
 
         # High: destructive, system, sudo

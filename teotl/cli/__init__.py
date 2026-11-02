@@ -107,4 +107,14 @@ def security(args: tuple[str, ...]):
     security_main(list(args))
 
 
+
+@main.command()
+@click.option("--save-svg", type=click.Path(dir_okay=False), help="Also save the output as an SVG")
+def demo(save_svg: str | None):
+    """Watch the guardrails and heartbeat stop a misbehaving agent (offline, no API key)."""
+    from teotl.demo import main as demo_main
+
+    demo_main(save_svg=save_svg)
+
+
 main.add_command(memory)

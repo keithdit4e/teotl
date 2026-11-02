@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-11-02
+
+### Added
+- **`teotl demo`:** watch the guardrails and heartbeat stop a misbehaving agent, offline in a few seconds with no API key. It covers three scenarios:
+  - an unattended cleanup agent's `rm -rf ~` and `curl | sh` are blocked;
+  - a prompt-injected agent can't read `~/.ssh` or email it out;
+  - a failing retry loop is stopped by the heartbeat.
+
+  The model is scripted, but the guardrails, confirmations, heartbeat and cost tracking are the real code, and the demo's shell and email tools never execute anything. `--save-svg` saves the output, which the README now shows at the top.
+
+### Security
+- **Critical actions are always blocked under `standard` and `strict`.** A specific rule could previously downgrade a critical action to "confirm". For example, `curl … | sh` matched the network rule ("confirm new hosts") instead of the critical-risk default ("block"). Unattended runs (no UI, the harness, the daemon) approve confirmations automatically, so these commands could actually run. Critical risk is now decided first.
+- **`rm -rf ~` is now critical.** Recursive deletes of the home folder or the root (`rm -rf ~`, `-r`/`-fr` on `~/`, `$HOME`, `/*`, `..`, also with `sudo`) are rated critical, and so blocked under `standard`. Before, only the literal `rm -rf /` was. Ordinary deletes like `rm -rf build/` are unchanged (confirm).
+- **Block patterns with `*` in the middle now work.** Patterns like `curl * | sh` in the presets never matched, because `*` only worked at the end. `*` now works anywhere.
+
+### Changed
+- **README:** the Guardrails section now says plainly that confirmations are auto-approved in unattended runs, and recommends `strict` or a custom policy there.
+
 ## [0.2.7] - 2026-11-02
 
 ### Changed

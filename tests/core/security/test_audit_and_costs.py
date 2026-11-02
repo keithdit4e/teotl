@@ -11,6 +11,26 @@ from teotl.core.security.audit import AuditEntry, AuditLogger, LogLevel
 from teotl.core.security.cost_tracker import CostRecord, CostTracker, RateLimiter
 from teotl.core.security.policy import CostLimits, RateLimits, SecurityPolicy
 
+FIXED_NOW = datetime(2026, 6, 15, 12, 0, 0)
+
+
+@pytest.fixture
+def mid_month_now(monkeypatch):
+    """Pin the cost tracker's clock to mid-month.
+
+    "This month" starts on the 1st, so a cost from 2 days ago isn't in the current
+    month on the 1st or 2nd; these tests failed on those days with a real clock.
+    """
+    import teotl.core.security.cost_tracker as cost_tracker
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return FIXED_NOW
+
+    monkeypatch.setattr(cost_tracker, "datetime", FixedDatetime)
+    return FIXED_NOW
+
 
 class TestAuditEntry:
     """Test audit entry data structure."""
@@ -273,9 +293,9 @@ class TestCostTracker:
         assert tracker.records[0].cost == 0.001
         assert tracker.records[0].tokens_used == 100
 
-    def test_get_remaining(self, tracker):
+    def test_get_remaining(self, tracker, mid_month_now):
         """Test getting remaining budget."""
-        now = datetime.now()
+        now = mid_month_now
 
         # Add costs with different timestamps
         # 2.0 in last hour
@@ -297,9 +317,9 @@ class TestCostTracker:
         assert remaining["daily"] == 30.0  # 50.0 - 20.0
         assert remaining["monthly"] == 300.0  # 500.0 - 200.0
 
-    def test_get_current(self, tracker):
+    def test_get_current(self, tracker, mid_month_now):
         """Test getting current spending."""
-        now = datetime.now()
+        now = mid_month_now
 
         # Add costs with different timestamps
         # 2.0 in last hour

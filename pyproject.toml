@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "teotl"
-version = "0.2.6"
+version = "0.2.7"
 description = "Autonomous agent framework with a planner-worker architecture, built-in guardrails, and multi-provider support (Claude, GPT, Gemini, Ollama)."
 readme = "README.md"
 license = "MIT"
@@ -46,7 +46,7 @@ dependencies = [
 anthropic = ["anthropic>=0.40"]
 openai = ["openai>=1.50"]
 ollama = ["ollama>=0.4"]
-google = ["google-generativeai>=0.8"]
+google = ["google-genai>=2.0"]
 litellm = ["litellm>=1.50"]
 memory = [
     "sentence-transformers>=3.0",

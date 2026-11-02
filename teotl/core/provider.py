@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -118,33 +119,49 @@ def _to_ollama_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _to_gemini_contents(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Anthropic-format history -> Gemini contents (function_call / function_response)."""
+    """Anthropic-format history -> Gemini contents (function_call / function_response).
+
+    Blocks produced by GeminiProvider carry `gemini_id` (the function call's id) and
+    `gemini_thought_signature` (base64). Both are sent back unchanged: newer Gemini
+    models reject function-calling turns whose thought signatures were dropped.
+    """
     out: list[dict[str, Any]] = []
     names: dict[str, str] = {}
+    gemini_ids: dict[str, str] = {}
     for msg in messages:
         blocks = _blocks(msg.get("content"))
-        parts: list[Any] = []
+        parts: list[dict[str, Any]] = []
         if msg["role"] == "assistant":
-            text = _text(blocks)
-            if text:
-                parts.append({"text": text})
             for b in blocks:
-                if b.get("type") == "tool_use":
+                part: dict[str, Any]
+                if b.get("type") == "text":
+                    if not b.get("text") and not b.get("gemini_thought_signature"):
+                        continue
+                    part = {"text": b.get("text", "")}
+                elif b.get("type") == "tool_use":
                     names[b["id"]] = b["name"]
-                    parts.append({"function_call": {"name": b["name"], "args": b.get("input", {})}})
+                    call: dict[str, Any] = {"name": b["name"], "args": b.get("input", {})}
+                    if b.get("gemini_id"):
+                        call["id"] = b["gemini_id"]
+                        gemini_ids[b["id"]] = b["gemini_id"]
+                    part = {"function_call": call}
+                else:
+                    continue  # other providers' native blocks (e.g. Claude thinking)
+                if b.get("gemini_thought_signature"):
+                    part["thought_signature"] = base64.b64decode(b["gemini_thought_signature"])
+                parts.append(part)
             if parts:
                 out.append({"role": "model", "parts": parts})
         else:
             for b in blocks:
                 if b.get("type") == "tool_result":
-                    parts.append(
-                        {
-                            "function_response": {
-                                "name": names.get(b["tool_use_id"], "unknown"),
-                                "response": {"result": _result_text(b)},
-                            }
-                        }
-                    )
+                    response: dict[str, Any] = {
+                        "name": names.get(b["tool_use_id"], "unknown"),
+                        "response": {"result": _result_text(b)},
+                    }
+                    if b["tool_use_id"] in gemini_ids:
+                        response["id"] = gemini_ids[b["tool_use_id"]]
+                    parts.append({"function_response": response})
             text = _text(blocks)
             if text:
                 parts.append({"text": text})
@@ -457,7 +474,7 @@ class OllamaProvider(Provider):
 
 
 class GeminiProvider(Provider):
-    """Google Gemini via Google Generative AI API."""
+    """Google Gemini via the Google Gen AI SDK (`google-genai`)."""
 
     def __init__(
         self,
@@ -466,22 +483,18 @@ class GeminiProvider(Provider):
         max_tokens: int = 8192,
     ) -> None:
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
         except ImportError:
             raise ImportError(
-                "google-generativeai package required. Install with: pip install teotl[google]"
+                "google-genai package required. Install with: pip install teotl[google]"
             )
 
         self.model = model
         self.max_tokens = max_tokens
-        self._genai = genai
-
-        # Configure the API key
-        if api_key:
-            genai.configure(api_key=api_key)
-
-        # Create the model client
-        self.client = genai.GenerativeModel(model)
+        self._types = types
+        # Without api_key, the SDK reads GOOGLE_API_KEY or GEMINI_API_KEY
+        self.client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
     async def complete(
         self,
@@ -491,67 +504,62 @@ class GeminiProvider(Provider):
         tools: list[ToolDefinition] | None = None,
         max_tokens: int | None = None,
     ) -> CompletionResult:
-        import asyncio
+        types = self._types
+        config = types.GenerateContentConfig(
+            system_instruction=system or None,
+            max_output_tokens=max_tokens if max_tokens is not None else self.max_tokens,
+            tools=self._convert_tools(tools) if tools else None,
+            # Teotl runs tools itself (through guardrails); never let the SDK call them
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+        )
+        contents = [types.Content.model_validate(c) for c in _to_gemini_contents(messages)]
 
-        # Convert Anthropic-format history (incl. tool calls/results) to Gemini contents
-        gemini_messages = _to_gemini_contents(messages)
+        response = await self.client.aio.models.generate_content(
+            model=self.model, contents=contents, config=config
+        )
 
-        # Build generation config
-        generation_config = {
-            "max_output_tokens": max_tokens if max_tokens is not None else self.max_tokens,
-        }
-
-        # Build tool config if tools provided
-        gemini_tools = None
-        if tools:
-            gemini_tools = self._convert_tools(tools)
-
-        # Create model with system instruction if provided
-        model = self.client
-        if system:
-            model = self._genai.GenerativeModel(
-                self.model,
-                system_instruction=system,
-            )
-
-        # Run sync API in thread pool (Gemini SDK is synchronous)
-        def _sync_generate():
-            kwargs: dict[str, Any] = {
-                "contents": gemini_messages,
-                "generation_config": generation_config,
-            }
-            if gemini_tools:
-                kwargs["tools"] = gemini_tools
-
-            return model.generate_content(**kwargs)
-
-        response = await asyncio.to_thread(_sync_generate)
-
-        # Parse response
         content = ""
-        tool_calls = []
+        tool_calls: list[ToolCall] = []
+        assistant_content: list[dict[str, Any]] = []
+        candidate = response.candidates[0] if response.candidates else None
+        for part in (candidate.content.parts if candidate and candidate.content else None) or []:
+            signature = (
+                base64.b64encode(part.thought_signature).decode()
+                if part.thought_signature
+                else None
+            )
+            if part.function_call and part.function_call.name:
+                fc = part.function_call
+                call_id = fc.id or f"call_{fc.name}_{len(tool_calls)}"
+                args = dict(fc.args or {})
+                tool_calls.append(ToolCall(id=call_id, name=fc.name, args=args))
+                block: dict[str, Any] = {
+                    "type": "tool_use",
+                    "id": call_id,
+                    "name": fc.name,
+                    "input": args,
+                }
+                if fc.id:
+                    block["gemini_id"] = fc.id
+            elif part.text is not None and not part.thought:
+                content += part.text
+                block = {"type": "text", "text": part.text}
+            elif signature:
+                block = {"type": "text", "text": ""}  # signature-only part
+            else:
+                continue
+            if signature:
+                block["gemini_thought_signature"] = signature
+            assistant_content.append(block)
 
-        # Handle response parts
-        if response.candidates and response.candidates[0].content.parts:
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, "text") and part.text:
-                    content += part.text
-                elif getattr(part, "function_call", None) and part.function_call.name:
-                    fc = part.function_call
-                    tool_calls.append(
-                        ToolCall(
-                            id=f"call_{fc.name}_{len(tool_calls)}",
-                            name=fc.name,
-                            args=dict(fc.args) if fc.args else {},
-                        )
-                    )
-
-        # Extract usage metadata
-        usage = {}
-        if hasattr(response, "usage_metadata") and response.usage_metadata:
+        usage: dict[str, int] = {}
+        meta = response.usage_metadata
+        if meta:
             usage = {
-                "input_tokens": response.usage_metadata.prompt_token_count or 0,
-                "output_tokens": response.usage_metadata.candidates_token_count or 0,
+                "input_tokens": meta.prompt_token_count or 0,
+                # Thinking tokens are billed as output
+                "output_tokens": (meta.candidates_token_count or 0)
+                + (meta.thoughts_token_count or 0),
             }
 
         return CompletionResult(
@@ -560,24 +568,25 @@ class GeminiProvider(Provider):
             done=len(tool_calls) == 0,
             usage=usage,
             raw=response,
+            # Sent back verbatim so call ids and thought signatures survive tool loops
+            assistant_content=assistant_content,
         )
 
     def _convert_tools(self, tools: list[ToolDefinition]) -> list[Any]:
-        """Convert ToolDefinition to Gemini function declarations."""
-        from google.generativeai.types import content_types
-
-        declarations = []
-        for tool in tools:
-            # Convert JSON schema to Gemini format
-            declarations.append(
-                content_types.FunctionDeclaration(
-                    name=tool.name,
-                    description=tool.description,
-                    parameters=tool.parameters,
-                )
+        """ToolDefinitions -> one Gemini Tool, passing each JSON Schema through as-is."""
+        types = self._types
+        return [
+            types.Tool(
+                function_declarations=[
+                    types.FunctionDeclaration(
+                        name=t.name,
+                        description=t.description,
+                        parameters_json_schema=t.parameters,
+                    )
+                    for t in tools
+                ]
             )
-
-        return [content_types.Tool(function_declarations=declarations)]
+        ]
 
     @property
     def context_window(self) -> int:

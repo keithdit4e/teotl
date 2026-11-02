@@ -286,10 +286,11 @@ class TestProviderConversion:
         assert contents[2]["parts"][0]["function_response"]["name"] == "get_weather"
 
     def test_gemini_contents_match_sdk_types(self):
-        pytest.importorskip("google.generativeai")
-        from google.generativeai.types import content_types
+        pytest.importorskip("google.genai")
+        from google.genai import types
 
-        content_types.to_contents(_to_gemini_contents(HISTORY))
+        for content in _to_gemini_contents(HISTORY):
+            types.Content.model_validate(content)
 
 
 @pytest.mark.asyncio

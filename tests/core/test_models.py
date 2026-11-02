@@ -138,7 +138,7 @@ class TestThinkingBlocks:
 class TestOtherProviderCatalogs:
     def test_openai_and_gemini_defaults(self):
         pytest.importorskip("openai")
-        pytest.importorskip("google.generativeai")
+        pytest.importorskip("google.genai")
         from teotl.core.models import GEMINI_MODELS, OPENAI_MODELS
         from teotl.core.provider import GeminiProvider, OpenAIProvider
 

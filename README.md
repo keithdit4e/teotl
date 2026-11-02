@@ -115,7 +115,7 @@ The harness writes `PLAN.md` and `PROGRESS.md` into the workspace, so you can re
 from teotl.core.provider import GeminiProvider, OllamaProvider, OpenAIProvider
 
 OpenAIProvider(model="gpt-5.6-terra")        # OPENAI_API_KEY
-GeminiProvider(model="gemini-3.8-flash")     # GOOGLE_API_KEY
+GeminiProvider(model="gemini-3.8-flash")     # GOOGLE_API_KEY or GEMINI_API_KEY
 OllamaProvider(model="llama3.1")             # local, no key
 ```
 

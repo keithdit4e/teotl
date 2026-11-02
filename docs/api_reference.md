@@ -355,7 +355,9 @@ class GeminiProvider(Provider):
 ```
 
 - `model` (str): Model name (default: `"gemini-3.8-flash"`). `gemini-3.5-flash-lite` is the cheap option. Google limits the Gemini 2.5 models to projects that already used them, so new projects should use the 3.x models.
-- `api_key` (str | None): API key (default: the Gemini SDK reads `GOOGLE_API_KEY`)
+- `api_key` (str | None): API key (default: the Google Gen AI SDK reads `GOOGLE_API_KEY` or `GEMINI_API_KEY`)
+
+Uses the `google-genai` SDK. Tool calls keep Gemini's call ids and thought signatures in the agent's history and send them back unchanged, as Gemini requires for multi-step tool use. Thinking tokens are counted as output tokens, since they're billed that way.
 
 ---
 

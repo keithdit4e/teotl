@@ -199,7 +199,7 @@ deactivate
 |-------|----------|---------|
 | `anthropic` | anthropic | Claude models |
 | `openai` | openai | OpenAI models |
-| `google` | google-generativeai | Gemini models |
+| `google` | google-genai | Gemini models (key from `GOOGLE_API_KEY` or `GEMINI_API_KEY`) |
 | `ollama` | ollama | Local models via Ollama |
 | `litellm` | litellm | LiteLLM |
 | `memory` | sentence-transformers, sqlite-vec | `LocalMemory` long-term memory |

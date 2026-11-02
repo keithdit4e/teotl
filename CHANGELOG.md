@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-11-02
+
+### Changed
+- **Gemini now uses Google's current SDK, `google-genai`,** replacing `google-generativeai`. Google has ended support for the old SDK, which printed a deprecation warning to every Gemini user. The `teotl[google]` extra now installs `google-genai`. The API key is read from `GOOGLE_API_KEY` or `GEMINI_API_KEY`.
+- Gemini calls now use the SDK's async client directly, instead of running a synchronous call in a thread pool.
+
+### Fixed
+- **Gemini tool loops kept nothing of the model's thinking.** Gemini's call ids and thought signatures are now kept in the agent's history and sent back unchanged. Newer Gemini models require this for multi-step function calling. Function responses carry the matching call id.
+- **Gemini tool schemas could lose detail in conversion.** They are now passed to Gemini as JSON Schema unchanged (`parameters_json_schema`).
+- **Gemini thinking tokens were left out of cost.** They are now counted as output tokens, which is how Google bills them, so costs aren't under-reported.
+- **Gemini's thought summaries could leak into the answer.** They are no longer included in the response text.
+- **The SDK could run tools on its own.** Automatic function calling is now disabled, so tools always run through Teotl's guardrails.
+- **Two cost-tracker tests failed on the 1st and 2nd of every month** (date-dependent). They now use a fixed clock.
+
+### Notes
+- The new SDK doesn't depend on gRPC. gRPC's native code was involved in an intermittent CI crash, which should no longer occur.
+
 ## [0.2.6] - 2026-09-30
 
 ### Fixed

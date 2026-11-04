@@ -91,6 +91,8 @@ class PlannerWorkerHarness:
         unattended: str = "safe_zone",
         safe_zone: list[str | Path] | None = None,
         worker_rules: dict[str, Any] | None = None,
+        sandbox: str = "auto",
+        sandbox_network: bool = False,
         approval_callback: Callable[[CycleApprovalRequest], bool] | None = None,
         halt_on_critical_escalation: bool = True,
         enable_checkpoints: bool = True,
@@ -123,6 +125,9 @@ class PlannerWorkerHarness:
             safe_zone: Folders the worker may change without asking (default: the
                 current working directory, unless that's the home folder or /)
             worker_rules: Extra allow/block rules for the worker (see Agent(rules=...))
+            sandbox: OS sandbox for the worker's shell commands: "auto" (default: on for
+                unattended runs when available), "on", "docker" or "off"
+            sandbox_network: Allow network access inside the sandbox (default: False)
             approval_callback: Optional callback for approval (uses CLI prompt if None)
             halt_on_critical_escalation: Halt execution on critical health issues (default: True)
             enable_checkpoints: Enable automatic git checkpoints before steps (default: True)
@@ -218,6 +223,8 @@ class PlannerWorkerHarness:
             unattended=unattended,
             safe_zone=safe_zone,
             rules=worker_rules,
+            sandbox=sandbox,
+            sandbox_network=sandbox_network,
         )
 
         # Initialize evaluator (uses same provider as planner)

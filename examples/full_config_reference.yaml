@@ -67,6 +67,15 @@ agent:
       block: ["git push --force*", "npm publish*"]
     tools:
       post_to_slack: allow
+  # OS sandbox for shell commands (writes only in safe_zone, no secrets, no network):
+  #   auto (default) - sandbox unattended runs when this machine has one
+  #                    (macOS sandbox-exec, Linux bubblewrap)
+  #   on             - always; refuse commands if no sandbox is available
+  #   docker         - run commands in a throwaway container (sandbox_image)
+  #   off            - no sandbox
+  sandbox: auto
+  sandbox_network: false
+  # sandbox_image: python:3.12-slim
   max_turns: 50                # Maximum turns per run
   enable_injection_defense: true  # Protect against prompt injection
 

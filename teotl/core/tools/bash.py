@@ -89,6 +89,7 @@ class BashTool:
         working_dir: Path | None = None,
         timeout: int = 30,
         max_output_size: int = 1024 * 1024,  # 1MB
+        os_sandbox: Any | None = None,
     ):
         """Initialize bash tool.
 
@@ -97,11 +98,13 @@ class BashTool:
             working_dir: Default working directory (default: current dir)
             timeout: Command timeout in seconds (default: 30)
             max_output_size: Maximum output size in bytes (default: 1MB)
+            os_sandbox: SandboxSettings: run commands inside an OS sandbox
         """
         self.sandbox = sandbox
         self.working_dir = working_dir or Path.cwd()
         self.timeout = timeout
         self.max_output_size = max_output_size
+        self.os_sandbox = os_sandbox
 
         logger.info(
             f"BashTool initialized: "
@@ -192,14 +195,34 @@ class BashTool:
 
         logger.info(f"Executing command (timeout={timeout_val}s): {command[:100]}")
 
+        backend = prepared = None
+        if self.os_sandbox is not None:
+            from teotl.core.tools.os_sandbox import RUN_UNATTENDED
+
+            backend, refusal = self.os_sandbox.choose(RUN_UNATTENDED.get())
+            if refusal:
+                logger.error(refusal)
+                return f"Error: {refusal}"
+
         try:
-            process = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=str(cwd),
-                env=exec_env,
-            )
+            if backend is not None:
+                prepared = backend.prepare(command, self.os_sandbox.spec(Path(cwd)), exec_env)
+                logger.info(f"Sandboxed with {backend.name}")
+                process = await asyncio.create_subprocess_exec(
+                    *prepared.argv,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=str(prepared.cwd),
+                    env=prepared.env,
+                )
+            else:
+                process = await asyncio.create_subprocess_shell(
+                    command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=str(cwd),
+                    env=exec_env,
+                )
 
             try:
                 stdout_bytes, stderr_bytes = await asyncio.wait_for(
@@ -209,6 +232,13 @@ class BashTool:
                 # Kill the process
                 process.kill()
                 await process.wait()
+                if prepared is not None and prepared.kill_argv:
+                    killer = await asyncio.create_subprocess_exec(
+                        *prepared.kill_argv,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await killer.wait()
                 logger.error(f"Command timed out after {timeout_val}s: {command[:100]}")
                 return f"Error: Command timed out after {timeout_val} seconds"
 
@@ -222,6 +252,20 @@ class BashTool:
                 logger.warning(f"Output exceeds max size ({total_output} > {self.max_output_size})")
                 stdout = stdout[: self.max_output_size // 2] + "\n...(truncated)"
                 stderr = stderr[: self.max_output_size // 2] + "\n...(truncated)"
+
+            if (
+                backend is not None
+                and process.returncode
+                and not self.os_sandbox.network
+                and re.search(
+                    r"Could not resolve|Network is unreachable|Temporary failure in name|"
+                    r"nodename nor servname|Name or service not known",
+                    stderr + stdout,
+                )
+            ):
+                stderr += (
+                    "\n(The sandbox has no network access. Set sandbox_network=True to allow it.)"
+                )
 
             # Create result
             result = BashResult(
@@ -253,6 +297,10 @@ class BashTool:
             error_msg = f"Command execution failed: {type(e).__name__}: {e}"
             logger.error(error_msg)
             return f"Error: {error_msg}"
+
+        finally:
+            if prepared is not None:
+                prepared.cleanup()
 
     def get_tool_definition(self) -> dict[str, Any]:
         """Get tool definition for agent registration.
@@ -309,7 +357,11 @@ def create_bash_tool(agent: Any) -> BashTool:
     # Get working directory from agent's config if available
     working_dir = Path.cwd()
 
-    tool = BashTool(sandbox=sandbox, working_dir=working_dir)
+    tool = BashTool(
+        sandbox=sandbox,
+        working_dir=working_dir,
+        os_sandbox=getattr(agent, "os_sandbox", None),
+    )
 
     logger.info("Created bash tool for agent")
 

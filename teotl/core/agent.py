@@ -104,6 +104,10 @@ class Agent:
         unattended: str = "safe_zone",
         safe_zone: list[str | Path] | None = None,
         rules: dict[str, Any] | None = None,
+        # OS sandbox for shell commands (see teotl/core/tools/os_sandbox.py)
+        sandbox: str = "auto",
+        sandbox_network: bool = False,
+        sandbox_image: str | None = None,
     ) -> None:
         self.provider = provider
         self.instructions = instructions
@@ -129,6 +133,7 @@ class Agent:
         # Core primitives (lazy-loaded to avoid circular imports)
         self._init_guardrails(policy)
         self._init_unattended(unattended, safe_zone, rules)
+        self._init_sandbox(sandbox, sandbox_network, sandbox_image)
         self._init_memory(memory)
         self._init_skills(skills)
 
@@ -178,17 +183,29 @@ class Agent:
         from teotl.primitives.guardrails.unattended import resolve_safe_zone, validate_mode
 
         self.unattended = validate_mode(mode)
-        self.safe_zone = resolve_safe_zone(safe_zone) if mode == "safe_zone" else []
+        # The sandbox uses the safe zone folders in every mode
+        self._zone_folders = resolve_safe_zone(safe_zone)
+        self.safe_zone = self._zone_folders if mode == "safe_zone" else []
         if mode == "approve":
             logger.warning(
                 "⚠️  unattended='approve': actions that need confirmation will run WITHOUT "
                 "asking when no one is watching (deleting files, git push, sending email, ...). "
-                "Use unattended='safe_zone' (the default) unless this agent is sandboxed."
+                "Use unattended='safe_zone' (the default), or pair 'approve' with "
+                "sandbox='on' or 'docker'."
             )
         if self.guardrails is not None:
             self.guardrails.unattended_mode = mode
             self.guardrails.safe_zone = self.safe_zone
             self.guardrails.rules = dict(rules or {})
+
+    def _init_sandbox(self, mode: str, network: bool, image: str | None) -> None:
+        """Configure the OS sandbox the bash tool runs commands in."""
+        from teotl.core.tools.os_sandbox import DEFAULT_IMAGE, SandboxSettings
+
+        self.os_sandbox = SandboxSettings(
+            mode=mode, zones=self._zone_folders, network=network, image=image or DEFAULT_IMAGE
+        )
+        self.sandbox = self.os_sandbox.mode
 
     def _init_memory(self, memory: Any | None) -> None:
         """Initialize memory system if available."""
@@ -385,6 +402,9 @@ class Agent:
             Response with the agent's final text and metadata.
         """
         ui = ui or _HeadlessUI()
+        from teotl.core.tools.os_sandbox import RUN_UNATTENDED
+
+        RUN_UNATTENDED.set(bool(getattr(ui, "unattended", False)))
 
         # Emit session start on first message
         if self.session.message_count == 0:
@@ -696,9 +716,7 @@ class Agent:
         Registering a name that already exists replaces the earlier tool.
         """
         if not _TOOL_NAME_RE.match(name):
-            raise ValueError(
-                f"Invalid tool name {name!r}: use 1-64 letters, digits, '_' or '-'"
-            )
+            raise ValueError(f"Invalid tool name {name!r}: use 1-64 letters, digits, '_' or '-'")
         if risk not in _TOOL_RISKS:
             raise ValueError(f"Invalid risk {risk!r}: use one of {', '.join(_TOOL_RISKS)}")
 

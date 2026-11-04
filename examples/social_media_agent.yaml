@@ -69,5 +69,5 @@ agent:
   skills:
     - web  # Search for SMB trends, stats, and examples
 
-  auto_approve: true
+  unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
   max_turns: 30

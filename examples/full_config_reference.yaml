@@ -53,7 +53,20 @@ agent:
     - claude_code              # AI coding assistance
 
   # Execution settings
-  auto_approve: true           # Auto-approve tool calls without prompts
+  # When no one is watching (daemon, harness, headless runs), actions that would
+  # ask for confirmation are handled by `unattended`:
+  #   safe_zone (default) - allow file changes inside safe_zone, refuse the rest
+  #   refuse              - refuse them all
+  #   approve             - run them without asking (logged loudly; not recommended)
+  unattended: safe_zone
+  safe_zone:                   # default: the folder the agent starts in
+    - ~/projects/my-app
+  rules:                       # this agent's own allow/block rules
+    commands:
+      allow: ["git push origin main", "npm run build"]
+      block: ["git push --force*", "npm publish*"]
+    tools:
+      post_to_slack: allow
   max_turns: 50                # Maximum turns per run
   enable_injection_defense: true  # Protect against prompt injection
 

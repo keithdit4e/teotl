@@ -293,7 +293,7 @@ provider:
 agent:
   agent_id: my-first-agent
   instructions: You are my personal assistant. Help me with tasks, reminders, and information.
-  auto_approve: true
+  unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
 daemon:
   poll_interval: 30
   data_dir: ~/.teotl/my-first-agent
@@ -337,7 +337,7 @@ provider:
 agent:
   agent_id: my-first-agent
   instructions: You are my personal assistant. Help me with tasks, reminders, and information.
-  auto_approve: true
+  unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
 daemon:
   poll_interval: 30
   data_dir: ~/.teotl/my-first-agent

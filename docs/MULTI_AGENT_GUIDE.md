@@ -94,14 +94,14 @@ agents:
     agent_id: personal
     instructions: "You are my personal assistant. Help with personal tasks, emails, and scheduling."
     workspace: ~/.teotl/agents/personal
-    auto_approve: true
+    unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
     port: 8000
 
   work:
     agent_id: work
     instructions: "You are my work assistant. Help with work tasks, meetings, and professional communications."
     workspace: ~/.teotl/agents/work
-    auto_approve: true
+    unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
     port: 8001
 ```
 

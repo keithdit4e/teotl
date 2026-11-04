@@ -444,6 +444,13 @@ def create_agent_from_config(
         compact_every = agent_config.janitor.compact_every
         max_context_tokens = agent_config.janitor.max_context_tokens
 
+    if agent_config.auto_approve is not None:
+        logger.warning(
+            f"Agent {agent_config.agent_id!r}: `auto_approve` is deprecated and ignored. "
+            "Unattended agents now default to `unattended: safe_zone`; set "
+            "`unattended: approve` only if you really want actions to run without asking."
+        )
+
     # Create the agent
     agent = Agent(
         provider=provider,
@@ -463,6 +470,9 @@ def create_agent_from_config(
         enable_auto_compact=enable_auto_compact,
         compact_every=compact_every,
         max_context_tokens=max_context_tokens,
+        unattended=agent_config.unattended,
+        safe_zone=agent_config.safe_zone,
+        rules=agent_config.rules,
     )
 
     # Store agent_id on the agent for reference

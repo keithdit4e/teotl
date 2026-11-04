@@ -784,7 +784,7 @@ class OnboardingWizard:
         self.config["agent"] = {
             "agent_id": agent_id,
             "instructions": instructions,
-            "auto_approve": True,  # Required for autonomous execution
+            "unattended": "safe_zone",
             "work_types": work_types,  # Store what types of work this agent does
         }
 
@@ -817,14 +817,14 @@ class OnboardingWizard:
                         "agent_id": "personal",
                         "instructions": "You are my personal assistant. Help with personal tasks, emails, and scheduling.",
                         "workspace": f"{teotl_home_display()}/agents/personal",
-                        "auto_approve": True,
+                        "unattended": "safe_zone",
                         "port": base_port,
                     },
                     "work": {
                         "agent_id": "work",
                         "instructions": "You are my work assistant. Help with work tasks, meetings, and professional communications.",
                         "workspace": f"{teotl_home_display()}/agents/work",
-                        "auto_approve": True,
+                        "unattended": "safe_zone",
                         "port": base_port + 1,
                     },
                 }
@@ -834,7 +834,7 @@ class OnboardingWizard:
                         "agent_id": "personal",
                         "instructions": "You are my personal assistant. Help with personal tasks and scheduling.",
                         "workspace": f"{teotl_home_display()}/agents/personal",
-                        "auto_approve": True,
+                        "unattended": "safe_zone",
                         "port": base_port,
                         "work_types": ["Tasks"],  # Personal assistant uses tasks
                     },
@@ -842,7 +842,7 @@ class OnboardingWizard:
                         "agent_id": "work",
                         "instructions": "You are my work assistant. Help with work tasks and professional communications.",
                         "workspace": f"{teotl_home_display()}/agents/work",
-                        "auto_approve": True,
+                        "unattended": "safe_zone",
                         "port": base_port + 1,
                         "work_types": [
                             "Tasks",
@@ -853,7 +853,7 @@ class OnboardingWizard:
                         "agent_id": "research",
                         "instructions": "You are my research assistant. Help gather information, summarize findings, and analyze data.",
                         "workspace": f"{teotl_home_display()}/agents/research",
-                        "auto_approve": True,
+                        "unattended": "safe_zone",
                         "port": base_port + 2,
                         "work_types": ["Goals"],  # Research uses continuous goals
                     },
@@ -914,7 +914,7 @@ class OnboardingWizard:
                 "agent_id": agent_id,
                 "instructions": instructions,
                 "workspace": workspace,
-                "auto_approve": True,
+                "unattended": "safe_zone",
                 "port": base_port + port_offset,
                 "work_types": work_types,
             }
@@ -933,7 +933,7 @@ class OnboardingWizard:
                 "agent_id": "main",
                 "instructions": "You are a helpful AI assistant",
                 "workspace": f"{teotl_home_display()}/agents/main",
-                "auto_approve": True,
+                "unattended": "safe_zone",
                 "port": base_port,
                 "work_types": ["Goals"],  # Default to Goals
             }

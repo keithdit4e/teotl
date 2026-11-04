@@ -137,7 +137,7 @@ provider:
 agent:
   agent_id: demo-agent
   instructions: You are an autonomous code quality agent
-  auto_approve: true
+  unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
 
 security:
   preset: moderate

@@ -80,6 +80,9 @@ class Agent:
 - `enable_auto_compact` (bool | None): Auto-compact context (default: auto-enabled with memory)
 - `compact_every` (int): Compact frequency in turns (default: 15)
 - `max_context_tokens` (int | None): Max context size (default: auto-detected)
+- `unattended` (str): What to do with actions that need confirmation when no `ui` is passed to `run()`: `"safe_zone"` (default), `"refuse"`, or `"approve"`. See [Unattended runs](GUARDRAILS.md#unattended-runs).
+- `safe_zone` (list[str | Path] | None): Folders the agent may change without asking when unattended (default: the current working directory, unless that's the home folder or `/`)
+- `rules` (dict | None): This agent's allow/block rules: `{"commands": {"allow": [...], "block": [...]}, "tools": {name: "allow" | "block"}}`
 
 A `bash` tool is registered automatically; access to it is governed by the guardrail policy.
 
@@ -417,6 +420,7 @@ class Response:
     tool_results: list[ToolResult] = field(default_factory=list)  # is_error=True if blocked/failed
     input_tokens: int = 0
     output_tokens: int = 0
+    auto_approved: list[ToolCall] = field(default_factory=list)  # ran without asking (unattended="approve")
 ```
 
 `cost` is filled for every run, whether or not a `cost_tracker` is attached. Models not in the catalog (`teotl.core.models`, e.g. local Ollama models) report `0.0`, with a single warning.
@@ -654,6 +658,9 @@ class PlannerWorkerHarness:
         cost_tracker: CostTracker | None = None,
         require_approval_for_continuation: bool = True,
         max_plan_steps: int = 8,
+        unattended: str = "safe_zone",
+        safe_zone: list[str | Path] | None = None,
+        worker_rules: dict[str, Any] | None = None,
         approval_callback: Callable[[CycleApprovalRequest], bool] | None = None,
         halt_on_critical_escalation: bool = True,
         enable_checkpoints: bool = True,

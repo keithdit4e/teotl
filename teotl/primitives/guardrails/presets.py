@@ -119,15 +119,9 @@ PRESETS: dict[str, dict] = {
                 "docker",
             ],
             "confirm": ["*"],
-            "allow": [
-                "ls",
-                "cat",
-                "head",
-                "tail",
-                "wc",
-                "pwd",
-                "echo",
-            ],
+            # Strict asks before every shell command (catch-all confirm). An allow list
+            # here would let commands run without asking.
+            "allow": [],
         },
         "network": {
             "allow_outbound": False,

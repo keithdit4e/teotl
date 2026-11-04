@@ -122,6 +122,9 @@ class Worker:
         instructions: str | None = None,
         enable_checkpoints: bool = True,
         checkpoint_manager: CheckpointManager | None = None,
+        unattended: str = "safe_zone",
+        safe_zone: list[str | Path] | None = None,
+        rules: dict[str, Any] | None = None,
         # Harness components (optional, shared from orchestrator)
         cost_tracker=None,
         audit_logger=None,
@@ -200,6 +203,9 @@ class Worker:
             checkpoint_manager=self.checkpoint_manager,
             heartbeat_monitor=heartbeat_monitor,
             state_manager=self.state,
+            unattended=unattended,
+            safe_zone=safe_zone,
+            rules=rules,
         )
 
         logger.info(f"Worker initialized with model: {provider.model}")

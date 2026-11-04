@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-11-04
+
+### Security
+- **Unattended agents no longer approve everything.** With no UI (headless `agent.run()`, the planner-worker harness, the daemon), every action that needed confirmation used to be approved automatically. A new `unattended` setting controls this:
+  - `safe_zone` **(new default):** allow only plain file operations whose every path is inside the agent's safe zone (default: the folder it starts in), and refuse the rest;
+  - `refuse`: refuse every action that needs confirmation;
+  - `approve`: the old behavior, with a loud warning at startup and each auto-approval recorded in the audit log and `Response.auto_approved`.
+
+  A safe zone of `/` or the home folder is ignored with a warning. Refusals tell the agent why. Unattended runs no longer build "trust" that would skip future confirmations.
+- **`git push`, `git push --force` and `git reset --hard` ran without asking under `standard`.** Multi-word rule entries ("git push") were compared with the first word only, so they never matched. Now any part of a chained command (`ls && git push`) can require confirmation, an allow rule must cover every part, and bash rules apply to every shell command, including ones classified as reads.
+- **Writes through output redirects were treated as reads.** `cat > ~/.bashrc << EOF`, `cat >> ~/.zshrc` and `ls > file` were allowed almost anywhere. Output redirects are now writes, targeting the redirected file. `2>&1`, `/dev/null` and `>` inside quotes aren't counted.
+- **`strict` keeps asking before every shell command.** Its allow list (`ls`, `cat`, …) had never taken effect because of the matching bug. It's now empty, rather than suddenly becoming less strict.
+
+### Added
+- **`Agent(unattended=..., safe_zone=..., rules=...)`,** also available in YAML (`unattended`, `safe_zone`, `rules` under `agent:`) and on `PlannerWorkerHarness(unattended=..., safe_zone=..., worker_rules=...)`. Per-agent rules can allow or block specific commands (`*` wildcards) and tools.
+  - An allow rule only lifts "ask first" to "allowed"; it can't unblock anything.
+  - A block rule applies even when a person is watching.
+- **`Response.auto_approved`:** the calls that ran without asking under `unattended="approve"`.
+
+### Changed
+- **`auto_approve` in YAML configs is deprecated and ignored,** with a warning; use `unattended`. The setup wizard now writes `unattended: safe_zone`.
+
+Live check: a planner-worker run on Claude, with every file write routed through the safe zone, passed with no refusals ($0.087).
+
 ## [0.2.8] - 2026-11-02
 
 ### Added

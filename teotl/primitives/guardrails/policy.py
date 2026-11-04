@@ -13,6 +13,38 @@ from teotl.core.types import Action, ActionType, Decision
 logger = logging.getLogger(__name__)
 
 
+def _command_segments(command: str) -> list[list[str]]:
+    """Split a shell command on &&, ||, ;, | into word lists (best effort)."""
+    import re
+    import shlex
+
+    segments = []
+    for part in re.split(r"&&|\|\||;|\|", command):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            words = shlex.split(part)
+        except ValueError:
+            words = part.split()
+        while words and "=" in words[0] and not words[0].startswith("-"):
+            words = words[1:]  # FOO=bar cmd
+        if words and words[0] == "sudo":
+            words = words[1:]
+        if words:
+            words[0] = Path(words[0]).name
+            segments.append(words)
+    return segments
+
+
+def _matches_entry(words: list[str], entry: str) -> bool:
+    """A rule entry is a command name ("rm") or leading words ("git push")."""
+    entry_words = entry.split()
+    if entry_words == ["*"]:
+        return True
+    return words[: len(entry_words)] == entry_words
+
+
 class Policy:
     """
     Declarative guardrail policy. Loaded from JSON, preset name, or dict.
@@ -91,17 +123,21 @@ class Policy:
         if action.risk == RiskLevel.CRITICAL:
             return self._default_for_risk(action)
 
-        # Check filesystem rules
+        # Filesystem and bash rules. Bash rules apply to every shell command,
+        # whatever its classification ("ls && git push" is classified as a read).
+        fs_decision = None
         if action.type in (ActionType.READ, ActionType.WRITE) and action.target:
             fs_decision = self._check_filesystem(action)
-            if fs_decision is not None:
-                return fs_decision
+        bash_decision = self._check_bash(action) if "command" in action.details else None
 
-        # Check bash rules
-        if action.type == ActionType.EXECUTE:
-            bash_decision = self._check_bash(action)
-            if bash_decision is not None:
-                return bash_decision
+        if Decision.BLOCK in (fs_decision, bash_decision):
+            return Decision.BLOCK
+        if bash_decision == Decision.CONFIRM:
+            return Decision.CONFIRM
+        if fs_decision is not None:
+            return fs_decision
+        if bash_decision is not None:
+            return bash_decision
 
         # Check network rules
         if action.type == ActionType.NETWORK:
@@ -157,12 +193,17 @@ class Policy:
         return None  # Fall through to default
 
     def _check_bash(self, action: Action) -> Decision | None:
-        """Check bash command rules."""
-        command = action.details.get("command", "")
-        primary = action.details.get("primary_command", "")
+        """Check bash command rules against every part of a chained command.
 
-        # Block list: "*" is a wildcard anywhere ("curl * | sh"); other patterns
-        # match as substrings
+        - block: "*" is a wildcard anywhere ("curl * | sh"); other patterns match
+          as substrings of the whole command
+        - confirm: any part of the command matches (an entry like "git push"
+          matches commands starting with those words; "rm" matches the command name)
+        - allow: every part of the command matches; checked before a catch-all
+          "*" confirm, so strict's allow list (ls, cat, ...) still applies
+        """
+        command = action.details.get("command", "")
+
         for pattern in self.bash.get("block", []):
             if "*" in pattern:
                 if fnmatch(command, pattern) or fnmatch(command, pattern + "*"):
@@ -170,17 +211,19 @@ class Policy:
             elif pattern in command:
                 return Decision.BLOCK
 
-        # Allow list (primary command)
-        for allowed in self.bash.get("allow", []):
-            if primary == allowed:
-                return Decision.ALLOW
-
-        # Confirm list (primary command)
-        for confirm_cmd in self.bash.get("confirm", []):
-            if primary == confirm_cmd:
-                return Decision.CONFIRM
-
-        return None  # Fall through to default
+        segments = _command_segments(command)
+        if not segments:
+            return None
+        confirm = self.bash.get("confirm", [])
+        specific_confirm = [e for e in confirm if e.strip() != "*"]
+        if any(_matches_entry(seg, e) for seg in segments for e in specific_confirm):
+            return Decision.CONFIRM
+        allowed = self.bash.get("allow", [])
+        if allowed and all(any(_matches_entry(seg, e) for e in allowed) for seg in segments):
+            return Decision.ALLOW
+        if len(specific_confirm) != len(confirm):  # catch-all "*" confirm
+            return Decision.CONFIRM
+        return None
 
     def _check_network(self, action: Action) -> Decision | None:
         """Check network access rules."""

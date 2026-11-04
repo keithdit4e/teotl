@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,14 @@ class GuardrailEngine:
         self.audit = AuditLog()
         # Risk levels declared for custom tools (Agent.register_tool(risk=...))
         self.tool_risk: dict[str, RiskLevel] = {}
+        # Unattended behavior (no one to ask): "safe_zone", "refuse" or "approve"
+        self.unattended_mode = "safe_zone"
+        self.safe_zone: list[Path] = []
+        # Per-agent rules: {"commands": {"allow": [...], "block": [...]},
+        #                   "tools": {"name": "allow" | "block"}}
+        self.rules: dict[str, Any] = {}
+        # Tool calls approved automatically in "approve" mode (drained by Agent.run)
+        self.auto_approved: list[ToolCall] = []
 
     def set_tool_risk(self, tool_name: str, risk: str) -> None:
         """Set the risk level guardrails use for a custom tool ("low" to "critical")."""
@@ -88,8 +97,14 @@ class GuardrailEngine:
         # 1. Classify the action
         action = classify(tool_call, tool_risk=self.tool_risk)
 
-        # 2. Check policy
+        # 2. Check policy, then the agent's own rules. A block rule blocks anything;
+        #    an allow rule only lifts "ask first" to "allow" (it can't unblock).
         decision = self.policy.decide(action)
+        rule = self._rule_decision(tool_call, action)
+        if rule == Decision.BLOCK:
+            decision = Decision.BLOCK
+        elif rule == Decision.ALLOW and decision == Decision.CONFIRM:
+            decision = Decision.ALLOW
 
         # 3. Apply progressive trust
         if decision == Decision.CONFIRM and self.trust.is_trusted(action):
@@ -98,10 +113,17 @@ class GuardrailEngine:
 
         # 4. Execute decision
         if decision == Decision.BLOCK:
-            reason = self.policy.block_reason(action)
+            reason = (
+                f"`{tool_call.name}` is blocked by this agent's rules"
+                if rule == Decision.BLOCK
+                else self.policy.block_reason(action)
+            )
             self.audit.log(action, "blocked", reason)
             logger.info(f"Blocked: {reason}")
             return EventResult(data=tool_call, blocked=True, reason=reason)
+
+        if decision == Decision.CONFIRM and getattr(ui, "unattended", False):
+            return self._decide_unattended(action, tool_call)
 
         if decision == Decision.CONFIRM:
             if ui is None:
@@ -124,6 +146,49 @@ class GuardrailEngine:
         # Allow
         self.audit.log(action, "allowed")
         return EventResult(data=tool_call, blocked=False)
+
+    def _rule_decision(self, tool_call: ToolCall, action: Action) -> Decision | None:
+        """The agent's own allow/block rules for this call, if any match."""
+        if not self.rules:
+            return None
+        tool_rule = (self.rules.get("tools") or {}).get(tool_call.name)
+        if tool_rule in ("allow", "block"):
+            return Decision.ALLOW if tool_rule == "allow" else Decision.BLOCK
+        if tool_call.name == "bash":
+            command = str(tool_call.args.get("command", "")).strip()
+            commands = self.rules.get("commands") or {}
+            if any(fnmatch(command, p) for p in commands.get("block", [])):
+                return Decision.BLOCK
+            if any(fnmatch(command, p) for p in commands.get("allow", [])):
+                return Decision.ALLOW
+        return None
+
+    def _decide_unattended(self, action: Action, tool_call: ToolCall) -> EventResult:
+        """An "ask first" action with nobody to ask."""
+        from teotl.primitives.guardrails.unattended import inside_safe_zone
+
+        if self.unattended_mode == "approve":
+            self.audit.log(action, "auto_approved_unattended")
+            self.auto_approved.append(tool_call)
+            logger.warning(f"Auto-approved without asking (unattended: approve): {action.target}")
+            return EventResult(data=tool_call, blocked=False)
+
+        if self.unattended_mode == "safe_zone":
+            inside, why = inside_safe_zone(tool_call.name, tool_call.args, self.safe_zone)
+            if inside:
+                self.audit.log(action, "allowed_safe_zone")
+                return EventResult(data=tool_call, blocked=False)
+            reason = (
+                f"Refused: this needs confirmation and no one is watching ({why}). "
+                "Allow it in the agent's rules, or add its folder to safe_zone."
+            )
+        else:
+            reason = (
+                "Refused: this needs confirmation and no one is watching (unattended: refuse)."
+            )
+        self.audit.log(action, "refused_unattended", reason)
+        logger.info(reason)
+        return EventResult(data=tool_call, blocked=True, reason=reason)
 
     def _describe_action(self, action: Action, tool_call: ToolCall) -> str:
         """Generate a human-readable description of the action."""

@@ -128,6 +128,8 @@ class Response:
     tool_results: list[ToolResult] = field(default_factory=list)
     input_tokens: int = 0  # across every model call in the run
     output_tokens: int = 0
+    # Calls that needed confirmation and ran without asking (unattended="approve")
+    auto_approved: list[ToolCall] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

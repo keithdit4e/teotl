@@ -88,6 +88,9 @@ class PlannerWorkerHarness:
         cost_tracker: CostTracker | None = None,
         require_approval_for_continuation: bool = True,
         max_plan_steps: int = 8,
+        unattended: str = "safe_zone",
+        safe_zone: list[str | Path] | None = None,
+        worker_rules: dict[str, Any] | None = None,
         approval_callback: Callable[[CycleApprovalRequest], bool] | None = None,
         halt_on_critical_escalation: bool = True,
         enable_checkpoints: bool = True,
@@ -115,6 +118,11 @@ class PlannerWorkerHarness:
             cost_tracker: Optional CostTracker instance (creates default if None)
             require_approval_for_continuation: Require human approval to continue cycles (default: True)
             max_plan_steps: Maximum steps the planner may create (default: 8)
+            unattended: What the worker does with "ask first" actions when no one is
+                watching: "safe_zone" (default), "refuse" or "approve"
+            safe_zone: Folders the worker may change without asking (default: the
+                current working directory, unless that's the home folder or /)
+            worker_rules: Extra allow/block rules for the worker (see Agent(rules=...))
             approval_callback: Optional callback for approval (uses CLI prompt if None)
             halt_on_critical_escalation: Halt execution on critical health issues (default: True)
             enable_checkpoints: Enable automatic git checkpoints before steps (default: True)
@@ -207,6 +215,9 @@ class PlannerWorkerHarness:
             # The harness runs the heartbeat per step with its own state; passing the
             # monitor to the worker's agent too would run every check twice
             heartbeat_monitor=None,
+            unattended=unattended,
+            safe_zone=safe_zone,
+            rules=worker_rules,
         )
 
         # Initialize evaluator (uses same provider as planner)

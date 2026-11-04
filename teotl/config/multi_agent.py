@@ -218,6 +218,11 @@ class AgentConfig(BaseModel):
     safe_zone: list[str] | None = None  # default: the folder the agent starts in
     # {"commands": {"allow": [...], "block": [...]}, "tools": {name: "allow" | "block"}}
     rules: dict[str, Any] | None = None
+    # OS sandbox for shell commands: "auto" (default: on for unattended runs when this
+    # machine has one), "on" (always; refuse commands if unavailable), "docker", "off"
+    sandbox: str = "auto"
+    sandbox_network: bool = False
+    sandbox_image: str | None = None  # for sandbox: docker
     port: int | None = None  # A2A server port
     max_turns: int = 50
 

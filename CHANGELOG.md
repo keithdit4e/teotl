@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`strict` keeps asking before every shell command.** Its allow list (`ls`, `cat`, …) had never taken effect because of the matching bug. It's now empty, rather than suddenly becoming less strict.
 
 ### Added
+- **OS sandbox for shell commands.** Guardrails read command text; the sandbox stops what code actually does.
+  - What it stops: sandboxed commands can write only inside the safe zone and a private temp folder, can't read secrets (`~/.ssh`, `~/.aws`, `~/.config/gh`, Teotl's credentials, the keychain, ...), have no network unless `sandbox_network=True`, can't reach the Docker socket, and don't receive API keys or tokens from the environment.
+  - Backends: macOS `sandbox-exec` (built in), Linux bubblewrap, or Docker.
+  - `Agent(sandbox=...)`, also in YAML and on `PlannerWorkerHarness`:
+    - `auto` (default) sandboxes unattended runs when a sandbox is available;
+    - `on` sandboxes every run and refuses commands when none is available;
+    - `docker` runs each command in a throwaway container;
+    - `off` turns it off.
+  - `unattended="approve"` with `sandbox="on"` is now a reasonable way to let an agent work without asking.
+  - Escape tests cover symlinks, `python -c`, `cd ..`, secrets, network and environment on macOS and Linux.
 - **`Agent(unattended=..., safe_zone=..., rules=...)`,** also available in YAML (`unattended`, `safe_zone`, `rules` under `agent:`) and on `PlannerWorkerHarness(unattended=..., safe_zone=..., worker_rules=...)`. Per-agent rules can allow or block specific commands (`*` wildcards) and tools.
   - An allow rule only lifts "ask first" to "allowed"; it can't unblock anything.
   - A block rule applies even when a person is watching.
@@ -32,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **`auto_approve` in YAML configs is deprecated and ignored,** with a warning; use `unattended`. The setup wizard now writes `unattended: safe_zone`.
 
-Live checks: planner-worker runs on Claude, with every file write routed through the safe zone and with the tighter command rules, passed with no refusals ($0.087 and $0.07).
+Live checks: planner-worker runs on Claude passed with no refusals, with every file write routed through the safe zone ($0.087), with the tighter command rules ($0.07), and inside the macOS sandbox ($0.07).
 
 ## [0.2.8] - 2026-11-02
 

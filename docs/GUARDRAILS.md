@@ -513,7 +513,7 @@ When a person is watching (`teotl chat`, or a `ui=` you pass to `agent.run()`), 
 |---|---|---|
 | `safe_zone` **(default)** | Allowed if they're plain file operations whose every path is inside the safe zone; refused otherwise | The safe zone defaults to the folder the agent starts in |
 | `refuse` | Always refused | Strictest |
-| `approve` | Always run without asking | ⚠️ Logs a warning at startup; each auto-approval is in the audit log and `Response.auto_approved`. Not recommended outside a sandbox |
+| `approve` | Always run without asking | ⚠️ Logs a warning at startup; each auto-approval is in the audit log and `Response.auto_approved`. Pair it with `sandbox="on"` or `"docker"` |
 
 Blocked actions stay blocked in every mode, and refusals tell the agent why, so it can report what it couldn't do.
 
@@ -542,6 +542,38 @@ agent = Agent(
 - `*` is a wildcard.
 
 The same settings work in YAML (`unattended`, `safe_zone`, `rules` under `agent:`) and on `PlannerWorkerHarness(unattended=..., safe_zone=..., worker_rules=...)`. The old `auto_approve` config key is deprecated and ignored.
+
+### OS sandbox
+
+Guardrails decide from the command text, so they can't see what `python cleanup.py` or a `make` target will do once it runs. The sandbox is the second layer: the operating system itself stops a shell command from:
+- writing anywhere except the safe zone and a private temp folder (symlinks that point outside don't help);
+- reading secrets (`~/.ssh`, `~/.aws`, `~/.gnupg`, `~/.config/gh`, `~/.netrc`, Teotl's credentials, the macOS keychain, ...);
+- using the network (localhost still works). Set `sandbox_network=True` to allow it;
+- reaching the Docker socket, which would let it start an unsandboxed container.
+
+API keys, tokens and passwords in the environment aren't passed to sandboxed commands.
+
+| `sandbox` | What happens |
+|---|---|
+| `auto` **(default)** | Unattended runs are sandboxed when this machine has a sandbox. Runs with a person watching aren't. With no sandbox available it warns once and relies on the guardrails |
+| `on` | Every command is sandboxed. With no sandbox available, commands are refused (fails closed) |
+| `docker` | Every command runs in a throwaway container that only sees the safe zone (`sandbox_image`, default `python:3.12-slim`) |
+| `off` | No sandbox |
+
+| Platform | Backend | Setup |
+|---|---|---|
+| macOS | `sandbox-exec` | Built in |
+| Linux | bubblewrap (`bwrap`) | `apt install bubblewrap` / `dnf install bubblewrap` |
+| Any (incl. Windows) | Docker | Docker running, image pulled beforehand |
+
+The native sandboxes use your own tools and start instantly. Docker gives stronger isolation (nothing outside the safe zone is even visible), but the container has its own tools and the first run of an image is slow.
+
+```python
+# Let an unattended agent run without asking, inside the sandbox
+agent = Agent(provider=provider, unattended="approve", sandbox="on", safe_zone=["~/projects/site"])
+```
+
+Only the `bash` tool is sandboxed. Tools you register in Python run in your own process, so give them a `risk` level.
 
 ## Trust Building
 

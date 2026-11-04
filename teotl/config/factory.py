@@ -473,6 +473,9 @@ def create_agent_from_config(
         unattended=agent_config.unattended,
         safe_zone=agent_config.safe_zone,
         rules=agent_config.rules,
+        sandbox=agent_config.sandbox,
+        sandbox_network=agent_config.sandbox_network,
+        sandbox_image=agent_config.sandbox_image,
     )
 
     # Store agent_id on the agent for reference

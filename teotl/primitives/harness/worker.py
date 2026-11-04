@@ -125,6 +125,8 @@ class Worker:
         unattended: str = "safe_zone",
         safe_zone: list[str | Path] | None = None,
         rules: dict[str, Any] | None = None,
+        sandbox: str = "auto",
+        sandbox_network: bool = False,
         # Harness components (optional, shared from orchestrator)
         cost_tracker=None,
         audit_logger=None,
@@ -206,6 +208,8 @@ class Worker:
             unattended=unattended,
             safe_zone=safe_zone,
             rules=rules,
+            sandbox=sandbox,
+            sandbox_network=sandbox_network,
         )
 
         logger.info(f"Worker initialized with model: {provider.model}")
@@ -249,7 +253,9 @@ class Worker:
         path = _concrete_path(step.file_path)
         if path is not None:
             fs = self.policy.filesystem
-            if fs._matches_path(path, fs.blocked_paths) or fs._matches_path(path, fs.readonly_paths):
+            if fs._matches_path(path, fs.blocked_paths) or fs._matches_path(
+                path, fs.readonly_paths
+            ):
                 reason = f"File path blocked by security policy: {path}"
                 logger.error(reason)
                 return (False, reason)

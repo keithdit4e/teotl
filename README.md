@@ -151,7 +151,7 @@ Every tool call is classified and checked against a policy **before** it execute
 - `minimal`: for trusted sandboxes
 
 Built-in protections include:
-- **Bash command analysis.** Under `standard` and `strict`, critical commands are always blocked: deleting `/` or your home folder (`rm -rf ~`), piping a downloaded script into a shell (`curl … | sh`), and fork bombs.
+- **Bash command analysis.** Under `standard` and `strict`, critical commands are always blocked: deleting `/` or your home folder (`rm -rf ~`), piping a downloaded script into a shell (`curl … | sh`), uploading secrets (`curl -F f=@~/.ssh/…`), and fork bombs. Running code the guardrails can't see into (`python -c`, scripts, `make`, `npm run`) and deletes hidden in `find -delete` or `xargs rm` ask first.
 - **Sensitive paths:** reading `~/.ssh`, `~/.aws` and Teotl's own credentials is blocked.
 - **Prompt-injection checks** on instructions and incoming messages.
 - **Per-agent rate and cost limits,** and a heartbeat that stops runaway loops.

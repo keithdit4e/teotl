@@ -132,6 +132,15 @@ class Policy:
 
         if Decision.BLOCK in (fs_decision, bash_decision):
             return Decision.BLOCK
+        # Allow lists match command names ("python", "find"); under standard and
+        # strict they can't wave through high-risk commands (inline code, scripts,
+        # find -delete), which then ask first like any other high-risk action
+        if (
+            bash_decision == Decision.ALLOW
+            and action.risk == RiskLevel.HIGH
+            and self.level in ("standard", "strict")
+        ):
+            bash_decision = None
         if bash_decision == Decision.CONFIRM:
             return Decision.CONFIRM
         if fs_decision is not None:

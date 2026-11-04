@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A safe zone of `/` or the home folder is ignored with a warning. Refusals tell the agent why. Unattended runs no longer build "trust" that would skip future confirmations.
 - **`git push`, `git push --force` and `git reset --hard` ran without asking under `standard`.** Multi-word rule entries ("git push") were compared with the first word only, so they never matched. Now any part of a chained command (`ls && git push`) can require confirmation, an allow rule must cover every part, and bash rules apply to every shell command, including ones classified as reads.
 - **Writes through output redirects were treated as reads.** `cat > ~/.bashrc << EOF`, `cat >> ~/.zshrc` and `ls > file` were allowed almost anywhere. Output redirects are now writes, targeting the redirected file. `2>&1`, `/dev/null` and `>` inside quotes aren't counted.
+- **Running code no longer slips past the guardrails.** Guardrails read command text, so `python3 -c "shutil.rmtree(...)"`, `node -e ...`, `python3 cleanup.py`, `./deploy.sh` and `make clean` were allowed under `standard` (the allow list names `python` and `node`). Inline code, scripts and task runners (`make`, `npm run`, `npx`) are now high risk and ask first under `standard` and `strict`, whatever the allow list says. `pytest`, `python -m pytest` and `npm test` stay allowed so unattended workers can check their work, and the planner now prefers them for **Verify** commands.
+- **Deletes hidden in `find` and `xargs` are caught.** `find … -delete`, `find … -exec rm` and `… | xargs rm` were classified as reads. They're now destructive (ask first), and `find ~ -delete` or `find / … -delete` is blocked.
+- **Uploading secrets is blocked.** `curl -F f=@~/.ssh/id_ed25519 …`, `curl --data-binary @$HOME/.ssh/…` and `curl -T ~/.aws/credentials …` only asked first; they're now blocked under `standard` and `strict`.
 - **`strict` keeps asking before every shell command.** Its allow list (`ls`, `cat`, …) had never taken effect because of the matching bug. It's now empty, rather than suddenly becoming less strict.
 
 ### Added
@@ -29,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **`auto_approve` in YAML configs is deprecated and ignored,** with a warning; use `unattended`. The setup wizard now writes `unattended: safe_zone`.
 
-Live check: a planner-worker run on Claude, with every file write routed through the safe zone, passed with no refusals ($0.087).
+Live checks: planner-worker runs on Claude, with every file write routed through the safe zone and with the tighter command rules, passed with no refusals ($0.087 and $0.07).
 
 ## [0.2.8] - 2026-11-02
 

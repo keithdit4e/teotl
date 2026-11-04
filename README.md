@@ -9,7 +9,19 @@
 
 Teotl splits agent work between a **planner** (a strong model that runs once to write a step-by-step plan) and a **worker** (a cheaper, faster model that executes each step). Every tool call passes through a policy-based guardrail layer before it runs, and a harness keeps plans, progress, costs, and audit logs on disk so long-running missions can pause, resume, and be inspected.
 
-> **Status:** alpha (v0.2.0). APIs may change between minor versions.
+> **Status:** alpha. APIs may change between minor versions.
+
+### See it stop a misbehaving agent
+
+```bash
+pip install teotl && teotl demo
+```
+
+Runs offline in a few seconds, with no API key needed:
+
+![teotl demo: an unattended agent's `rm -rf ~` and `curl | sh` are blocked, a prompt-injected agent can't read ~/.ssh or email it out, and a retry loop is stopped by the heartbeat](docs/assets/demo.svg)
+
+The demo plays back a scripted model so it's identical every time. The guardrails, confirmation prompts, heartbeat and cost tracking are Teotl's real code, and its shell and email tools are stand-ins that never execute anything.
 
 ## Features
 
@@ -138,7 +150,16 @@ Every tool call is classified and checked against a policy **before** it execute
 - `standard`: common development actions allowed; destructive or sensitive actions need approval
 - `minimal`: for trusted sandboxes
 
-Built-in protections include bash command analysis (for example blocking `rm -rf /` and piping remote scripts to a shell), prompt-injection checks on instructions and incoming messages, per-agent rate and cost limits, and a trust score that grows with repeated safe behavior. See [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
+Built-in protections include:
+- **Bash command analysis.** Under `standard` and `strict`, critical commands are always blocked: deleting `/` or your home folder (`rm -rf ~`), piping a downloaded script into a shell (`curl … | sh`), and fork bombs.
+- **Sensitive paths:** reading `~/.ssh`, `~/.aws` and Teotl's own credentials is blocked.
+- **Prompt-injection checks** on instructions and incoming messages.
+- **Per-agent rate and cost limits,** and a heartbeat that stops runaway loops.
+- **A trust score** that grows with repeated safe behavior.
+
+> **Unattended runs:** with no UI (headless runs, the planner-worker harness, the daemon), actions that would ask for confirmation are approved automatically. Blocked actions stay blocked. For unattended agents, use `strict`, or a custom policy that blocks what you'd otherwise confirm.
+
+See [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
 
 ## Your own skills and tools
 

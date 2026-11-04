@@ -191,7 +191,7 @@ filesystem:
 
 # Bash command rules (for execute actions)
 bash:
-  block: ["rm -rf /", "curl * | bash"]   # substring / prefix patterns
+  block: ["rm -rf /", "curl * | bash"]   # substrings; "*" is a wildcard anywhere
   confirm: ["rm", "git push", "sudo"]    # primary command names
   allow: ["ls", "cat", "git status"]     # primary command names
 
@@ -233,6 +233,8 @@ Selects the default decision for actions no rule matched:
 | `critical` | confirm | block | block |
 
 Any other `level` value uses the `standard` defaults.
+
+**Critical actions are decided by this table alone.** No `allow`, `confirm` or network rule can downgrade them, so under `standard` and `strict` they're always blocked. This matters for unattended runs (no UI, the planner-worker harness, the daemon), where confirmations are approved automatically.
 
 #### `filesystem`
 
@@ -345,7 +347,7 @@ agent = Agent(provider=provider, policy="standard")
 - Low-risk actions: allow; medium/high: confirm; critical: block
 - Filesystem: `~/projects/**`, `~/Documents/**`, `/tmp/**` allowed (writes confirmed);
   `~/.ssh`, `~/.aws`, `~/.teotl/auth`, `~/.gnupg` denied
-- Bash: blocks `rm -rf /`, fork bombs, and piping `curl`/`wget` into a shell; confirms
+- Bash: blocks `rm -rf /` or `~` (and `$HOME`, `/*`, `..`), fork bombs, and piping `curl`/`wget` into a shell; confirms
   `rm`, `git push`, `git reset --hard`, `sudo`, `docker`, `pip install`, `chmod`, `kill`, ...;
   allows common read-only commands, `git status/log/diff`, `pytest`, ...
 - Network: outbound restricted to `api.github.com`, `pypi.org`, `registry.npmjs.org`; other hosts confirmed
@@ -490,8 +492,8 @@ paths such as `~/.ssh`; commands that can't be parsed
 
 ### `CRITICAL` - Catastrophic, irreversible
 
-**Examples:** `rm -rf /`, `dd ...`, fork bombs, downloading and piping into a shell
-(`curl ... | bash`)
+**Examples:** `rm -rf /`, `rm -rf ~` (also `-r`/`-fr` on `$HOME`, `/*`, `..`), `dd ...`, fork bombs,
+downloading and piping into a shell (`curl ... | bash`)
 
 The default decision for each level depends on the policy `level` (see the table above).
 

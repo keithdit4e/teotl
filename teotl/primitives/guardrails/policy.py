@@ -82,6 +82,15 @@ class Policy:
             Decision.CONFIRM - ask user before proceeding
             Decision.BLOCK - refuse to execute
         """
+        from teotl.core.types import RiskLevel
+
+        # Critical actions (pipe-to-shell from the network, wiping / or ~, fork bombs)
+        # are decided by risk alone: blocked under standard and strict. Specific
+        # allow/confirm/network rules must not downgrade them, because unattended
+        # runs auto-approve confirmations.
+        if action.risk == RiskLevel.CRITICAL:
+            return self._default_for_risk(action)
+
         # Check filesystem rules
         if action.type in (ActionType.READ, ActionType.WRITE) and action.target:
             fs_decision = self._check_filesystem(action)
@@ -152,10 +161,11 @@ class Policy:
         command = action.details.get("command", "")
         primary = action.details.get("primary_command", "")
 
-        # Block list (exact patterns)
+        # Block list: "*" is a wildcard anywhere ("curl * | sh"); other patterns
+        # match as substrings
         for pattern in self.bash.get("block", []):
-            if pattern.endswith("*"):
-                if command.startswith(pattern[:-1]):
+            if "*" in pattern:
+                if fnmatch(command, pattern) or fnmatch(command, pattern + "*"):
                     return Decision.BLOCK
             elif pattern in command:
                 return Decision.BLOCK

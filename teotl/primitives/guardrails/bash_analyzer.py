@@ -54,6 +54,8 @@ class BashAnalysis:
     accesses_network: bool = False
     accesses_sensitive: bool = False
     all_commands: list[str] = field(default_factory=list)
+    # Files written by output redirects (> or >>), e.g. "cat > notes.txt"
+    redirect_targets: list[str] = field(default_factory=list)
 
 
 class BashAnalyzer:
@@ -77,6 +79,7 @@ class BashAnalyzer:
         result.has_pipe = "|" in command
         result.has_redirect = any(op in command for op in [">", ">>", "<", "2>"])
         result.has_subshell = "$(" in command or "`" in command or "(" in command
+        result.redirect_targets = cls._output_redirect_targets(command)
 
         # Tokenize (best-effort — complex bash may fail)
         try:
@@ -105,8 +108,12 @@ class BashAnalyzer:
         # Determine risk level
         result.risk_level = cls._assess_risk(result, command)
 
-        # Determine primary target
-        result.primary_target = cls._extract_target(tokens, result.primary_command)
+        # Determine primary target (the redirected-to file for "cmd > file")
+        result.primary_target = (
+            result.redirect_targets[0]
+            if result.redirect_targets
+            else cls._extract_target(tokens, result.primary_command)
+        )
 
         return result
 
@@ -150,12 +157,41 @@ class BashAnalyzer:
             return ActionType.DESTRUCTIVE
         if cmd in NETWORK_COMMANDS or analysis.accesses_network:
             return ActionType.NETWORK
+        # Output redirects write files even when the command itself only reads
+        # ("cat > ~/.bashrc << EOF", "ls > out.txt")
+        if analysis.redirect_targets:
+            return ActionType.WRITE
         if cmd in ("cat", "ls", "head", "tail", "find", "grep", "wc", "file", "stat"):
             return ActionType.READ
-        if cmd in ("cp", "mv", "tee", "sed", "awk") or analysis.has_redirect:
+        if cmd in ("cp", "mv", "tee", "sed", "awk"):
             return ActionType.WRITE
 
         return ActionType.EXECUTE
+
+    _HARMLESS_REDIRECTS = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr"})
+
+    @classmethod
+    def _output_redirect_targets(cls, command: str) -> list[str]:
+        """Files an output redirect writes to: `> f`, `>> f`, `1> f`, `&> f`.
+
+        Ignores stderr-to-stdout (`2>&1`), heredocs (`<<`), and /dev/null.
+        Only the first line is scanned, since heredoc bodies are data.
+        """
+        first_line = command.split("\n", 1)[0]
+        # Hide quoted text so "print(1 > 0)" isn't read as a redirect; keep it for targets
+        quoted: list[str] = []
+
+        def hide(match: re.Match) -> str:
+            quoted.append(match.group(0)[1:-1])
+            return f"\x00{len(quoted) - 1}\x00"
+
+        line = re.sub(r"'[^']*'|\"(?:\\.|[^\"\\])*\"", hide, first_line)
+        targets = []
+        for match in re.finditer(r"(?<![<>\d&])(?:&|1)?>>?(?!&)\s*([^\s;&|<>]+)", line):
+            target = re.sub(r"\x00(\d+)\x00", lambda m: quoted[int(m.group(1))], match.group(1))
+            if target and target not in cls._HARMLESS_REDIRECTS:
+                targets.append(target)
+        return targets
 
     @classmethod
     def _check_sensitive_paths(cls, tokens: list[str]) -> bool:

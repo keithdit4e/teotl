@@ -234,7 +234,7 @@ Selects the default decision for actions no rule matched:
 
 Any other `level` value uses the `standard` defaults.
 
-**Critical actions are decided by this table alone.** No `allow`, `confirm` or network rule can downgrade them, so under `standard` and `strict` they're always blocked. This matters for unattended runs (no UI, the planner-worker harness, the daemon), where confirmations are approved automatically.
+**Critical actions are decided by this table alone.** No `allow`, `confirm` or network rule can downgrade them, so under `standard` and `strict` they're always blocked. This matters most for unattended runs (see [Unattended runs](#unattended-runs)).
 
 #### `filesystem`
 
@@ -498,6 +498,44 @@ downloading and piping into a shell (`curl ... | bash`)
 The default decision for each level depends on the policy `level` (see the table above).
 
 ---
+
+## Unattended runs
+
+When a person is watching (`teotl chat`, or a `ui=` you pass to `agent.run()`), actions that need confirmation are asked about. When **no one is watching** (`agent.run()` with no `ui`, the planner-worker harness, the daemon), the agent's `unattended` setting decides instead:
+
+| `unattended` | "Ask first" actions | Notes |
+|---|---|---|
+| `safe_zone` **(default)** | Allowed if they're plain file operations whose every path is inside the safe zone; refused otherwise | The safe zone defaults to the folder the agent starts in |
+| `refuse` | Always refused | Strictest |
+| `approve` | Always run without asking | ⚠️ Logs a warning at startup; each auto-approval is in the audit log and `Response.auto_approved`. Not recommended outside a sandbox |
+
+Blocked actions stay blocked in every mode, and refusals tell the agent why, so it can report what it couldn't do.
+
+**The safe zone** is a list of folders (`safe_zone=[...]`). A command counts as "inside" only if all of these hold:
+- every part of it is a plain file command (`rm`, `mv`, `cp`, `mkdir`, `touch`, `sed -i`, or `echo`/`cat`/`printf` redirected to a file);
+- every path it touches, following any `cd`, resolves inside the zone;
+- it has no `$(...)`, backticks or unknown variables.
+
+`git push`, `pip install`, network commands and custom tools aren't file operations, so they're refused unless a rule allows them. A safe zone of `/` or the home folder, including the default when the agent is started from the home folder, is ignored with a warning, because it would cover nearly everything.
+
+**Rules** open (or close) specific actions for one agent:
+
+```python
+agent = Agent(
+    provider=provider,
+    safe_zone=["~/projects/website"],
+    rules={
+        "commands": {"allow": ["git push origin main"], "block": ["git push --force*"]},
+        "tools": {"post_to_slack": "allow", "send_email": "block"},
+    },
+)
+```
+
+- An `allow` rule only lifts an "ask first" action to "allowed". It can't unblock anything, so `rm -rf ~` stays blocked.
+- A `block` rule blocks the action even when a person is watching.
+- `*` is a wildcard.
+
+The same settings work in YAML (`unattended`, `safe_zone`, `rules` under `agent:`) and on `PlannerWorkerHarness(unattended=..., safe_zone=..., worker_rules=...)`. The old `auto_approve` config key is deprecated and ignored.
 
 ## Trust Building
 

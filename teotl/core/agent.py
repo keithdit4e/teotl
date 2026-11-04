@@ -40,9 +40,15 @@ _TOOL_RISKS = ("low", "medium", "high", "critical")
 
 
 class _HeadlessUI:
-    """Default UI that auto-approves everything. For programmatic use."""
+    """UI used when no one is watching (no ui= passed to Agent.run).
 
-    def __init__(self, auto_approve: bool = True) -> None:
+    Guardrails see `unattended = True` and apply the agent's unattended mode
+    (safe_zone / refuse / approve) instead of asking.
+    """
+
+    unattended = True
+
+    def __init__(self, auto_approve: bool = False) -> None:
         self.auto_approve = auto_approve
 
     async def confirm(self, message: str, *, title: str = "") -> bool:
@@ -94,6 +100,10 @@ class Agent:
         enable_auto_compact: bool | None = None,  # Auto-enabled when memory enabled
         compact_every: int = 15,  # Compact every N turns
         max_context_tokens: int | None = None,  # Auto-detected from model if None
+        # Unattended runs (no ui= given): what to do with "ask first" actions
+        unattended: str = "safe_zone",
+        safe_zone: list[str | Path] | None = None,
+        rules: dict[str, Any] | None = None,
     ) -> None:
         self.provider = provider
         self.instructions = instructions
@@ -118,6 +128,7 @@ class Agent:
 
         # Core primitives (lazy-loaded to avoid circular imports)
         self._init_guardrails(policy)
+        self._init_unattended(unattended, safe_zone, rules)
         self._init_memory(memory)
         self._init_skills(skills)
 
@@ -159,6 +170,25 @@ class Agent:
             # Loud on purpose: a bad policy name must not silently disable guardrails
             logger.warning(f"Guardrails DISABLED - could not load policy {policy!r}: {e}")
             self.guardrails = None
+
+    def _init_unattended(
+        self, mode: str, safe_zone: list[str | Path] | None, rules: dict[str, Any] | None
+    ) -> None:
+        """Configure what guardrails do with "ask first" actions when no one is watching."""
+        from teotl.primitives.guardrails.unattended import resolve_safe_zone, validate_mode
+
+        self.unattended = validate_mode(mode)
+        self.safe_zone = resolve_safe_zone(safe_zone) if mode == "safe_zone" else []
+        if mode == "approve":
+            logger.warning(
+                "⚠️  unattended='approve': actions that need confirmation will run WITHOUT "
+                "asking when no one is watching (deleting files, git push, sending email, ...). "
+                "Use unattended='safe_zone' (the default) unless this agent is sandboxed."
+            )
+        if self.guardrails is not None:
+            self.guardrails.unattended_mode = mode
+            self.guardrails.safe_zone = self.safe_zone
+            self.guardrails.rules = dict(rules or {})
 
     def _init_memory(self, memory: Any | None) -> None:
         """Initialize memory system if available."""
@@ -407,6 +437,8 @@ class Agent:
         all_tool_results: list[ToolResult] = []
         turns = 0
 
+        if self.guardrails is not None:
+            self.guardrails.auto_approved.clear()
         run_input_tokens = 0
         run_output_tokens = 0
         run_cost = 0.0
@@ -590,6 +622,7 @@ class Agent:
             tool_results=all_tool_results,
             input_tokens=run_input_tokens,
             output_tokens=run_output_tokens,
+            auto_approved=list(self.guardrails.auto_approved) if self.guardrails else [],
         )
 
     def _call_cost(self, input_tokens: int, output_tokens: int) -> float:

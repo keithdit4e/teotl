@@ -209,7 +209,15 @@ class AgentConfig(BaseModel):
     instructions: str = ""
     workspace: str | None = None
     skills: list[str] = []
-    auto_approve: bool = True
+    # Deprecated and ignored (it was always on): use `unattended` instead
+    auto_approve: bool | None = None
+    # What to do with "ask first" actions when no one is watching:
+    # "safe_zone" (default: allow file changes inside safe_zone, refuse the rest),
+    # "refuse", or "approve" (run them without asking; not recommended)
+    unattended: str = "safe_zone"
+    safe_zone: list[str] | None = None  # default: the folder the agent starts in
+    # {"commands": {"allow": [...], "block": [...]}, "tools": {name: "allow" | "block"}}
+    rules: dict[str, Any] | None = None
     port: int | None = None  # A2A server port
     max_turns: int = 50
 

@@ -181,7 +181,9 @@ class TestAgentConfig:
         assert config.agent_id == "test-agent"
         assert config.instructions == ""
         assert config.skills == []
-        assert config.auto_approve is True
+        assert config.auto_approve is None  # deprecated, ignored
+        assert config.unattended == "safe_zone"
+        assert config.safe_zone is None and config.rules is None
 
     def test_full_config(self):
         """Test full agent configuration."""

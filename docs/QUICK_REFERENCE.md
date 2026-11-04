@@ -193,7 +193,7 @@ WEEKLY  - Once per week
 agent:
   agent_id: my-agent
   instructions: "You are..."
-  auto_approve: true
+  unattended: safe_zone  # see docs/GUARDRAILS.md#unattended-runs
 
 provider:
   type: anthropic

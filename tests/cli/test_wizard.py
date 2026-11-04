@@ -134,7 +134,8 @@ class TestOnboardingWizard:
 
         assert wizard.config["agent"]["agent_id"] == "my-agent"
         assert "helpful assistant" in wizard.config["agent"]["instructions"]
-        assert wizard.config["agent"]["auto_approve"] is True
+        assert wizard.config["agent"]["unattended"] == "safe_zone"
+        assert "auto_approve" not in wizard.config["agent"]
         assert "work_types" in wizard.config["agent"]
 
     @patch("builtins.input", side_effect=["1", "~/.teotl/test-agent"])  # 30 seconds

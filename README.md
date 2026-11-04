@@ -157,7 +157,12 @@ Built-in protections include:
 - **Per-agent rate and cost limits,** and a heartbeat that stops runaway loops.
 - **A trust score** that grows with repeated safe behavior.
 
-> **Unattended runs:** with no UI (headless runs, the planner-worker harness, the daemon), actions that would ask for confirmation are approved automatically. Blocked actions stay blocked. For unattended agents, use `strict`, or a custom policy that blocks what you'd otherwise confirm.
+**When no one is watching** (headless runs, the planner-worker harness, the daemon), "ask first" actions are handled by the agent's `unattended` setting:
+- **`safe_zone` (the default):** file changes inside the agent's project folder are allowed, and anything else that would need confirmation is refused.
+- **`refuse`:** everything that would need confirmation is refused.
+- **`approve`:** everything runs without asking. It warns loudly, and isn't recommended outside a sandbox.
+
+Per-agent `rules` can allow specific commands or tools (for example `git push origin main`). See [Unattended runs](docs/GUARDRAILS.md#unattended-runs).
 
 See [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
 

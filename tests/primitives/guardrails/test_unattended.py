@@ -272,3 +272,16 @@ def test_config_settings_and_deprecated_auto_approve(project, caplog):
     assert agent.unattended == "safe_zone"  # not switched to approve
     assert agent.guardrails.safe_zone == [project.resolve()]
     assert agent.guardrails.rules["commands"]["allow"] == ["npm run build"]
+
+
+@pytest.mark.asyncio
+async def test_inline_code_is_refused_unattended(project):
+    agent, ran = agent_with(
+        bash("python3 -c \"import shutil; shutil.rmtree('../elsewhere')\""),
+        bash("find .. -name '*.txt' -delete"),
+        bash("pytest -q"),  # checking work stays allowed
+    )
+    response = await agent.run("clean up")
+    assert ran == ["pytest -q"]
+    assert (project.parent / "elsewhere" / "important.txt").exists()
+    assert all("no one is watching" in err for _, _, err in outcome(response)[:2])

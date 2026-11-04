@@ -24,6 +24,34 @@ SYSTEM_COMMANDS = {"sudo", "su", "systemctl", "service", "mount", "umount", "reb
 # Package managers
 PACKAGE_COMMANDS = {"pip", "pip3", "npm", "yarn", "pnpm", "apt", "apt-get", "brew", "cargo"}
 
+# Interpreters: running code through them can do anything the code does, which
+# the guardrails can't see. Inline code and scripts are high risk (ask first).
+INTERPRETERS = {
+    "python",
+    "python3",
+    "node",
+    "deno",
+    "bun",
+    "ruby",
+    "perl",
+    "php",
+    "bash",
+    "sh",
+    "zsh",
+    "fish",
+    "osascript",
+    "lua",
+    "Rscript",
+}
+INLINE_CODE_FLAGS = {"-c", "-e", "-E", "--eval", "-p", "--print", "-r", "eval", "-x"}
+# Build and task runners execute project-defined code
+TASK_RUNNERS = {"make", "gmake", "just", "rake", "npx", "invoke", "nox", "tox"}
+# Test runners: also run project code, but checking work is what agents must do;
+# kept low risk so an unattended worker can verify its steps
+TEST_COMMANDS = {"pytest", "py.test"}
+TEST_MODULES = {"pytest", "unittest"}
+DELETING_COMMANDS = {"rm", "rmdir", "shred", "unlink"}
+
 # Sensitive paths
 SENSITIVE_PATHS = {
     "~/.ssh",
@@ -56,6 +84,7 @@ class BashAnalysis:
     all_commands: list[str] = field(default_factory=list)
     # Files written by output redirects (> or >>), e.g. "cat > notes.txt"
     redirect_targets: list[str] = field(default_factory=list)
+    deletes: bool = False  # find -delete / -exec, xargs rm
 
 
 class BashAnalyzer:
@@ -80,6 +109,7 @@ class BashAnalyzer:
         result.has_redirect = any(op in command for op in [">", ">>", "<", "2>"])
         result.has_subshell = "$(" in command or "`" in command or "(" in command
         result.redirect_targets = cls._output_redirect_targets(command)
+        result.deletes = cls._deletes_via_helper(command)
 
         # Tokenize (best-effort — complex bash may fail)
         try:
@@ -161,6 +191,8 @@ class BashAnalyzer:
         # ("cat > ~/.bashrc << EOF", "ls > out.txt")
         if analysis.redirect_targets:
             return ActionType.WRITE
+        if cmd in ("find", "xargs") and analysis.deletes:
+            return ActionType.DESTRUCTIVE
         if cmd in ("cat", "ls", "head", "tail", "find", "grep", "wc", "file", "stat"):
             return ActionType.READ
         if cmd in ("cp", "mv", "tee", "sed", "awk"):
@@ -245,6 +277,74 @@ class BashAnalyzer:
         return False
 
     @classmethod
+    def _segments(cls, raw_command: str) -> list[list[str]]:
+        segments = []
+        for part in re.split(r"&&|\|\||;|\|", raw_command.split("\n", 1)[0]):
+            try:
+                words = shlex.split(part)
+            except ValueError:
+                words = part.split()
+            while words and "=" in words[0] and not words[0].startswith("-"):
+                words = words[1:]
+            if words and words[0] in ("sudo", "env", "nohup", "time", "exec"):
+                words = words[1:]
+            if words:
+                words[0] = Path(words[0]).name
+                segments.append(words)
+        return segments
+
+    @classmethod
+    def _runs_code(cls, raw_command: str) -> bool:
+        """Inline code, a script through an interpreter, `./script`, or a task runner."""
+        for words in cls._segments(raw_command):
+            cmd, args = words[0], words[1:]
+            if cmd in TEST_COMMANDS:
+                continue
+            if cmd in TASK_RUNNERS:
+                return True
+            if cmd in ("npm", "pnpm", "yarn", "bun") and args[:1] in (["run"], ["exec"], ["x"]):
+                return True
+            if words[0] != Path(words[0]).name or raw_command.lstrip().startswith("./"):
+                return True
+            if cmd in INTERPRETERS or re.fullmatch(r"python\d(\.\d+)?", cmd):
+                if not args:
+                    continue  # bare interpreter (interactive) - nothing to run
+                if args[0] == "-m" and len(args) > 1 and args[1] in TEST_MODULES:
+                    continue
+                if args[0] in ("--version", "-V", "--help", "-h"):
+                    continue
+                return True
+        return False
+
+    @classmethod
+    def _deletes_via_helper(cls, raw_command: str) -> bool:
+        """`find ... -delete` / `-exec rm`, or `xargs rm`."""
+        for words in cls._segments(raw_command):
+            if words[0] == "find" and any(
+                a in ("-delete", "-exec", "-execdir", "-ok") for a in words[1:]
+            ):
+                return True
+            if words[0] == "xargs" and any(Path(a).name in DELETING_COMMANDS for a in words[1:]):
+                return True
+        return False
+
+    _UPLOAD_PATTERNS = (
+        r"(?:-F|--form)\s+\S*?=@(\S+)",
+        r"(?:-d|--data|--data-binary|--data-raw|--data-urlencode)\s+\S*?@(\S+)",
+        r"(?:-T|--upload-file)\s+(\S+)",
+    )
+
+    @classmethod
+    def _uploads_sensitive_file(cls, raw_command: str) -> bool:
+        for pattern in cls._UPLOAD_PATTERNS:
+            for match in re.finditer(pattern, raw_command):
+                path = match.group(1).strip("'\"")
+                path = re.sub(r"^\$\{?HOME\}?", "~", path)
+                if cls._check_sensitive_paths([path]):
+                    return True
+        return False
+
+    @classmethod
     def _assess_risk(cls, analysis: BashAnalysis, raw_command: str) -> RiskLevel:
         """Assess overall risk level."""
         cmd = analysis.primary_command
@@ -262,6 +362,17 @@ class BashAnalyzer:
             return RiskLevel.CRITICAL
         if cls._wipes_root_or_home(raw_command):
             return RiskLevel.CRITICAL
+        # Critical: uploading secrets (curl -F file=@~/.ssh/...), deleting ~ or / via find
+        if analysis.accesses_network and cls._uploads_sensitive_file(raw_command):
+            return RiskLevel.CRITICAL
+        if cls._deletes_via_helper(raw_command) and re.search(
+            r"(?:^|\s)(?:~|\$HOME|\$\{HOME\}|/)/?(?:\s|$)", raw_command
+        ):
+            return RiskLevel.CRITICAL
+
+        # High: running code the guardrails can't inspect, or deleting via find/xargs
+        if cls._runs_code(raw_command) or cls._deletes_via_helper(raw_command):
+            return RiskLevel.HIGH
 
         # High: destructive, system, sudo
         if cmd in DESTRUCTIVE_COMMANDS or cmd in SYSTEM_COMMANDS:

@@ -349,7 +349,10 @@ agent = Agent(provider=provider, policy="standard")
   `~/.ssh`, `~/.aws`, `~/.teotl/auth`, `~/.gnupg` denied
 - Bash: blocks `rm -rf /` or `~` (and `$HOME`, `/*`, `..`), fork bombs, and piping `curl`/`wget` into a shell; confirms
   `rm`, `git push`, `git reset --hard`, `sudo`, `docker`, `pip install`, `chmod`, `kill`, ...;
-  allows common read-only commands, `git status/log/diff`, `pytest`, ...
+  allows common read-only commands, `git status/log/diff`, `pytest`, `python -m pytest`, ...
+- Code the guardrails can't see into asks first, even where an allow entry names the command:
+  inline code (`python -c`, `node -e`, `bash -c`), scripts (`python cleanup.py`, `./deploy.sh`) and task
+  runners (`make`, `npm run`, `npx`). So do deletes hidden in `find -delete`, `find -exec rm` and `xargs rm`
 - Network: outbound restricted to `api.github.com`, `pypi.org`, `registry.npmjs.org`; other hosts confirmed
 - Trust threshold: 3 approvals
 
@@ -488,12 +491,15 @@ file writes via write tools
 ### `HIGH` - Destructive, system-level, or sensitive paths
 
 **Examples:** `rm file.txt`, `sudo ...`, `systemctl`, `reboot`; commands touching sensitive
-paths such as `~/.ssh`; commands that can't be parsed
+paths such as `~/.ssh`; commands that can't be parsed; running code (`python -c ...`,
+`node -e ...`, `python script.py`, `./script.sh`, `make`, `npm run ...`); deleting through
+`find -delete` / `-exec rm` or `xargs rm`. Test runs (`pytest`, `python -m pytest`) stay low risk.
 
 ### `CRITICAL` - Catastrophic, irreversible
 
 **Examples:** `rm -rf /`, `rm -rf ~` (also `-r`/`-fr` on `$HOME`, `/*`, `..`), `dd ...`, fork bombs,
-downloading and piping into a shell (`curl ... | bash`)
+downloading and piping into a shell (`curl ... | bash`), uploading secrets
+(`curl -F f=@~/.ssh/id_ed25519 ...`, `curl -T ~/.aws/credentials ...`), `find ~ -delete`
 
 The default decision for each level depends on the policy `level` (see the table above).
 

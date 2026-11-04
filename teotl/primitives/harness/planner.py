@@ -119,8 +119,9 @@ you're given. Each step MUST follow this format:
 - **File** must be one real path (relative to the working directory, or absolute).
   Omit the File line if the step has no single target file. Never write
   placeholders like `<dir>/file.py` or `N/A`.
-- **Verify** should be a runnable shell command in backticks (e.g. `pytest -q tests/test_x.py`,
-  `python -c "from calc import add; assert add(2, 3) == 5"`).
+- **Verify** should be a runnable shell command in backticks, preferably a test run
+  (e.g. `pytest -q tests/test_x.py`). Avoid `python -c ...` and other inline code:
+  unattended workers can't run it without someone approving it.
 - Every step must change something. Don't add steps that only inspect, check the
   environment, or back up files; the worker checks those as part of real steps.
 - If the user asks for a specific number of steps, follow it.

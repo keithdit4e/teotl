@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-05
+
 ### Added
 - **Sandbox sessions: one sandboxed shell for a whole job** (`Agent(sandbox_session=...)`, also in YAML and on `PlannerWorkerHarness`).
   - `"agent"` keeps the working directory, variables and background processes between commands, until `agent.close()`. A planner-worker mission shares one session across its steps.

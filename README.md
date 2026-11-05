@@ -53,6 +53,7 @@ Pick the extras you need:
 | `security` | OS keyring and encrypted credential storage |
 | `web` | Web dashboard |
 | `aws` | AWS Secrets Manager credential backend |
+| `mcp` | Tools from MCP servers |
 | `all` | Everything above |
 
 Requires Python 3.11 or newer.
@@ -225,6 +226,36 @@ Teotl looks for skills in:
 3. any directories listed in `TEOTL_SKILLS_PATH` (colon-separated)
 
 See [docs/CUSTOM_SKILLS_QUICKSTART.md](docs/CUSTOM_SKILLS_QUICKSTART.md) and [docs/SKILLS_GUIDE.md](docs/SKILLS_GUIDE.md).
+
+### MCP servers
+
+Use tools from any MCP server (`pip install "teotl[mcp]"`). The `mcp_servers` setting takes the same shape as Claude Desktop's `mcpServers`, so you can paste yours in:
+
+```python
+agent = Agent(
+    provider=provider,
+    mcp_servers={
+        "github": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"],
+                   "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": token}},
+        "docs": {"url": "https://example.com/mcp"},
+    },
+)
+```
+
+- **Small prompts.** By default (`mcp_mode="compact"`) the model gets two tools, `mcp_discover` and `mcp_execute`, instead of every tool's schema. It looks up a tool's arguments only when it needs them. Use `mcp_mode="full"` to register each MCP tool directly.
+- **Guardrails see the real tool.** Each call is checked as `server.tool`, not as a generic "call a tool":
+  - Risk comes from the server's annotations: read-only tools are low risk; tools marked non-destructive are medium; anything else is high and asks first.
+  - Override the risk per server with `"risk": {"delete_*": "critical"}`.
+  - Rules can name MCP tools: `rules={"tools": {"github.create_issue": "allow", "github.delete_*": "block"}}`.
+- **New and changed tools are held.** Teotl records each server's tools and a fingerprint of their description, arguments and annotations:
+  - The first list from a server is approved.
+  - A tool added later, or one that changes behind the same name, is held. The model sees only its name, it always asks first (allow rules don't count), and it's refused when no one is watching.
+  - The list is read again when the server says it changed, when the model asks for a tool that isn't on it, and every 5 minutes.
+  - Review with `teotl mcp tools`, then `teotl mcp approve github.create_issue` or `teotl mcp block ...`.
+  - Or set rules in code: handlers on the `mcp_tools_changed` event get the changes and can call `changes.approve(tool)` or `changes.block(tool)`.
+  - `mcp_review="all"` holds every tool until approved; `"off"` turns this off.
+
+Call `await agent.close()`, or use `async with Agent(...) as agent:`, to stop the servers.
 
 ## Examples
 

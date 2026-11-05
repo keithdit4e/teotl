@@ -62,12 +62,16 @@ web = [
 aws = [
     "boto3>=1.34",
 ]
+mcp = [
+    "mcp>=2.0",
+]
 all = [
-    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,aws]",
+    "teotl[anthropic,openai,ollama,google,litellm,memory,security,web,aws,mcp]",
 ]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "mcp>=2.0",  # MCP bridge tests
     "pytest-cov>=5.0",
     "ruff>=0.8",
     "mypy>=1.13",

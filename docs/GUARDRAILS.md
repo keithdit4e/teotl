@@ -575,6 +575,46 @@ agent = Agent(provider=provider, unattended="approve", sandbox="on", safe_zone=[
 
 Only the `bash` tool is sandboxed. Tools you register in Python run in your own process, so give them a `risk` level.
 
+## MCP tools
+
+MCP tools are checked as `server.tool`, so rules and risk work on the real tool (see the README's MCP section). Because a server can change its tools at any time, Teotl also keeps an inventory of each server's tools (`~/.teotl/mcp/tool_inventory.json`): each tool's name and a fingerprint of its description, arguments and annotations.
+
+| What happened | What guardrails do |
+|---|---|
+| First tool list from a server | Approved (`mcp_review="all"`: held) |
+| A tool appears later | Held |
+| A tool's description, arguments or annotations change | Held again, even if it was approved |
+| A tool disappears | Dropped; approved again if it comes back unchanged |
+| A tool is blocked (`teotl mcp block`) | Never called |
+
+A held tool:
+- always asks first; allow rules and trust don't apply to it;
+- is refused when no one is watching, even with `unattended="approve"`;
+- is shown to the model by name only, because a new or changed description is exactly what a tampered server would use to steer the model. In `mcp_mode="full"` it isn't registered at all.
+
+If someone approves it when asked, it's approved for that session. To approve it for good, run `teotl mcp approve server.tool` (patterns work: `server.read_*`). Running agents pick it up on their next MCP call.
+
+The tool list is read again when the server sends `tools/list_changed`, when the model asks for a tool that isn't listed (a server can add tools without saying so), and every 5 minutes. The bridge also refuses a held tool itself, in case the list changes between the guardrail check and the call.
+
+To set rules for new tools in code, handle the `mcp_tools_changed` event:
+
+```python
+async def review_new_tools(event, **kwargs):
+    changes = event.data  # .server, .added, .changed, .removed, .held
+    for tool in changes.held:
+        if tool.startswith(("get_", "list_")):
+            changes.approve(tool)
+        elif "delete" in tool:
+            changes.block(tool)
+    return event
+
+agent.events.on("mcp_tools_changed", review_new_tools)
+```
+
+Every change is written to the audit log (`mcp_tool_added`, `mcp_tool_changed`, `mcp_tool_removed`).
+
+What this doesn't catch: a server that changes what a tool *does* without changing what it advertises. Set `risk` for servers you don't trust, and block the tools you never want called.
+
 ## Trust Building
 
 Guardrails implement **progressive trust** - repeated approvals of the same action pattern

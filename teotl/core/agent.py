@@ -111,6 +111,10 @@ class Agent:
         sandbox_session: str | None = None,
         sandbox_idle_minutes: int = 240,
         sandbox_root: bool = False,
+        # Tools from MCP servers (see teotl/primitives/integrations/mcp_bridge.py)
+        mcp_servers: Any = None,
+        mcp_mode: str = "compact",
+        mcp_review: str = "changes",
     ) -> None:
         self.provider = provider
         self.instructions = instructions
@@ -144,6 +148,15 @@ class Agent:
             idle_minutes=sandbox_idle_minutes,
             docker_root=sandbox_root,
         )
+        self.mcp = None
+        if mcp_servers:
+            from teotl.primitives.integrations.mcp_bridge import MCPBridge
+
+            self.mcp = MCPBridge(mcp_servers, mode=mcp_mode, review=mcp_review)
+            self.mcp.on_change.append(self._on_mcp_change)
+            if self.guardrails is not None:
+                self.mcp.session_approved = self.guardrails.session_approved
+        self._mcp_tool_names: set[str] = set()  # tools registered from MCP (full mode)
         self._init_memory(memory)
         self._init_skills(skills)
 
@@ -208,9 +221,7 @@ class Agent:
             self.guardrails.safe_zone = self.safe_zone
             self.guardrails.rules = dict(rules or {})
 
-    def _init_sandbox(
-        self, mode: str, network: bool, image: str | None, **session: Any
-    ) -> None:
+    def _init_sandbox(self, mode: str, network: bool, image: str | None, **session: Any) -> None:
         """Configure the OS sandbox the bash tool runs commands in."""
         from teotl.core.tools.os_sandbox import DEFAULT_IMAGE, SandboxSettings
 
@@ -421,6 +432,7 @@ class Agent:
         from teotl.core.tools.os_sandbox import RUN_UNATTENDED
 
         RUN_UNATTENDED.set(bool(getattr(ui, "unattended", False)))
+        await self._ensure_mcp()
 
         # Emit session start on first message
         if self.session.message_count == 0:
@@ -707,13 +719,94 @@ class Agent:
             return f"Stopped by heartbeat monitor ({reasons})"
         return None
 
+    async def _ensure_mcp(self) -> None:
+        """Connect to the MCP servers (first run) and register their tools."""
+        if self.mcp is None or self.mcp.connected:
+            return
+        from teotl.primitives.integrations.mcp_bridge import DISCOVER_TOOL, EXECUTE_TOOL
+
+        await self.mcp.connect()
+        if self.mcp.mode == "compact":
+            definitions = {d.name: d for d in self.mcp.get_tools()}
+            handlers = {DISCOVER_TOOL: self.mcp.discover, EXECUTE_TOOL: self.mcp.execute}
+            for name, handler in handlers.items():
+                d = definitions[name]
+                self.register_tool(name, d.description, handler, d.parameters)
+        self._sync_mcp()
+
+    def _sync_mcp(self) -> None:
+        """Bring guardrails (and, in full mode, the tool list) in line with the bridge."""
+        if self.mcp is None:
+            return
+        self.mcp.reload_inventory()
+        if self.guardrails is not None:
+            self.guardrails.tool_risk.update(self.mcp.tool_risk())
+            self.guardrails.held_tools = self.mcp.held()
+            self.guardrails.blocked_tools = self.mcp.blocked()
+        if self.mcp.mode != "full":
+            return
+        definitions = {d.name: d for d in self.mcp.get_tools()}
+        # Drop MCP tools that were removed, or are now held or blocked
+        for stale in self._mcp_tool_names - set(definitions):
+            self._tools = [t for t in self._tools if t.name != stale]
+            self._tool_handlers.pop(stale, None)
+        self._mcp_tool_names = set(definitions)
+        for name, d in definitions.items():
+            tool = self.mcp.tool_for_full_name(name)
+            if tool is None:
+                continue
+
+            async def call(_server: str = tool.server, _tool: str = tool.name, **args: Any) -> str:
+                return await self.mcp.execute(_server, _tool, args)
+
+            self.register_tool(name, d.description, call, d.parameters, risk=tool.risk.value)
+            if self.guardrails is not None:
+                self.guardrails.set_tool_alias(name, tool.qualified)
+
+    async def _on_mcp_change(self, changes: Any) -> None:
+        """A server's tools changed: update guardrails, log it, tell event handlers.
+
+        Handlers on ``mcp_tools_changed`` get the ToolChanges (``.added``,
+        ``.changed``, ``.removed``, ``.held``) and can call ``changes.approve(tool)``
+        or ``changes.block(tool)`` to set rules for the new tools.
+        """
+        self._sync_mcp()
+        if self.guardrails is not None:
+            from teotl.core.types import Action, ActionType, RiskLevel
+
+            risk = self.mcp.tool_risk() if self.mcp else {}
+            for kind, names in (
+                ("added", changes.added),
+                ("changed", changes.changed),
+                ("removed", changes.removed),
+            ):
+                for name in names:
+                    target = f"{changes.server}.{name}"
+                    self.guardrails.audit.log(
+                        Action(
+                            type=ActionType.EXECUTE,
+                            target=target,
+                            risk=risk.get(target, RiskLevel.HIGH),
+                            details={"mcp_tool_change": kind, "held": name in changes.held},
+                        ),
+                        f"mcp_tool_{kind}",
+                        changes.summary(),
+                    )
+        await self.events.emit("mcp_tools_changed", changes)
+        self._sync_mcp()  # handlers may have approved or blocked tools
+
     async def close(self) -> None:
-        """Release what the agent holds open (its sandbox session).
+        """Release what the agent holds open: MCP server connections and its sandbox
+        session.
 
         A named Docker session keeps running until it's idle; `teotl sandbox stop`
         stops it sooner.
         """
-        await self.os_sandbox.close()
+        try:
+            if self.mcp is not None:
+                await self.mcp.close()
+        finally:
+            await self.os_sandbox.close()
 
     async def __aenter__(self) -> Agent:
         return self

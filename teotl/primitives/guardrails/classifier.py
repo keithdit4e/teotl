@@ -22,6 +22,23 @@ def classify(tool_call: ToolCall, tool_risk: dict[str, RiskLevel] | None = None)
             risk=RiskLevel.MEDIUM,
             details={"tool": tool_call.name},
         )
+    elif tool_call.name == "mcp_discover":
+        return Action(
+            type=ActionType.READ,
+            target=f"mcp:{tool_call.args.get('server', '')}",
+            risk=RiskLevel.LOW,
+            details={"tool": tool_call.name},
+        )
+    elif tool_call.name == "mcp_execute":
+        # Judge the MCP tool actually being called, not the generic wrapper.
+        # Unknown tools (not discovered, or from an unconnected server) ask first.
+        target = f"{tool_call.args.get('server', '')}.{tool_call.args.get('tool', '')}"
+        return Action(
+            type=ActionType.EXECUTE,
+            target=target,
+            risk=(tool_risk or {}).get(target, RiskLevel.HIGH),
+            details={"tool": target, "args": tool_call.args.get("args") or {}, "mcp": True},
+        )
     elif tool_call.name in ("read_file", "view"):
         return Action(
             type=ActionType.READ,

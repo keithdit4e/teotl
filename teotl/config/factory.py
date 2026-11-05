@@ -479,6 +479,9 @@ def create_agent_from_config(
         sandbox_session=agent_config.sandbox_session,
         sandbox_idle_minutes=agent_config.sandbox_idle_minutes,
         sandbox_root=agent_config.sandbox_root,
+        mcp_servers=agent_config.mcp_servers,
+        mcp_mode=agent_config.mcp_mode,
+        mcp_review=agent_config.mcp_review,
     )
 
     # Store agent_id on the agent for reference

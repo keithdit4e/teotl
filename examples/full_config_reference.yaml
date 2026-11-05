@@ -83,6 +83,23 @@ agent:
   # sandbox_session: agent
   # sandbox_idle_minutes: 240     # a named session stops itself after this long idle
   # sandbox_root: false           # Docker only: root in the container (apt install)
+
+  # MCP servers (pip install "teotl[mcp]"), in Claude Desktop's mcpServers shape
+  # mcp_servers:
+  #   github:
+  #     command: npx
+  #     args: ["-y", "@modelcontextprotocol/server-github"]
+  #     risk: {"delete_*": critical}       # override risk by tool name
+  #     auto_approve: ["get_*", "list_*"]  # approve these even if new or changed
+  #   docs:
+  #     url: https://example.com/mcp
+  # mcp_mode: compact   # or full: register every MCP tool directly
+  # Tools that appear or change after a server's first connection are held until
+  # approved (teotl mcp tools / teotl mcp approve):
+  #   changes (default) - the first tool list is approved, later changes are held
+  #   all               - every tool is held until approved
+  #   off               - don't check
+  # mcp_review: changes
   max_turns: 50                # Maximum turns per run
   enable_injection_defense: true  # Protect against prompt injection
 

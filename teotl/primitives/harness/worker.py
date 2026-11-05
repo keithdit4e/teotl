@@ -127,6 +127,7 @@ class Worker:
         rules: dict[str, Any] | None = None,
         sandbox: str = "auto",
         sandbox_network: bool = False,
+        sandbox_session: str | None = None,
         # Harness components (optional, shared from orchestrator)
         cost_tracker=None,
         audit_logger=None,
@@ -210,6 +211,7 @@ class Worker:
             rules=rules,
             sandbox=sandbox,
             sandbox_network=sandbox_network,
+            sandbox_session=sandbox_session,
         )
 
         logger.info(f"Worker initialized with model: {provider.model}")

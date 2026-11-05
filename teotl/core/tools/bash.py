@@ -204,6 +204,12 @@ class BashTool:
                 logger.error(refusal)
                 return f"Error: {refusal}"
 
+        session = (
+            self.os_sandbox.session(backend, Path(cwd), exec_env) if backend is not None else None
+        )
+        if session is not None:
+            return await self._run_in_session(session, command, working_dir, Path(cwd), timeout)
+
         try:
             if backend is not None:
                 prepared = backend.prepare(command, self.os_sandbox.spec(Path(cwd)), exec_env)
@@ -301,6 +307,34 @@ class BashTool:
         finally:
             if prepared is not None:
                 prepared.cleanup()
+
+    async def _run_in_session(
+        self,
+        session: Any,
+        command: str,
+        working_dir: Path | None,
+        cwd: Path,
+        timeout: int | None,
+    ) -> str:
+        """Run in the long-lived sandbox shell: `cd` and variables carry over."""
+        if working_dir:
+            from teotl.core.tools.sandbox_session import _quote
+
+            command = f"cd {_quote(str(working_dir))} && {command}"
+        try:
+            result = await session.run(command, cwd=cwd, timeout=timeout or self.timeout)
+        except Exception as e:
+            logger.error(f"Sandbox session failed: {e}")
+            return f"Error: Sandbox session failed: {e}"
+        output = str(
+            BashResult(
+                stdout=result.stdout,
+                stderr=result.stderr,
+                return_code=result.return_code,
+                command=command,
+            )
+        )
+        return f"{output}\n\n{result.note}" if result.note else output
 
     def get_tool_definition(self) -> dict[str, Any]:
         """Get tool definition for agent registration.

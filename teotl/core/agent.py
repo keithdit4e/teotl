@@ -108,6 +108,9 @@ class Agent:
         sandbox: str = "auto",
         sandbox_network: bool = False,
         sandbox_image: str | None = None,
+        sandbox_session: str | None = None,
+        sandbox_idle_minutes: int = 240,
+        sandbox_root: bool = False,
     ) -> None:
         self.provider = provider
         self.instructions = instructions
@@ -133,7 +136,14 @@ class Agent:
         # Core primitives (lazy-loaded to avoid circular imports)
         self._init_guardrails(policy)
         self._init_unattended(unattended, safe_zone, rules)
-        self._init_sandbox(sandbox, sandbox_network, sandbox_image)
+        self._init_sandbox(
+            sandbox,
+            sandbox_network,
+            sandbox_image,
+            session=sandbox_session,
+            idle_minutes=sandbox_idle_minutes,
+            docker_root=sandbox_root,
+        )
         self._init_memory(memory)
         self._init_skills(skills)
 
@@ -198,12 +208,18 @@ class Agent:
             self.guardrails.safe_zone = self.safe_zone
             self.guardrails.rules = dict(rules or {})
 
-    def _init_sandbox(self, mode: str, network: bool, image: str | None) -> None:
+    def _init_sandbox(
+        self, mode: str, network: bool, image: str | None, **session: Any
+    ) -> None:
         """Configure the OS sandbox the bash tool runs commands in."""
         from teotl.core.tools.os_sandbox import DEFAULT_IMAGE, SandboxSettings
 
         self.os_sandbox = SandboxSettings(
-            mode=mode, zones=self._zone_folders, network=network, image=image or DEFAULT_IMAGE
+            mode=mode,
+            zones=self._zone_folders,
+            network=network,
+            image=image or DEFAULT_IMAGE,
+            **session,
         )
         self.sandbox = self.os_sandbox.mode
 
@@ -690,6 +706,20 @@ class Agent:
             reasons = "; ".join(f"{e.title}: {e.message}" for e in critical)
             return f"Stopped by heartbeat monitor ({reasons})"
         return None
+
+    async def close(self) -> None:
+        """Release what the agent holds open (its sandbox session).
+
+        A named Docker session keeps running until it's idle; `teotl sandbox stop`
+        stops it sooner.
+        """
+        await self.os_sandbox.close()
+
+    async def __aenter__(self) -> Agent:
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        await self.close()
 
     def register_tool(
         self,

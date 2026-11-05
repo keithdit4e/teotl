@@ -575,6 +575,33 @@ agent = Agent(provider=provider, unattended="approve", sandbox="on", safe_zone=[
 
 Only the `bash` tool is sandboxed. Tools you register in Python run in your own process, so give them a `risk` level.
 
+#### Sessions: one sandbox for a whole job
+
+By default each command gets a fresh sandbox. Files persist (they're in the safe zone), but `cd`, environment variables, an activated virtualenv and background processes such as a dev server don't. A session keeps one sandboxed shell running:
+
+| `sandbox_session` | Lives | Keeps |
+|---|---|---|
+| `None` (default) | one command | files in the safe zone |
+| `"agent"` | until `agent.close()` (a planner-worker mission shares it across steps) | plus working directory, variables, background processes |
+| any other name, with `sandbox="docker"` | across runs and days, until `teotl sandbox reset` | plus everything installed in the container (`pip install`, `npm install -g`) |
+
+```python
+async with Agent(provider=provider, sandbox="docker", sandbox_session="site-dev",
+                 sandbox_network=True, safe_zone=["~/projects/site"]) as agent:
+    await agent.run("Install the dependencies and get the test suite passing.")
+```
+
+Named sessions:
+- `teotl sandbox list` shows them.
+- `teotl sandbox stop NAME` stops one. Its files and installs are kept, and the next command starts it again. Running processes don't survive a stop.
+- `teotl sandbox start NAME` starts one again.
+- `teotl sandbox reset NAME` deletes the container, so the next run starts clean. The safe zone is never touched.
+- A named session stops itself after `sandbox_idle_minutes` (default 240) without a command.
+- `pip install` and `npm install -g` work as a normal user: they install into the container's home folder. Set `sandbox_root=True` to run as root inside the container, for `apt install`.
+- A session's image, safe zone, network setting and user are fixed when it's created. To change them, reset the session.
+
+Guardrails still check every command in a session. A command that times out ends the session and everything it started, so a runaway process can't keep running; the next command starts a fresh one. Background processes are also ended when the agent closes. A named Docker session's processes keep running until it's stopped or goes idle.
+
 ## Trust Building
 
 Guardrails implement **progressive trust** - repeated approvals of the same action pattern

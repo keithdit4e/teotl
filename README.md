@@ -162,7 +162,7 @@ Built-in protections include:
 - **`refuse`:** everything that would need confirmation is refused.
 - **`approve`:** everything runs without asking. It warns loudly, and isn't recommended outside a sandbox.
 
-**An OS sandbox** is the second layer for code the guardrails can't see into. On macOS (`sandbox-exec`) and Linux (bubblewrap), unattended shell commands can only write inside the safe zone, can't read `~/.ssh` and other secrets, have no network, and don't get your API keys. Use `sandbox="on"` to sandbox every run and fail closed, or `sandbox="docker"` for a throwaway container. See [OS sandbox](docs/GUARDRAILS.md#os-sandbox).
+**An OS sandbox** is the second layer for code the guardrails can't see into. On macOS (`sandbox-exec`) and Linux (bubblewrap), unattended shell commands can only write inside the safe zone, can't read `~/.ssh` and other secrets, have no network, and don't get your API keys. Use `sandbox="on"` to sandbox every run and fail closed, or `sandbox="docker"` for a throwaway container. A **session** (`sandbox_session="agent"`, or a name for a Docker session that keeps its installs across days and can be stopped and restarted with `teotl sandbox`) keeps one sandboxed shell running between commands. See [OS sandbox](docs/GUARDRAILS.md#os-sandbox).
 
 Per-agent `rules` can allow specific commands or tools (for example `git push origin main`). See [Unattended runs](docs/GUARDRAILS.md#unattended-runs).
 

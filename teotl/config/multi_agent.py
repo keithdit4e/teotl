@@ -223,6 +223,11 @@ class AgentConfig(BaseModel):
     sandbox: str = "auto"
     sandbox_network: bool = False
     sandbox_image: str | None = None  # for sandbox: docker
+    # One long-lived sandboxed shell: "agent" (for the agent's lifetime), or a name for
+    # a Docker session that keeps files and installs across runs (sandbox: docker)
+    sandbox_session: str | None = None
+    sandbox_idle_minutes: int = 240  # a named session stops itself after this long idle
+    sandbox_root: bool = False  # Docker only: run as root in the container (apt install)
     port: int | None = None  # A2A server port
     max_turns: int = 50
 

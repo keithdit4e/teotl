@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Sandbox sessions: one sandboxed shell for a whole job** (`Agent(sandbox_session=...)`, also in YAML and on `PlannerWorkerHarness`).
+  - `"agent"` keeps the working directory, variables and background processes between commands, until `agent.close()`. A planner-worker mission shares one session across its steps.
+  - **Named Docker sessions** (`sandbox_session="site-dev"`, `sandbox="docker"`) keep everything installed in the container across runs and days.
+    - They stop themselves after `sandbox_idle_minutes` (default 240) and start again on the next command.
+    - `pip install` and `npm install -g` work without root. `sandbox_root=True` runs as root inside the container, for `apt install`.
+    - Changing a session's image, safe zone, network or user asks you to reset it.
+  - A command that times out ends the session and everything it started; the next command starts a fresh one.
+- **`teotl sandbox list | stop | start | reset`** to manage named sessions.
+- **`await agent.close()` and `async with Agent(...)`** release the agent's sandbox session.
+
 ## [0.2.9] - 2026-11-04
 
 ### Security

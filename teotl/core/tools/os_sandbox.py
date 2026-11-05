@@ -33,6 +33,7 @@ import uuid
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -329,11 +330,20 @@ class SandboxSettings:
         zones: list[Path] | None = None,
         network: bool = False,
         image: str = DEFAULT_IMAGE,
+        session: str | None = None,
+        idle_minutes: int = 240,
+        docker_root: bool = False,
     ) -> None:
+        from teotl.core.tools.sandbox_session import validate_session
+
         self.mode = validate_mode(mode)
         self.zones = list(zones or [])
         self.network = network
         self.image = image
+        self.session_scope = validate_session(session, self.mode)
+        self.idle_minutes = idle_minutes
+        self.docker_root = docker_root
+        self._session: Any = None
         self._backend: Backend | None = None
         self._resolved = False
         self._warned = False
@@ -368,3 +378,25 @@ class SandboxSettings:
 
     def spec(self, cwd: Path) -> SandboxSpec:
         return SandboxSpec(writable=self.zones, cwd=cwd, network=self.network, image=self.image)
+
+    def session(self, backend: Backend, cwd: Path, env: dict[str, str]) -> Any:
+        """The long-lived shell session (created on first use), or None without one."""
+        if self.session_scope is None:
+            return None
+        if self._session is None:
+            from teotl.core.tools.sandbox_session import open_session
+
+            self._session = open_session(
+                self.session_scope,
+                backend,
+                self.spec(cwd),
+                env,
+                idle_minutes=self.idle_minutes,
+                docker_root=self.docker_root,
+            )
+        return self._session
+
+    async def close(self) -> None:
+        session, self._session = self._session, None
+        if session is not None:
+            await session.close()

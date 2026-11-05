@@ -93,6 +93,7 @@ class PlannerWorkerHarness:
         worker_rules: dict[str, Any] | None = None,
         sandbox: str = "auto",
         sandbox_network: bool = False,
+        sandbox_session: str | None = None,
         approval_callback: Callable[[CycleApprovalRequest], bool] | None = None,
         halt_on_critical_escalation: bool = True,
         enable_checkpoints: bool = True,
@@ -128,6 +129,8 @@ class PlannerWorkerHarness:
             sandbox: OS sandbox for the worker's shell commands: "auto" (default: on for
                 unattended runs when available), "on", "docker" or "off"
             sandbox_network: Allow network access inside the sandbox (default: False)
+            sandbox_session: Keep one sandboxed shell for the whole mission ("agent"),
+                or a named Docker session that persists across runs (needs sandbox="docker")
             approval_callback: Optional callback for approval (uses CLI prompt if None)
             halt_on_critical_escalation: Halt execution on critical health issues (default: True)
             enable_checkpoints: Enable automatic git checkpoints before steps (default: True)
@@ -225,6 +228,7 @@ class PlannerWorkerHarness:
             rules=worker_rules,
             sandbox=sandbox,
             sandbox_network=sandbox_network,
+            sandbox_session=sandbox_session,
         )
 
         # Initialize evaluator (uses same provider as planner)

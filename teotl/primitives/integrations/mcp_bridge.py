@@ -17,6 +17,11 @@ server's tool annotations: read-only tools are low risk, tools marked
 non-destructive are medium, and everything else is high (ask first). Annotations
 are hints from the server, so set ``risk`` for servers you don't trust.
 
+Tool lists are checked against a saved inventory (see ``mcp_inventory``): tools
+that appear or change after a server's first connection are held for approval,
+and the list is read again whenever the server says it changed, when the agent
+asks for a tool that isn't on it, and every ``refresh_seconds``.
+
 Requires the ``mcp`` extra: ``pip install "teotl[mcp]"``.
 """
 
@@ -26,12 +31,25 @@ import asyncio
 import json
 import logging
 import re
+import time
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from teotl.core.types import RiskLevel, ToolDefinition
+from teotl.primitives.integrations.mcp_inventory import (
+    APPROVED,
+    BLOCKED,
+    PENDING,
+    REVIEW_MODES,
+    ToolChanges,
+    ToolInventory,
+    fingerprint,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +57,7 @@ MODES = ("compact", "full")
 DISCOVER_TOOL = "mcp_discover"
 EXECUTE_TOOL = "mcp_execute"
 FULL_SEPARATOR = "__"
+MAX_LIST_PAGES = 100
 
 
 @dataclass
@@ -47,6 +66,10 @@ class MCPServerConfig:
 
     ``risk`` overrides the risk of this server's tools, by tool name or pattern:
     ``{"read_*": "low", "delete_*": "critical", "*": "medium"}``.
+
+    ``review`` overrides the bridge's review mode for this server ("changes",
+    "all" or "off"), and ``auto_approve`` lists tool name patterns approved even
+    when they are new or changed.
     """
 
     name: str
@@ -56,15 +79,26 @@ class MCPServerConfig:
     cwd: str | None = None
     url: str | None = None
     risk: dict[str, str] = field(default_factory=dict)
+    review: str | None = None
+    auto_approve: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if bool(self.command) == bool(self.url):
             raise ValueError(f"MCP server {self.name!r}: set exactly one of `command` or `url`")
+        if self.review is not None and self.review not in REVIEW_MODES:
+            raise ValueError(
+                f"MCP server {self.name!r}: review must be one of {', '.join(REVIEW_MODES)}"
+            )
+
+    @property
+    def identity(self) -> str:
+        """What this server runs; if it changes, its inventory starts again."""
+        return self.url or " ".join([self.command or "", *self.args])
 
     @classmethod
     def from_dict(cls, name: str, spec: dict[str, Any]) -> MCPServerConfig:
         """Accept the `mcpServers` entries used by Claude Desktop, Cursor and others."""
-        known = {"command", "args", "env", "cwd", "url", "risk"}
+        known = {"command", "args", "env", "cwd", "url", "risk", "review", "auto_approve"}
         unknown = set(spec) - known - {"type", "transport"}
         if unknown:
             logger.warning(f"MCP server {name!r}: ignoring unknown keys {sorted(unknown)}")
@@ -96,6 +130,9 @@ class MCPTool:
     schema: dict[str, Any]
     risk: RiskLevel
     read_only: bool = False
+    fingerprint: str = ""
+    status: str = APPROVED  # approved, pending (held for review) or blocked
+    reason: str = ""  # why it's held: "new" or "changed"
 
     @property
     def qualified(self) -> str:
@@ -132,9 +169,28 @@ class MCPBridge:
         mode: str = "compact",
         max_output_chars: int = 20_000,
         connect_timeout: float = 30.0,
+        *,
+        review: str = "changes",
+        inventory: ToolInventory | None = None,
+        refresh_seconds: float = 300.0,
     ) -> None:
         if mode not in MODES:
             raise ValueError(f"Invalid MCP mode {mode!r}: use one of {', '.join(MODES)}")
+        if review not in REVIEW_MODES:
+            raise ValueError(f"Invalid MCP review {review!r}: use one of {', '.join(REVIEW_MODES)}")
+        self.review = review
+        # Created on connect when any server is reviewed
+        self.inventory = inventory
+        self.refresh_seconds = refresh_seconds
+        # Called with ToolChanges whenever a server's tool list changes
+        self.on_change: list[Callable[[ToolChanges], Awaitable[None] | None]] = []
+        self._last_refresh: dict[str, float] = {}
+        self._refresh_locks: dict[str, asyncio.Lock] = {}
+        self._pending_refresh: dict[str, asyncio.Task] = {}
+        # Held tools someone approved for this session (shared with the guardrails).
+        # A held tool runs only if it's here: the list can change between the
+        # guardrail check and the call, so the bridge checks again itself.
+        self.session_approved: set[str] = set()
         self.servers: dict[str, MCPServerConfig] = {s.name: s for s in parse_servers(servers)}
         self.mode = mode
         self.max_output_chars = max_output_chars
@@ -171,6 +227,10 @@ class MCPBridge:
         # Connections from an earlier event loop are gone with that loop
         self._sessions.clear()
         self._tasks.clear()
+        self._refresh_locks.clear()
+        self._pending_refresh.clear()
+        if self.inventory is None and self._needs_inventory():
+            self.inventory = ToolInventory()
         self._loop = asyncio.get_running_loop()
         self._stop = asyncio.Event()
         for config in self.servers.values():
@@ -181,7 +241,7 @@ class MCPBridge:
                     session = await asyncio.shield(ready)
                 self._sessions[config.name] = session
                 self._tasks[config.name] = task
-                self.tools[config.name] = await self._list_tools(config, session)
+                await self.refresh(config.name)
                 self.errors.pop(config.name, None)
                 logger.info(f"MCP server {config.name}: {len(self.tools[config.name])} tools")
             except Exception as e:
@@ -200,7 +260,9 @@ class MCPBridge:
         try:
             async with AsyncExitStack() as stack:
                 read, write = await stack.enter_async_context(self._transport(config))
-                session = await stack.enter_async_context(ClientSession(read, write))
+                session = await stack.enter_async_context(
+                    ClientSession(read, write, message_handler=self._message_handler(config.name))
+                )
                 await session.initialize()
                 if not ready.done():
                     ready.set_result(session)
@@ -214,8 +276,40 @@ class MCPBridge:
                 raise
             logger.debug(f"MCP server {config.name} connection ended: {e}")
 
+    def _message_handler(self, server: str) -> Callable[[Any], Awaitable[None]]:
+        async def handle(message: Any) -> None:
+            # Must not wait on the server here (the session is reading messages),
+            # so the new list is read in its own task
+            from mcp.types import ToolListChangedNotification
+
+            if isinstance(message, ToolListChangedNotification) or (
+                getattr(getattr(message, "root", None), "method", None)
+                == "notifications/tools/list_changed"
+            ):
+                logger.info(f"MCP server {server} says its tools changed")
+                self._schedule_refresh(server)
+
+        return handle
+
+    def _schedule_refresh(self, server: str) -> None:
+        if self._loop is None or server not in self._sessions:
+            return
+        pending = self._pending_refresh.get(server)
+        if pending is not None and not pending.done():
+            return
+        self._pending_refresh[server] = self._loop.create_task(self._refresh_quietly(server))
+
+    async def _refresh_quietly(self, server: str) -> None:
+        try:
+            await self.refresh(server)
+        except Exception as e:
+            logger.warning(f"Could not re-read the tools of MCP server {server!r}: {e}")
+
     async def close(self) -> None:
         """Close every server connection."""
+        for task in self._pending_refresh.values():
+            task.cancel()
+        self._pending_refresh.clear()
         if self._stop is not None and self.connected:
             self._stop.set()
             tasks = list(self._tasks.values())
@@ -245,31 +339,149 @@ class MCPBridge:
             )
         )
 
+    def _needs_inventory(self) -> bool:
+        return any(self._review_mode(c) != "off" for c in self.servers.values())
+
+    def _review_mode(self, config: MCPServerConfig) -> str:
+        return config.review or self.review
+
     async def _list_tools(self, config: MCPServerConfig, session: Any) -> list[MCPTool]:
-        result = await session.list_tools()
+        """Every tool the server lists, following its pages."""
+        from mcp.types import PaginatedRequestParams
+
+        listed: list[Any] = []
+        cursor = None
+        for _ in range(MAX_LIST_PAGES):
+            params = PaginatedRequestParams(cursor=cursor) if cursor else None
+            result = await session.list_tools(params=params)
+            listed.extend(result.tools)
+            cursor = _get(result, "next_cursor", "nextCursor")
+            if not cursor:
+                break
+        else:
+            logger.warning(f"MCP server {config.name}: stopped after {MAX_LIST_PAGES} pages")
+
         tools = []
-        for tool in result.tools:
-            risk, read_only = _risk_from_annotations(getattr(tool, "annotations", None))
+        for tool in listed:
+            annotations = getattr(tool, "annotations", None)
+            risk, read_only = _risk_from_annotations(annotations)
             for pattern, level in config.risk.items():
                 if fnmatch(tool.name, pattern):
                     risk = RiskLevel(level)
                     break
+            description = (tool.description or "").strip()
+            schema = _get(tool, "input_schema", "inputSchema", {}) or {}
+            dumped = annotations.model_dump(exclude_none=True) if annotations else None
             tools.append(
                 MCPTool(
                     server=config.name,
                     name=tool.name,
-                    description=(tool.description or "").strip(),
-                    schema=_get(tool, "input_schema", "inputSchema", {}) or {},
+                    description=description,
+                    schema=schema,
                     risk=risk,
                     read_only=read_only,
+                    fingerprint=fingerprint(description, schema, dumped),
                 )
             )
         return tools
+
+    async def refresh(self, server: str) -> ToolChanges | None:
+        """Read a server's tool list again and check it against the inventory."""
+        session = self._sessions.get(server)
+        if session is None:
+            return None
+        config = self.servers[server]
+        lock = self._refresh_locks.setdefault(server, asyncio.Lock())
+        async with lock:
+            tools = await self._list_tools(config, session)
+            self._last_refresh[server] = time.monotonic()
+            mode = self._review_mode(config)
+            if mode == "off" or self.inventory is None:
+                old = {t.name: t.fingerprint for t in self.tools.get(server, [])}
+                new = {t.name: t.fingerprint for t in tools}
+                changes = ToolChanges(
+                    server=server,
+                    added=[n for n in new if n not in old] if server in self.tools else [],
+                    changed=[n for n in new if n in old and old[n] != new[n]],
+                    removed=[n for n in old if n not in new],
+                )
+            else:
+                changes = self.inventory.review(
+                    server,
+                    config.identity,
+                    {
+                        t.name: {
+                            "fingerprint": t.fingerprint,
+                            "description": t.description,
+                            "risk": t.risk.value,
+                        }
+                        for t in tools
+                    },
+                    mode=mode,
+                    auto_approve=config.auto_approve,
+                )
+                self._apply_inventory(server, tools)
+            self.tools[server] = tools
+        changes._bridge = self
+        if changes or changes.held:
+            logger.info(changes.summary())
+        if changes:
+            await self._notify(changes)
+        return changes
+
+    def _apply_inventory(self, server: str, tools: list[MCPTool]) -> None:
+        if self.inventory is None:
+            return
+        entries = self.inventory.tools(server)
+        for t in tools:
+            entry = entries.get(t.name) or {}
+            t.status = entry.get("status", APPROVED)
+            t.reason = entry.get("reason", "") if t.status == PENDING else ""
+
+    async def _notify(self, changes: ToolChanges) -> None:
+        for callback in list(self.on_change):
+            try:
+                result = callback(changes)
+                if asyncio.iscoroutine(result):
+                    await result
+            except Exception as e:
+                logger.error(f"MCP tool-change handler failed: {e}", exc_info=True)
+
+    def set_status(self, server: str, tool: str, status: str) -> list[str]:
+        """Approve or block a tool (name or pattern) in the inventory and here."""
+        if self.inventory is None:
+            raise RuntimeError("Tool review is off, so there is no inventory to change")
+        matched = self.inventory.set_status(server, tool, status)
+        self._apply_inventory(server, self.tools.get(server, []))
+        return matched
+
+    def reload_inventory(self) -> None:
+        """Pick up approvals made elsewhere (`teotl mcp approve`)."""
+        if self.inventory is not None:
+            self.inventory.load()
+            for server, tools in self.tools.items():
+                self._apply_inventory(server, tools)
+
+    async def _settle(self, server: str) -> None:
+        """Wait for a pending re-read, or re-read if the list is old."""
+        pending = self._pending_refresh.get(server)
+        if pending is not None and not pending.done():
+            await asyncio.shield(pending)
+        last = self._last_refresh.get(server, 0.0)
+        if self.refresh_seconds and time.monotonic() - last > self.refresh_seconds:
+            await self._refresh_quietly(server)
 
     # -- what the agent sees ----------------------------------------------
 
     def all_tools(self) -> list[MCPTool]:
         return [t for tools in self.tools.values() for t in tools]
+
+    def held(self) -> dict[str, str]:
+        """Tools waiting for approval (`server.tool` -> "new" or "changed")."""
+        return {t.qualified: t.reason or "new" for t in self.all_tools() if t.status == PENDING}
+
+    def blocked(self) -> set[str]:
+        return {t.qualified for t in self.all_tools() if t.status == BLOCKED}
 
     def find(self, server: str, tool: str) -> MCPTool | None:
         return next((t for t in self.tools.get(server, []) if t.name == tool), None)
@@ -289,6 +501,7 @@ class MCPBridge:
                     parameters=t.schema or {"type": "object", "properties": {}},
                 )
                 for t in self.all_tools()
+                if t.status == APPROVED
             ]
         names = ", ".join(self.servers)
         return [
@@ -336,19 +549,34 @@ class MCPBridge:
         return f"Error: unknown MCP server {server!r}. Servers: {', '.join(self.servers)}"
 
     async def discover(self, server: str, tool: str | None = None) -> str:
-        """One line per tool, or one tool's full schema."""
+        """One line per tool, or one tool's full schema.
+
+        Held tools are listed by name only: a new or changed description is
+        exactly what a tampered server would use to steer the model.
+        """
         if error := self._unknown_server(server):
             return error
+        await self._settle(server)
         if tool:
             found = self.find(server, tool)
             if found is None:
+                await self.refresh(server)
+                found = self.find(server, tool)
+            if found is None or found.status == BLOCKED:
                 return f"Error: {server} has no tool {tool!r}. Call mcp_discover({server!r})."
+            if found.status == PENDING:
+                return _held_message(found)
             return json.dumps(
                 {"name": found.name, "description": found.description, "arguments": found.schema},
                 indent=1,
             )
         lines = []
         for t in self.tools.get(server, []):
+            if t.status == BLOCKED:
+                continue
+            if t.status == PENDING:
+                lines.append(f"- {t.name}: (needs approval: {_reason_text(t)})")
+                continue
             summary = t.description.split("\n", 1)[0][:160]
             lines.append(f"- {t.name}{' (read-only)' if t.read_only else ''}: {summary}")
         return f"Tools on {server} (call mcp_discover with `tool` for arguments):\n" + "\n".join(
@@ -358,8 +586,18 @@ class MCPBridge:
     async def execute(self, server: str, tool: str, args: dict[str, Any] | None = None) -> str:
         if error := self._unknown_server(server):
             return error
-        if self.find(server, tool) is None:
+        await self._settle(server)
+        found = self.find(server, tool)
+        if found is None:
+            # Maybe the server added it without saying so: read the list again
+            await self.refresh(server)
+            found = self.find(server, tool)
+        if found is None:
             return f"Error: {server} has no tool {tool!r}. Call mcp_discover({server!r})."
+        if found.status == BLOCKED:
+            return f"Error: {server}.{tool} is blocked in the MCP tool inventory."
+        if found.status == PENDING and found.qualified not in self.session_approved:
+            return f"Error: {_held_message(found)}"
         try:
             result = await self._sessions[server].call_tool(tool, arguments=args or {})
         except Exception as e:
@@ -386,6 +624,19 @@ class MCPBridge:
         if _get(result, "is_error", "isError"):
             return f"Error: {output or 'the tool reported an error'}"
         return output or "(no output)"
+
+
+def _reason_text(tool: MCPTool) -> str:
+    if tool.reason == "changed":
+        return "changed since it was approved"
+    return "new since the server was approved"
+
+
+def _held_message(tool: MCPTool) -> str:
+    return (
+        f"{tool.qualified} is {_reason_text(tool)}, so its details are hidden until "
+        f"someone approves it (`teotl mcp approve {tool.qualified}`). Calling it asks first."
+    )
 
 
 def qualified_mcp_target(tool_call_name: str, args: dict[str, Any]) -> str | None:

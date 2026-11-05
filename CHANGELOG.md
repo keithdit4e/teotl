@@ -16,12 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Connections survive across runs, and across separate `asyncio.run()` calls.
   - `await agent.close()` or `async with Agent(...)` stops the servers.
 - **Rules can use wildcards for tools** (`"github.*": "block"`) and name MCP tools as `server.tool`.
+- **MCP tool inventory: new and changed tools are held for approval** (`mcp_review`, default `"changes"`).
+  - Teotl records each server's tools in `~/.teotl/mcp/tool_inventory.json`, with a fingerprint of each tool's description, arguments and annotations.
+  - The first list from a server is approved. Tools added later, and tools that change behind the same name, are held: they always ask first, allow rules and trust don't lift that, and they're refused when no one is watching. The model sees only their names.
+  - The list is read again when the server sends `tools/list_changed`, when the model asks for a tool that isn't listed, and every `refresh_seconds` (5 minutes).
+  - `teotl mcp tools`, `teotl mcp approve`, `teotl mcp block` and `teotl mcp forget` review the inventory.
+  - New event `mcp_tools_changed`: handlers can approve or block the new tools. Every change is written to the audit log.
+  - Per server: `auto_approve` patterns and `review` (`changes`, `all` or `off`).
 
 ### Security
 - **MCP tool calls were allowed without checks.** Every call through the MCP bridge reached guardrails as a generic, low-risk tool, so a delete ran as freely as a read. Guardrails now judge the real tool:
   - read-only tools are low risk, tools marked non-destructive are medium, and everything else is high (asks first);
   - tools that haven't been discovered are high risk;
   - you can override the risk per server.
+- **MCP tools added or changed after connecting were trusted.** A server could add tools, or change a tool's description and annotations, after the first tool list, and they were used under the rules written for the original list. Now they're held for approval (above), and the bridge refuses a held tool itself even if the list changed between the guardrail check and the call.
+- **Long MCP tool lists were cut off at the first page.** The bridge now reads every page.
 
 ### Changed
 - **The MCP bridge needs `mcp` 2.x** (the `mcp` extra) and was rewritten for it. `MCPBridge(servers)`, `get_tools()` and `close()` work as before; `discover()` now returns text for the model.

@@ -26,6 +26,7 @@ EVENTS = {
     "compact": "Context window is getting full. Summarize.",
     "error": "Something went wrong.",
     "bash_spawn": "Before subprocess exec. Sandbox hook.",
+    "mcp_tools_changed": "An MCP server's tools were added, changed or removed.",
 }
 
 

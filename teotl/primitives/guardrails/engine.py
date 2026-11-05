@@ -72,6 +72,8 @@ class GuardrailEngine:
         self.audit = AuditLog()
         # Risk levels declared for custom tools (Agent.register_tool(risk=...))
         self.tool_risk: dict[str, RiskLevel] = {}
+        # Other names rules may use for a tool (MCP tools in full mode: `server.tool`)
+        self.tool_aliases: dict[str, str] = {}
         # Unattended behavior (no one to ask): "safe_zone", "refuse" or "approve"
         self.unattended_mode = "safe_zone"
         self.safe_zone: list[Path] = []
@@ -80,6 +82,10 @@ class GuardrailEngine:
         self.rules: dict[str, Any] = {}
         # Tool calls approved automatically in "approve" mode (drained by Agent.run)
         self.auto_approved: list[ToolCall] = []
+
+    def set_tool_alias(self, tool_name: str, qualified: str) -> None:
+        """Let rules name a tool by another name (an MCP tool's `server.tool`)."""
+        self.tool_aliases[tool_name] = qualified
 
     def set_tool_risk(self, tool_name: str, risk: str) -> None:
         """Set the risk level guardrails use for a custom tool ("low" to "critical")."""
@@ -151,9 +157,19 @@ class GuardrailEngine:
         """The agent's own allow/block rules for this call, if any match."""
         if not self.rules:
             return None
-        tool_rule = (self.rules.get("tools") or {}).get(tool_call.name)
-        if tool_rule in ("allow", "block"):
-            return Decision.ALLOW if tool_rule == "allow" else Decision.BLOCK
+        # Tool rules match the tool's name or, for MCP tools, `server.tool`;
+        # `*` wildcards work ("github.*"). A matching block rule wins.
+        names = {tool_call.name, str(action.details.get("tool", "")), action.target}
+        names |= {self.tool_aliases[n] for n in list(names) if n in self.tool_aliases}
+        matched = {
+            verdict
+            for pattern, verdict in (self.rules.get("tools") or {}).items()
+            if verdict in ("allow", "block") and any(fnmatch(n, pattern) for n in names if n)
+        }
+        if "block" in matched:
+            return Decision.BLOCK
+        if "allow" in matched:
+            return Decision.ALLOW
         if tool_call.name == "bash":
             command = str(tool_call.args.get("command", "")).strip()
             commands = self.rules.get("commands") or {}
@@ -183,9 +199,7 @@ class GuardrailEngine:
                 "Allow it in the agent's rules, or add its folder to safe_zone."
             )
         else:
-            reason = (
-                "Refused: this needs confirmation and no one is watching (unattended: refuse)."
-            )
+            reason = "Refused: this needs confirmation and no one is watching (unattended: refuse)."
         self.audit.log(action, "refused_unattended", reason)
         logger.info(reason)
         return EventResult(data=tool_call, blocked=True, reason=reason)

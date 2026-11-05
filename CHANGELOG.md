@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MCP servers: `Agent(mcp_servers=..., mcp_mode=...)`** (and `mcp_servers` / `mcp_mode` in YAML). It accepts Claude Desktop's `mcpServers` format, with local commands (stdio) and URLs (streamable HTTP). Install with `pip install "teotl[mcp]"`.
+  - **`compact` mode (default):** the model gets two tools, `mcp_discover` and `mcp_execute`, instead of every schema, and looks up one tool's arguments when it needs them.
+  - **`full` mode:** registers each MCP tool directly (`server__tool`).
+  - A server that fails to start is skipped and reported to the model.
+  - Long outputs are truncated.
+  - Connections survive across runs, and across separate `asyncio.run()` calls.
+  - `await agent.close()` or `async with Agent(...)` stops the servers.
+- **Rules can use wildcards for tools** (`"github.*": "block"`) and name MCP tools as `server.tool`.
+
+### Security
+- **MCP tool calls were allowed without checks.** Every call through the MCP bridge reached guardrails as a generic, low-risk tool, so a delete ran as freely as a read. Guardrails now judge the real tool:
+  - read-only tools are low risk, tools marked non-destructive are medium, and everything else is high (asks first);
+  - tools that haven't been discovered are high risk;
+  - you can override the risk per server.
+
+### Changed
+- **The MCP bridge needs `mcp` 2.x** (the `mcp` extra) and was rewritten for it. `MCPBridge(servers)`, `get_tools()` and `close()` work as before; `discover()` now returns text for the model.
+
 ## [0.2.9] - 2026-11-04
 
 ### Security

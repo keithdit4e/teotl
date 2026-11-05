@@ -108,6 +108,9 @@ class Agent:
         sandbox: str = "auto",
         sandbox_network: bool = False,
         sandbox_image: str | None = None,
+        # Tools from MCP servers (see teotl/primitives/integrations/mcp_bridge.py)
+        mcp_servers: Any = None,
+        mcp_mode: str = "compact",
     ) -> None:
         self.provider = provider
         self.instructions = instructions
@@ -134,6 +137,11 @@ class Agent:
         self._init_guardrails(policy)
         self._init_unattended(unattended, safe_zone, rules)
         self._init_sandbox(sandbox, sandbox_network, sandbox_image)
+        self.mcp = None
+        if mcp_servers:
+            from teotl.primitives.integrations.mcp_bridge import MCPBridge
+
+            self.mcp = MCPBridge(mcp_servers, mode=mcp_mode)
         self._init_memory(memory)
         self._init_skills(skills)
 
@@ -405,6 +413,7 @@ class Agent:
         from teotl.core.tools.os_sandbox import RUN_UNATTENDED
 
         RUN_UNATTENDED.set(bool(getattr(ui, "unattended", False)))
+        await self._ensure_mcp()
 
         # Emit session start on first message
         if self.session.message_count == 0:
@@ -690,6 +699,45 @@ class Agent:
             reasons = "; ".join(f"{e.title}: {e.message}" for e in critical)
             return f"Stopped by heartbeat monitor ({reasons})"
         return None
+
+    async def _ensure_mcp(self) -> None:
+        """Connect to the MCP servers (first run) and register their tools."""
+        if self.mcp is None or self.mcp.connected:
+            return
+        from teotl.primitives.integrations.mcp_bridge import DISCOVER_TOOL, EXECUTE_TOOL
+
+        await self.mcp.connect()
+        if self.guardrails is not None:
+            self.guardrails.tool_risk.update(self.mcp.tool_risk())
+        definitions = {d.name: d for d in self.mcp.get_tools()}
+        if self.mcp.mode == "compact":
+            handlers = {DISCOVER_TOOL: self.mcp.discover, EXECUTE_TOOL: self.mcp.execute}
+            for name, handler in handlers.items():
+                d = definitions[name]
+                self.register_tool(name, d.description, handler, d.parameters)
+            return
+        for name, d in definitions.items():
+            tool = self.mcp.tool_for_full_name(name)
+            if tool is None:
+                continue
+
+            async def call(_server: str = tool.server, _tool: str = tool.name, **args: Any) -> str:
+                return await self.mcp.execute(_server, _tool, args)
+
+            self.register_tool(name, d.description, call, d.parameters, risk=tool.risk.value)
+            if self.guardrails is not None:
+                self.guardrails.set_tool_alias(name, tool.qualified)
+
+    async def close(self) -> None:
+        """Close connections the agent opened (MCP servers)."""
+        if self.mcp is not None:
+            await self.mcp.close()
+
+    async def __aenter__(self) -> Agent:
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        await self.close()
 
     def register_tool(
         self,

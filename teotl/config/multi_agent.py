@@ -223,6 +223,10 @@ class AgentConfig(BaseModel):
     sandbox: str = "auto"
     sandbox_network: bool = False
     sandbox_image: str | None = None  # for sandbox: docker
+    # MCP servers, in the same shape as Claude Desktop's `mcpServers`:
+    # {"github": {"command": "npx", "args": [...], "env": {...}}, "docs": {"url": "..."}}
+    mcp_servers: dict[str, Any] | None = None
+    mcp_mode: str = "compact"  # or "full": register every MCP tool directly
     port: int | None = None  # A2A server port
     max_turns: int = 50
 

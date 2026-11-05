@@ -223,6 +223,11 @@ class AgentConfig(BaseModel):
     sandbox: str = "auto"
     sandbox_network: bool = False
     sandbox_image: str | None = None  # for sandbox: docker
+    # One long-lived sandboxed shell: "agent" (for the agent's lifetime), or a name for
+    # a Docker session that keeps files and installs across runs (sandbox: docker)
+    sandbox_session: str | None = None
+    sandbox_idle_minutes: int = 240  # a named session stops itself after this long idle
+    sandbox_root: bool = False  # Docker only: run as root in the container (apt install)
     # MCP servers, in the same shape as Claude Desktop's `mcpServers`:
     # {"github": {"command": "npx", "args": [...], "env": {...}}, "docs": {"url": "..."}}
     mcp_servers: dict[str, Any] | None = None

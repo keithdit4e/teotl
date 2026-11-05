@@ -119,3 +119,7 @@ def demo(save_svg: str | None):
 
 main.add_command(memory)
 main.add_command(mcp)
+
+from teotl.cli.sandbox import sandbox  # noqa: E402
+
+main.add_command(sandbox)

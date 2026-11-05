@@ -108,6 +108,9 @@ class Agent:
         sandbox: str = "auto",
         sandbox_network: bool = False,
         sandbox_image: str | None = None,
+        sandbox_session: str | None = None,
+        sandbox_idle_minutes: int = 240,
+        sandbox_root: bool = False,
         # Tools from MCP servers (see teotl/primitives/integrations/mcp_bridge.py)
         mcp_servers: Any = None,
         mcp_mode: str = "compact",
@@ -137,7 +140,14 @@ class Agent:
         # Core primitives (lazy-loaded to avoid circular imports)
         self._init_guardrails(policy)
         self._init_unattended(unattended, safe_zone, rules)
-        self._init_sandbox(sandbox, sandbox_network, sandbox_image)
+        self._init_sandbox(
+            sandbox,
+            sandbox_network,
+            sandbox_image,
+            session=sandbox_session,
+            idle_minutes=sandbox_idle_minutes,
+            docker_root=sandbox_root,
+        )
         self.mcp = None
         if mcp_servers:
             from teotl.primitives.integrations.mcp_bridge import MCPBridge
@@ -211,12 +221,16 @@ class Agent:
             self.guardrails.safe_zone = self.safe_zone
             self.guardrails.rules = dict(rules or {})
 
-    def _init_sandbox(self, mode: str, network: bool, image: str | None) -> None:
+    def _init_sandbox(self, mode: str, network: bool, image: str | None, **session: Any) -> None:
         """Configure the OS sandbox the bash tool runs commands in."""
         from teotl.core.tools.os_sandbox import DEFAULT_IMAGE, SandboxSettings
 
         self.os_sandbox = SandboxSettings(
-            mode=mode, zones=self._zone_folders, network=network, image=image or DEFAULT_IMAGE
+            mode=mode,
+            zones=self._zone_folders,
+            network=network,
+            image=image or DEFAULT_IMAGE,
+            **session,
         )
         self.sandbox = self.os_sandbox.mode
 
@@ -782,9 +796,17 @@ class Agent:
         self._sync_mcp()  # handlers may have approved or blocked tools
 
     async def close(self) -> None:
-        """Close connections the agent opened (MCP servers)."""
-        if self.mcp is not None:
-            await self.mcp.close()
+        """Release what the agent holds open: MCP server connections and its sandbox
+        session.
+
+        A named Docker session keeps running until it's idle; `teotl sandbox stop`
+        stops it sooner.
+        """
+        try:
+            if self.mcp is not None:
+                await self.mcp.close()
+        finally:
+            await self.os_sandbox.close()
 
     async def __aenter__(self) -> Agent:
         return self

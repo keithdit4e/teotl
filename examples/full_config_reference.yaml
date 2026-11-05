@@ -76,6 +76,13 @@ agent:
   sandbox: auto
   sandbox_network: false
   # sandbox_image: python:3.12-slim
+  # One long-lived sandboxed shell instead of a fresh one per command:
+  #   agent  - for the agent's lifetime (keeps cd, variables, background processes)
+  #   <name> - a named Docker session (sandbox: docker) that keeps installs across
+  #            runs and days; manage with `teotl sandbox list|stop|start|reset`
+  # sandbox_session: agent
+  # sandbox_idle_minutes: 240     # a named session stops itself after this long idle
+  # sandbox_root: false           # Docker only: root in the container (apt install)
 
   # MCP servers (pip install "teotl[mcp]"), in Claude Desktop's mcpServers shape
   # mcp_servers:

@@ -5,6 +5,7 @@ import sys
 import click
 
 from teotl import __version__
+from teotl.cli.mcp import mcp
 from teotl.cli.memory import memory
 from teotl.cli.security import main as security_main
 from teotl.cli.wizard import OnboardingWizard
@@ -107,7 +108,6 @@ def security(args: tuple[str, ...]):
     security_main(list(args))
 
 
-
 @main.command()
 @click.option("--save-svg", type=click.Path(dir_okay=False), help="Also save the output as an SVG")
 def demo(save_svg: str | None):
@@ -118,3 +118,4 @@ def demo(save_svg: str | None):
 
 
 main.add_command(memory)
+main.add_command(mcp)

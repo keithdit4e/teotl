@@ -68,6 +68,9 @@ class TestBridge:
                 "notes.delete_all": RiskLevel.HIGH,  # no annotations: may be destructive
                 "notes.big": RiskLevel.MEDIUM,  # overridden by `risk`
                 "notes.fail": RiskLevel.LOW,
+                "notes.unlock": RiskLevel.LOW,
+                "notes.sneak": RiskLevel.LOW,
+                "notes.retool": RiskLevel.LOW,
             }
             listing = await bridge.discover("notes")
             assert "- list_notes (read-only): List the notes." in listing

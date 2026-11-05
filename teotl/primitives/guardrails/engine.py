@@ -82,6 +82,12 @@ class GuardrailEngine:
         self.rules: dict[str, Any] = {}
         # Tool calls approved automatically in "approve" mode (drained by Agent.run)
         self.auto_approved: list[ToolCall] = []
+        # MCP tools that are new or changed since they were approved (`server.tool`
+        # -> "new" | "changed"), blocked MCP tools, and held tools the user has
+        # approved during this session. Kept up to date by the MCP bridge.
+        self.held_tools: dict[str, str] = {}
+        self.blocked_tools: set[str] = set()
+        self.session_approved: set[str] = set()
 
     def set_tool_alias(self, tool_name: str, qualified: str) -> None:
         """Let rules name a tool by another name (an MCP tool's `server.tool`)."""
@@ -112,8 +118,22 @@ class GuardrailEngine:
         elif rule == Decision.ALLOW and decision == Decision.CONFIRM:
             decision = Decision.ALLOW
 
+        # MCP tools the inventory blocks, or holds because they are new or changed:
+        # a held tool always asks first; allow rules and trust don't apply to it
+        names = self._tool_names(tool_call, action)
+        blocked_tool = next((n for n in names if n in self.blocked_tools), None)
+        if blocked_tool is not None:
+            reason = f"`{blocked_tool}` is blocked in the MCP tool inventory"
+            self.audit.log(action, "blocked_inventory", reason)
+            return EventResult(data=tool_call, blocked=True, reason=reason)
+        held = next(
+            (n for n in names if n in self.held_tools and n not in self.session_approved), None
+        )
+        if held is not None and decision != Decision.BLOCK:
+            decision = Decision.CONFIRM
+
         # 3. Apply progressive trust
-        if decision == Decision.CONFIRM and self.trust.is_trusted(action):
+        if held is None and decision == Decision.CONFIRM and self.trust.is_trusted(action):
             decision = Decision.ALLOW
             logger.debug(f"Auto-approved by trust: {action.target}")
 
@@ -128,6 +148,19 @@ class GuardrailEngine:
             logger.info(f"Blocked: {reason}")
             return EventResult(data=tool_call, blocked=True, reason=reason)
 
+        if (
+            held is not None
+            and decision == Decision.CONFIRM
+            and (ui is None or getattr(ui, "unattended", False))
+        ):
+            reason = (
+                f"Refused: `{held}` is {_held_text(self.held_tools[held])} and no one is "
+                f"watching to approve it. Review it with `teotl mcp tools`, then "
+                f"`teotl mcp approve {held}`."
+            )
+            self.audit.log(action, "refused_held_tool", reason)
+            return EventResult(data=tool_call, blocked=True, reason=reason)
+
         if decision == Decision.CONFIRM and getattr(ui, "unattended", False):
             return self._decide_unattended(action, tool_call)
 
@@ -139,8 +172,16 @@ class GuardrailEngine:
                 return EventResult(data=tool_call, blocked=True, reason=reason)
 
             description = self._describe_action(action, tool_call)
+            if held is not None:
+                description = (
+                    f"MCP tool {held} is {_held_text(self.held_tools[held])}. {description}"
+                )
             approved = await ui.confirm(f"🛡️ {description}")
 
+            if approved and held is not None:
+                self.session_approved.add(held)  # for this session only
+                self.audit.log(action, "approved_held_tool_by_user")
+                return EventResult(data=tool_call, blocked=False)
             if approved:
                 self.trust.record_approval(action)
                 self.audit.log(action, "approved_by_user")
@@ -159,8 +200,7 @@ class GuardrailEngine:
             return None
         # Tool rules match the tool's name or, for MCP tools, `server.tool`;
         # `*` wildcards work ("github.*"). A matching block rule wins.
-        names = {tool_call.name, str(action.details.get("tool", "")), action.target}
-        names |= {self.tool_aliases[n] for n in list(names) if n in self.tool_aliases}
+        names = self._tool_names(tool_call, action)
         matched = {
             verdict
             for pattern, verdict in (self.rules.get("tools") or {}).items()
@@ -178,6 +218,12 @@ class GuardrailEngine:
             if any(fnmatch(command, p) for p in commands.get("allow", [])):
                 return Decision.ALLOW
         return None
+
+    def _tool_names(self, tool_call: ToolCall, action: Action) -> set[str]:
+        """Every name this call's tool goes by (MCP tools: also `server.tool`)."""
+        names = {tool_call.name, str(action.details.get("tool", "")), action.target}
+        names |= {self.tool_aliases[n] for n in list(names) if n in self.tool_aliases}
+        return {n for n in names if n}
 
     def _decide_unattended(self, action: Action, tool_call: ToolCall) -> EventResult:
         """An "ask first" action with nobody to ask."""
@@ -220,3 +266,9 @@ class GuardrailEngine:
             return f"⚠️  Destructive: {action.target}"
         else:
             return f"Execute: {tool_call.name}({', '.join(f'{k}={v}' for k, v in tool_call.args.items())})"
+
+
+def _held_text(reason: str) -> str:
+    if reason == "changed":
+        return "changed since it was approved"
+    return "new since its server was approved"

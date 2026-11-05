@@ -247,6 +247,13 @@ agent = Agent(
   - Risk comes from the server's annotations: read-only tools are low risk; tools marked non-destructive are medium; anything else is high and asks first.
   - Override the risk per server with `"risk": {"delete_*": "critical"}`.
   - Rules can name MCP tools: `rules={"tools": {"github.create_issue": "allow", "github.delete_*": "block"}}`.
+- **New and changed tools are held.** Teotl records each server's tools and a fingerprint of their description, arguments and annotations:
+  - The first list from a server is approved.
+  - A tool added later, or one that changes behind the same name, is held. The model sees only its name, it always asks first (allow rules don't count), and it's refused when no one is watching.
+  - The list is read again when the server says it changed, when the model asks for a tool that isn't on it, and every 5 minutes.
+  - Review with `teotl mcp tools`, then `teotl mcp approve github.create_issue` or `teotl mcp block ...`.
+  - Or set rules in code: handlers on the `mcp_tools_changed` event get the changes and can call `changes.approve(tool)` or `changes.block(tool)`.
+  - `mcp_review="all"` holds every tool until approved; `"off"` turns this off.
 
 Call `await agent.close()`, or use `async with Agent(...) as agent:`, to stop the servers.
 

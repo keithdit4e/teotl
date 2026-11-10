@@ -353,3 +353,16 @@ def test_cli_review(notes, tmp_path):
     assert "No tools waiting" in runner.invoke(mcp_cli, ["tools", "--held"]).output
     out = runner.invoke(mcp_cli, ["block", "notes.nope"])
     assert out.exit_code != 0 and "no tool matching" in out.output
+
+
+def test_mcp_calls_are_described_by_their_real_name():
+    from teotl.primitives.guardrails.classifier import classify
+    from teotl.primitives.guardrails.engine import GuardrailEngine
+
+    call = ToolCall(
+        id="1",
+        name="mcp_execute",
+        args={"server": "notes", "tool": "add_note", "args": {"name": "b.txt"}},
+    )
+    text = GuardrailEngine()._describe_action(classify(call), call)
+    assert text == "Call notes.add_note(name='b.txt')"

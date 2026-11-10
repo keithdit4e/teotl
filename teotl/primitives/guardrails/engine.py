@@ -267,6 +267,11 @@ class GuardrailEngine:
             return f"Network access: {host}"
         elif action.type.value == "destructive":
             return f"⚠️  Destructive: {action.target}"
+        elif action.details.get("mcp"):
+            args = ", ".join(f"{k}={v!r}" for k, v in (action.details.get("args") or {}).items())
+            if len(args) > 200:
+                args = args[:197] + "..."
+            return f"Call {action.target}({args})"
         else:
             return f"Execute: {tool_call.name}({', '.join(f'{k}={v}' for k, v in tool_call.args.items())})"
 

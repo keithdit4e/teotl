@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `MCPBridge.sync_guardrails(engine)` brings a `GuardrailEngine` in line with the bridge (risk, held and blocked tools, session approvals).
   - `approve_command` on the bridge and the engine sets the command named when a held tool is refused (default `teotl mcp approve`).
 
+### Changed
+- Confirmations for MCP tools name the real tool and its arguments (`Call github.create_issue(title='...')`) instead of the `mcp_execute` wrapper.
+
 ## [0.3.0] - 2026-11-05
 
 ### Added

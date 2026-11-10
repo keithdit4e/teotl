@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Hooks for building on the MCP bridge** (used by the Pixqui MCP proxy):
+  - `MCPBridge.call_tool()` returns the server's result unchanged (images and structured content included) and raises `MCPCallRefusedError` for unknown, blocked or held tools. `execute()` still returns text.
+  - `MCPTool.raw` keeps each tool exactly as the server listed it.
+  - `MCPBridge.sync_guardrails(engine)` brings a `GuardrailEngine` in line with the bridge (risk, held and blocked tools, session approvals).
+  - `approve_command` on the bridge and the engine sets the command named when a held tool is refused (default `teotl mcp approve`).
+
 ## [0.3.0] - 2026-11-05
 
 ### Added

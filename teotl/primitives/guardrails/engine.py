@@ -88,6 +88,9 @@ class GuardrailEngine:
         self.held_tools: dict[str, str] = {}
         self.blocked_tools: set[str] = set()
         self.session_approved: set[str] = set()
+        # The commands named when a held tool is refused (a proxy can rename them)
+        self.approve_command = "teotl mcp approve"
+        self.review_command = "teotl mcp tools"
 
     def set_tool_alias(self, tool_name: str, qualified: str) -> None:
         """Let rules name a tool by another name (an MCP tool's `server.tool`)."""
@@ -155,8 +158,8 @@ class GuardrailEngine:
         ):
             reason = (
                 f"Refused: `{held}` is {_held_text(self.held_tools[held])} and no one is "
-                f"watching to approve it. Review it with `teotl mcp tools`, then "
-                f"`teotl mcp approve {held}`."
+                f"watching to approve it. Review it with `{self.review_command}`, then "
+                f"`{self.approve_command} {held}`."
             )
             self.audit.log(action, "refused_held_tool", reason)
             return EventResult(data=tool_call, blocked=True, reason=reason)

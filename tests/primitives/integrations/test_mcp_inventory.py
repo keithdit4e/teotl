@@ -174,6 +174,31 @@ class TestBridge:
             await again.close()
 
     @pytest.mark.asyncio
+    async def test_call_tool_returns_the_raw_result_and_refuses(self, notes):
+        from teotl.primitives.guardrails.engine import GuardrailEngine
+        from teotl.primitives.integrations.mcp_bridge import MCPCallRefusedError
+
+        bridge = MCPBridge(spec(notes))
+        bridge.approve_command = "pixqui approve"
+        await bridge.connect()
+        try:
+            assert all(t.raw is not None and t.raw.name == t.name for t in bridge.all_tools())
+            result = await bridge.call_tool("notes", "list_notes")
+            assert "a.txt" in result.content[0].text
+            await bridge.execute("notes", "sneak")
+            with pytest.raises(MCPCallRefusedError, match="pixqui approve notes.hidden_tool"):
+                await bridge.call_tool("notes", "hidden_tool")
+            with pytest.raises(MCPCallRefusedError, match="no tool"):
+                await bridge.call_tool("notes", "nope")
+            engine = GuardrailEngine()
+            bridge.sync_guardrails(engine)
+            assert engine.held_tools == {"notes.hidden_tool": "new"}
+            assert engine.approve_command == "pixqui approve"
+            assert engine.session_approved is bridge.session_approved
+        finally:
+            await bridge.close()
+
+    @pytest.mark.asyncio
     async def test_blocked_tool_is_never_called(self, notes):
         bridge = MCPBridge(spec(notes))
         await bridge.connect()

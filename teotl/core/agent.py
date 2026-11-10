@@ -738,11 +738,10 @@ class Agent:
         """Bring guardrails (and, in full mode, the tool list) in line with the bridge."""
         if self.mcp is None:
             return
-        self.mcp.reload_inventory()
         if self.guardrails is not None:
-            self.guardrails.tool_risk.update(self.mcp.tool_risk())
-            self.guardrails.held_tools = self.mcp.held()
-            self.guardrails.blocked_tools = self.mcp.blocked()
+            self.mcp.sync_guardrails(self.guardrails)
+        else:
+            self.mcp.reload_inventory()
         if self.mcp.mode != "full":
             return
         definitions = {d.name: d for d in self.mcp.get_tools()}

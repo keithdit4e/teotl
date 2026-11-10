@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-10
+
 ### Added
 - **Hooks for building on the MCP bridge** (used by the Pixqui MCP proxy):
   - `MCPBridge.call_tool()` returns the server's result unchanged (images and structured content included) and raises `MCPCallRefusedError` for unknown, blocked or held tools. `execute()` still returns text.

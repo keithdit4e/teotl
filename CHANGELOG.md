@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `MCPBridge.sync_guardrails(engine)` brings a `GuardrailEngine` in line with the bridge (risk, held and blocked tools, session approvals).
   - `approve_command` on the bridge and the engine sets the command named when a held tool is refused (default `teotl mcp approve`).
 
+### Fixed
+- Linux sandbox (bubblewrap): every command failed on machines with Docker installed, because the Docker socket was hidden through the `/var/run` symlink. Sockets are now found by their real path, once each.
+
 ### Changed
 - Confirmations for MCP tools name the real tool and its arguments (`Call github.create_issue(title='...')`) instead of the `mcp_execute` wrapper.
 

@@ -256,3 +256,19 @@ async def test_docker_backend(dirs):
     assert (zone / "a.txt").exists()
     assert "No such file" in out
     assert Path(zone / "a.txt").read_text().strip() == "ok"
+
+
+def test_docker_sockets_are_found_by_their_real_path(tmp_path, monkeypatch):
+    from teotl.core.tools import os_sandbox
+
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "docker.sock").touch()
+    (tmp_path / "var").mkdir()
+    (tmp_path / "var" / "run").symlink_to(run)
+    monkeypatch.setattr(
+        os_sandbox,
+        "DOCKER_SOCKETS",
+        (str(tmp_path / "var/run/docker.sock"), str(run / "docker.sock"), str(tmp_path / "nope")),
+    )
+    assert os_sandbox.docker_sockets() == [(run / "docker.sock").resolve()]

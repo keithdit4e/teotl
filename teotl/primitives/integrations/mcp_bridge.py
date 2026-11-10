@@ -133,6 +133,9 @@ class MCPTool:
     fingerprint: str = ""
     status: str = APPROVED  # approved, pending (held for review) or blocked
     reason: str = ""  # why it's held: "new" or "changed"
+    # The tool exactly as the server listed it (an mcp Tool), for proxies that
+    # pass tools on unchanged
+    raw: Any = field(default=None, repr=False, compare=False)
 
     @property
     def qualified(self) -> str:
@@ -153,6 +156,10 @@ def _risk_from_annotations(annotations: Any) -> tuple[RiskLevel, bool]:
     if _get(annotations, "destructive_hint", "destructiveHint") is False:
         return (RiskLevel.MEDIUM, False)
     return (RiskLevel.HIGH, False)  # the MCP default: may be destructive
+
+
+class MCPCallRefusedError(Exception):
+    """A tool call the bridge won't make: unknown, blocked, or held for review."""
 
 
 def _full_name(server: str, tool: str) -> str:
@@ -191,6 +198,8 @@ class MCPBridge:
         # A held tool runs only if it's here: the list can change between the
         # guardrail check and the call, so the bridge checks again itself.
         self.session_approved: set[str] = set()
+        # The command people run to approve a held tool, named in messages
+        self.approve_command = "teotl mcp approve"
         self.servers: dict[str, MCPServerConfig] = {s.name: s for s in parse_servers(servers)}
         self.mode = mode
         self.max_output_chars = max_output_chars
@@ -381,6 +390,7 @@ class MCPBridge:
                     risk=risk,
                     read_only=read_only,
                     fingerprint=fingerprint(description, schema, dumped),
+                    raw=tool,
                 )
             )
         return tools
@@ -565,7 +575,7 @@ class MCPBridge:
             if found is None or found.status == BLOCKED:
                 return f"Error: {server} has no tool {tool!r}. Call mcp_discover({server!r})."
             if found.status == PENDING:
-                return _held_message(found)
+                return self._held_message(found)
             return json.dumps(
                 {"name": found.name, "description": found.description, "arguments": found.schema},
                 indent=1,
@@ -584,8 +594,24 @@ class MCPBridge:
         )
 
     async def execute(self, server: str, tool: str, args: dict[str, Any] | None = None) -> str:
+        """Call a tool and return its output as text (errors start with "Error:")."""
+        try:
+            result = await self.call_tool(server, tool, args)
+        except MCPCallRefusedError as e:
+            return f"Error: {e}"
+        except Exception as e:
+            return f"Error: {server}.{tool} failed: {type(e).__name__}: {e}"
+        return self._format(result)
+
+    async def call_tool(self, server: str, tool: str, args: dict[str, Any] | None = None) -> Any:
+        """Call a tool and return the server's result unchanged (an mcp CallToolResult).
+
+        Raises MCPCallRefusedError for an unknown server or tool, a blocked tool, or a
+        held tool nobody approved this session. Errors from the call itself
+        propagate.
+        """
         if error := self._unknown_server(server):
-            return error
+            raise MCPCallRefusedError(error.removeprefix("Error: "))
         await self._settle(server)
         found = self.find(server, tool)
         if found is None:
@@ -593,16 +619,30 @@ class MCPBridge:
             await self.refresh(server)
             found = self.find(server, tool)
         if found is None:
-            return f"Error: {server} has no tool {tool!r}. Call mcp_discover({server!r})."
+            raise MCPCallRefusedError(
+                f"{server} has no tool {tool!r}. Call mcp_discover({server!r})."
+            )
         if found.status == BLOCKED:
-            return f"Error: {server}.{tool} is blocked in the MCP tool inventory."
+            raise MCPCallRefusedError(f"{server}.{tool} is blocked in the MCP tool inventory.")
         if found.status == PENDING and found.qualified not in self.session_approved:
-            return f"Error: {_held_message(found)}"
-        try:
-            result = await self._sessions[server].call_tool(tool, arguments=args or {})
-        except Exception as e:
-            return f"Error: {server}.{tool} failed: {type(e).__name__}: {e}"
-        return self._format(result)
+            raise MCPCallRefusedError(self._held_message(found))
+        return await self._sessions[server].call_tool(tool, arguments=args or {})
+
+    def sync_guardrails(self, engine: Any) -> None:
+        """Bring a GuardrailEngine in line with this bridge: risk, held and blocked tools."""
+        self.reload_inventory()
+        engine.tool_risk.update(self.tool_risk())
+        engine.held_tools = self.held()
+        engine.blocked_tools = self.blocked()
+        engine.session_approved = self.session_approved
+        engine.approve_command = self.approve_command
+
+    def _held_message(self, tool: MCPTool) -> str:
+        return (
+            f"{tool.qualified} is {_reason_text(tool)}, so its details are hidden until "
+            f"someone approves it (`{self.approve_command} {tool.qualified}`). "
+            "Calling it asks first."
+        )
 
     def _format(self, result: Any) -> str:
         parts = []
@@ -630,13 +670,6 @@ def _reason_text(tool: MCPTool) -> str:
     if tool.reason == "changed":
         return "changed since it was approved"
     return "new since the server was approved"
-
-
-def _held_message(tool: MCPTool) -> str:
-    return (
-        f"{tool.qualified} is {_reason_text(tool)}, so its details are hidden until "
-        f"someone approves it (`teotl mcp approve {tool.qualified}`). Calling it asks first."
-    )
 
 
 def qualified_mcp_target(tool_call_name: str, args: dict[str, Any]) -> str | None:

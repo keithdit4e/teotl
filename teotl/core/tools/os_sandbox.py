@@ -76,6 +76,22 @@ def scrub_env(env: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in env.items() if not _SECRET_ENV.search(k)}
 
 
+def docker_sockets() -> list[Path]:
+    """The Docker sockets on this machine, by their real path, once each.
+
+    /var/run is a symlink to /run on most Linux systems: bwrap can't mount over
+    a path through a symlink, and the same socket would be listed twice.
+    """
+    found: list[Path] = []
+    for sock in DOCKER_SOCKETS:
+        path = Path(os.path.expanduser(sock))
+        if path.exists():
+            real = path.resolve()
+            if real not in found:
+                found.append(real)
+    return found
+
+
 def default_secret_paths() -> list[Path]:
     home = Path.home()
     paths = [home / p for p in SECRET_PATHS]
@@ -224,10 +240,8 @@ class Bubblewrap(Backend):
                 args += ["--tmpfs", str(path)]
             elif path.exists():
                 args += ["--ro-bind", "/dev/null", str(path)]
-        for sock in DOCKER_SOCKETS:
-            sock_path = Path(os.path.expanduser(sock))
-            if sock_path.exists():
-                args += ["--ro-bind", "/dev/null", str(sock_path)]
+        for sock_path in docker_sockets():
+            args += ["--ro-bind", "/dev/null", str(sock_path)]
         if not spec.network:
             args.append("--unshare-net")
         args += [

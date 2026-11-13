@@ -30,6 +30,11 @@ EVENTS = {
 }
 
 
+# A handler that crashes on these events blocks the action instead of being skipped: a guardrail or an
+# output filter that fails must not let the call (or its unfiltered output) through.
+FAIL_CLOSED_EVENTS = frozenset({"tool_call", "tool_result"})
+
+
 class EventBus:
     """
     Typed async event bus. Extensions hook into this.
@@ -95,7 +100,15 @@ class EventBus:
                 result = await handler(result, **kwargs)
             except Exception as e:
                 logger.error(f"Error in handler for '{event}': {e}", exc_info=True)
-                # Don't let a broken handler crash the agent
+                if event in FAIL_CLOSED_EVENTS:
+                    name = getattr(handler, "__qualname__", None) or type(handler).__name__
+                    result.blocked = True
+                    result.reason = (
+                        f"a {event} handler ({name}) failed with {type(e).__name__}, "
+                        "so this was blocked to be safe"
+                    )
+                    break
+                # Other events: don't let a broken handler crash the agent
                 continue
 
             if result.blocked:

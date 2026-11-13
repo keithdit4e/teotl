@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A guardrail or output filter that crashes now blocks instead of being skipped.** The event bus used to log a failing handler and carry on, so a `tool_call` guardrail that raised let the call run, and a `tool_result` filter that raised (for example a redactor) let unfiltered output through. For `tool_call` and `tool_result` it now blocks, names the handler and stops; other events still skip a broken handler.
+- **MCP tools that report an error are recorded as failed calls.** A server's error result (`isError`), a refused call or a transport failure still reaches the model as text starting with "Error:", but the tool result now has `is_error=True`, so the harness, heartbeat and audit count it.
+
+### Added
+- `ToolErrorOutput`: a `str` a tool handler can return to report a failure without raising; the agent records the call as an error.
+- A `tool_result` handler can block: the model then sees "Output withheld: ..." instead of the output.
+- **Hooks for authenticated MCP connections**: `Agent(mcp_transport=...)` / `MCPBridge(transport=...)` open each server's connection (for example to sign every request), with `MCPBridge.default_transport(config)` for the servers you don't handle.
+- `Agent.add_mcp_servers(...)` gives MCP tools to an agent created elsewhere, such as a `PlannerWorkerHarness` worker.
+
 ## [0.3.1] - 2026-11-10
 
 ### Added

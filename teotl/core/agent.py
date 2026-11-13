@@ -17,6 +17,7 @@ from teotl.core.types import (
     Response,
     ToolCall,
     ToolDefinition,
+    ToolErrorOutput,
     ToolResult,
 )
 from teotl.primitives.guardrails.prompt_injection import (
@@ -115,6 +116,7 @@ class Agent:
         mcp_servers: Any = None,
         mcp_mode: str = "compact",
         mcp_review: str = "changes",
+        mcp_transport: Any = None,
     ) -> None:
         self.provider = provider
         self.instructions = instructions
@@ -150,12 +152,9 @@ class Agent:
         )
         self.mcp = None
         if mcp_servers:
-            from teotl.primitives.integrations.mcp_bridge import MCPBridge
-
-            self.mcp = MCPBridge(mcp_servers, mode=mcp_mode, review=mcp_review)
-            self.mcp.on_change.append(self._on_mcp_change)
-            if self.guardrails is not None:
-                self.mcp.session_approved = self.guardrails.session_approved
+            self.add_mcp_servers(
+                mcp_servers, mode=mcp_mode, review=mcp_review, transport=mcp_transport
+            )
         self._mcp_tool_names: set[str] = set()  # tools registered from MCP (full mode)
         self._init_memory(memory)
         self._init_skills(skills)
@@ -813,6 +812,28 @@ class Agent:
     async def __aexit__(self, *exc: Any) -> None:
         await self.close()
 
+    def add_mcp_servers(
+        self,
+        servers: Any,
+        *,
+        mode: str = "compact",
+        review: str = "changes",
+        transport: Any = None,
+    ) -> None:
+        """Give this agent tools from MCP servers (what ``Agent(mcp_servers=...)`` does).
+
+        For agents created by something else, such as a ``PlannerWorkerHarness`` worker. Call it before
+        the agent's first run; the servers connect on that run. ``transport`` is passed to ``MCPBridge``.
+        """
+        if self.mcp is not None:
+            raise ValueError("this agent already has MCP servers; pass them all at once")
+        from teotl.primitives.integrations.mcp_bridge import MCPBridge
+
+        self.mcp = MCPBridge(servers, mode=mode, review=review, transport=transport)
+        self.mcp.on_change.append(self._on_mcp_change)
+        if self.guardrails is not None:
+            self.mcp.session_approved = self.guardrails.session_approved
+
     def register_tool(
         self,
         name: str,
@@ -1270,7 +1291,10 @@ class Agent:
             output = handler(**tool_call.args)
             if inspect.isawaitable(output):
                 output = await output
-            result = ToolResult(call_id=tool_call.id, output=str(output))
+            if isinstance(output, ToolErrorOutput):
+                result = ToolResult(call_id=tool_call.id, error=str(output), is_error=True)
+            else:
+                result = ToolResult(call_id=tool_call.id, output=str(output))
         except Exception as e:
             logger.error(f"Tool {tool_call.name} failed: {e}")
             result = ToolResult(
@@ -1281,6 +1305,13 @@ class Agent:
 
         # 3. Emit tool_result event (output filtering hook)
         post_event = await self.events.emit("tool_result", result, ui=ui)
+        if post_event.blocked:
+            # A filter withheld the output, or crashed (fail closed): never pass it on unfiltered
+            return ToolResult(
+                call_id=tool_call.id,
+                error=f"Output withheld: {post_event.reason}",
+                is_error=True,
+            )
         if post_event.data is not None:
             result = post_event.data
 

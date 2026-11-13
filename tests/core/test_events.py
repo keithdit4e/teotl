@@ -117,3 +117,21 @@ async def test_has_handlers(bus):
 
     bus.clear("test")
     assert not bus.has_handlers("test")
+
+
+@pytest.mark.parametrize("event", ["tool_call", "tool_result"])
+async def test_broken_handler_blocks_tool_events(bus, event):
+    """A guardrail or output filter that crashes must not let the call (or its output) through."""
+
+    async def broken(event, **kwargs):
+        raise ValueError("boom")
+
+    async def after(event, **kwargs):
+        raise AssertionError("handlers after a failed one must not run")
+
+    bus.on(event, broken, priority=0)
+    bus.on(event, after, priority=1)
+
+    result = await bus.emit(event, "data")
+    assert result.blocked
+    assert "failed with ValueError" in result.reason and "blocked to be safe" in result.reason

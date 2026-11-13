@@ -56,6 +56,14 @@ class ToolCall:
     args: dict[str, Any]
 
 
+class ToolErrorOutput(str):
+    """Text a tool handler returns when the call failed without raising.
+
+    It is still a ``str`` (callers that read text see no change), but the agent records the call as an
+    error (``ToolResult.is_error``), so harness, heartbeat and audit count it as a failure.
+    """
+
+
 @dataclass
 class ToolResult:
     """Result of executing a tool call."""

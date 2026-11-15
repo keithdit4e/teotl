@@ -37,7 +37,7 @@ from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from typing import TYPE_CHECKING, Any
 
-from teotl.core.types import RiskLevel, ToolDefinition
+from teotl.core.types import RiskLevel, ToolDefinition, ToolErrorOutput
 from teotl.primitives.integrations.mcp_inventory import (
     APPROVED,
     BLOCKED,
@@ -180,12 +180,19 @@ class MCPBridge:
         review: str = "changes",
         inventory: ToolInventory | None = None,
         refresh_seconds: float = 300.0,
+        transport: Callable[[MCPServerConfig], Any] | None = None,
     ) -> None:
+        """``transport``, if given, opens each server's connection instead of the default: it receives the
+        server's ``MCPServerConfig`` and returns an async context manager yielding ``(read, write)``, like
+        the MCP SDK's ``stdio_client`` / ``streamable_http_client``. Use it to add authentication (for
+        example signed headers on every request). ``MCPBridge.default_transport(config)`` is the default,
+        so a factory can handle some servers itself and pass the rest on."""
         if mode not in MODES:
             raise ValueError(f"Invalid MCP mode {mode!r}: use one of {', '.join(MODES)}")
         if review not in REVIEW_MODES:
             raise ValueError(f"Invalid MCP review {review!r}: use one of {', '.join(REVIEW_MODES)}")
         self.review = review
+        self.transport = transport
         # Created on connect when any server is reviewed
         self.inventory = inventory
         self.refresh_seconds = refresh_seconds
@@ -268,7 +275,8 @@ class MCPBridge:
 
         try:
             async with AsyncExitStack() as stack:
-                read, write = await stack.enter_async_context(self._transport(config))
+                opener = self.transport or self._transport
+                read, write = await stack.enter_async_context(opener(config))
                 session = await stack.enter_async_context(
                     ClientSession(read, write, message_handler=self._message_handler(config.name))
                 )
@@ -329,6 +337,11 @@ class MCPBridge:
         self._sessions.clear()
         self._tasks.clear()
         self._stop = None
+
+    @staticmethod
+    def default_transport(config: MCPServerConfig) -> Any:
+        """The connection teotl opens for a server when no ``transport`` is given."""
+        return MCPBridge._transport(config)
 
     @staticmethod
     def _transport(config: MCPServerConfig) -> Any:
@@ -594,13 +607,17 @@ class MCPBridge:
         )
 
     async def execute(self, server: str, tool: str, args: dict[str, Any] | None = None) -> str:
-        """Call a tool and return its output as text (errors start with "Error:")."""
+        """Call a tool and return its output as text.
+
+        Errors start with "Error:" and are returned as ``ToolErrorOutput``, so the agent records them as
+        failed calls: the server's own error results (``isError``), refusals, and transport failures.
+        """
         try:
             result = await self.call_tool(server, tool, args)
         except MCPCallRefusedError as e:
-            return f"Error: {e}"
+            return ToolErrorOutput(f"Error: {e}")
         except Exception as e:
-            return f"Error: {server}.{tool} failed: {type(e).__name__}: {e}"
+            return ToolErrorOutput(f"Error: {server}.{tool} failed: {type(e).__name__}: {e}")
         return self._format(result)
 
     async def call_tool(self, server: str, tool: str, args: dict[str, Any] | None = None) -> Any:
@@ -662,7 +679,7 @@ class MCPBridge:
                 + f"\n...(truncated: {len(output)} characters in all)"
             )
         if _get(result, "is_error", "isError"):
-            return f"Error: {output or 'the tool reported an error'}"
+            return ToolErrorOutput(f"Error: {output or 'the tool reported an error'}")
         return output or "(no output)"
 
 

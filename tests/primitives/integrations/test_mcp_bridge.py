@@ -205,3 +205,66 @@ class TestAgent:
         assert outcome(response)[0] == (False, "a.txt")
         assert "no one is watching" in outcome(response)[1][1]
         assert (notes / "a.txt").exists()
+
+
+class TestErrorResults:
+    @pytest.mark.asyncio
+    async def test_server_error_result_is_a_failed_call(self, notes):
+        """An MCP tool's error result reaches the model as text and is recorded as a failed call."""
+        provider = Scripted(mcp_call("fail"))
+        async with Agent(
+            provider=provider, skills=[], mcp_servers={"notes": server_spec(notes)}
+        ) as agent:
+            response = await agent.run("go")
+        result = response.tool_results[0]
+        assert result.is_error is True
+        assert result.error.startswith("Error:") and "fail" in result.error
+
+    @pytest.mark.asyncio
+    async def test_execute_still_returns_text(self, notes):
+        from teotl.core.types import ToolErrorOutput
+
+        bridge = MCPBridge({"notes": server_spec(notes)})
+        await bridge.connect()
+        try:
+            out = await bridge.execute("notes", "fail")
+            ok = await bridge.execute("notes", "list_notes")
+        finally:
+            await bridge.close()
+        assert (
+            isinstance(out, str) and isinstance(out, ToolErrorOutput) and out.startswith("Error:")
+        )
+        assert not isinstance(ok, ToolErrorOutput)
+
+
+class TestTransportHook:
+    @pytest.mark.asyncio
+    async def test_custom_transport_opens_the_connection(self, notes):
+        """A transport factory can wrap the default one, e.g. to add authentication."""
+        opened = []
+
+        def transport(config):
+            opened.append(config.name)
+            return MCPBridge.default_transport(config)
+
+        provider = Scripted(mcp_call("list_notes"))
+        async with Agent(
+            provider=provider,
+            skills=[],
+            mcp_servers={"notes": server_spec(notes)},
+            mcp_transport=transport,
+        ) as agent:
+            response = await agent.run("go")
+        assert opened == ["notes"]
+        assert outcome(response)[0] == (False, "a.txt")
+
+    @pytest.mark.asyncio
+    async def test_add_mcp_servers_to_an_existing_agent(self, notes):
+        provider = Scripted(mcp_call("list_notes"))
+        agent = Agent(provider=provider, skills=[])
+        agent.add_mcp_servers({"notes": server_spec(notes)})
+        with pytest.raises(ValueError):
+            agent.add_mcp_servers({"other": server_spec(notes)})
+        async with agent:
+            response = await agent.run("go")
+        assert outcome(response)[0] == (False, "a.txt")

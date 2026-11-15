@@ -198,3 +198,39 @@ def test_evaluate_reports_first_failed_tool():
     )
     ok, reason = worker._evaluate_step(PlanStep(number=1, description="x"), response)
     assert not ok and "Blocked: Destructive action" in reason
+
+
+def _mcp_write(path, ok=True):
+    from teotl.primitives.harness.worker import Worker
+
+    worker = Worker.__new__(Worker)
+    call = ToolCall(
+        id="w",
+        name="mcp_execute",
+        args={"server": "fs", "tool": "write_file", "args": {"path": path, "content": "x"}},
+    )
+    result = (
+        ToolResult(call_id="w", output="ok")
+        if ok
+        else ToolResult(call_id="w", error="Error: denied", is_error=True)
+    )
+    return worker, SimpleNamespace(
+        text="STEP_STATUS: DONE", tool_calls_made=[call], tool_results=[result]
+    )
+
+
+def test_target_written_through_mcp_counts_as_existing():
+    """A step's File can live on an MCP server; the successful write is the evidence."""
+    worker, response = _mcp_write("/remote/reports/oct.md")
+    step = PlanStep(number=1, description="write report", file_path="/remote/reports/oct.md")
+    assert worker._evaluate_step(step, response) == (True, None)
+
+
+def test_mcp_write_to_another_path_or_a_failed_write_does_not_count():
+    worker, response = _mcp_write("/remote/reports/other.md")
+    step = PlanStep(number=1, description="write report", file_path="/remote/reports/oct.md")
+    ok, reason = worker._evaluate_step(step, response)
+    assert not ok and "does not exist" in reason
+    worker, response = _mcp_write("/remote/reports/oct.md", ok=False)
+    ok, reason = worker._evaluate_step(step, response)
+    assert not ok and "blocked or failed" in reason

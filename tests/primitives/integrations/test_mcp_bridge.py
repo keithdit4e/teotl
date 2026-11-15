@@ -268,3 +268,47 @@ class TestTransportHook:
         async with agent:
             response = await agent.run("go")
         assert outcome(response)[0] == (False, "a.txt")
+
+
+class TestExecuteArgs:
+    """Models don't always nest a tool's arguments under `args`."""
+
+    @pytest.mark.asyncio
+    async def test_top_level_and_string_args_are_accepted(self, notes):
+        provider = Scripted(
+            ("mcp_execute", {"server": "notes", "tool": "add_note", "name": "flat", "text": "x"}),
+            (
+                "mcp_execute",
+                {"server": "notes", "tool": "add_note", "args": '{"name": "str", "text": "y"}'},
+            ),
+            (
+                "mcp_execute",
+                {"server": "notes", "tool": "add_note", "args": {"name": "nested", "text": "z"}},
+            ),
+        )
+        async with Agent(
+            provider=provider,
+            skills=[],
+            mcp_servers={"notes": server_spec(notes)},
+            rules={"tools": {"notes.add_*": "allow"}},
+        ) as agent:
+            response = await agent.run("go")
+        assert [r.is_error for r in response.tool_results] == [False, False, False]
+        assert {"flat", "str", "nested"} <= {p.name for p in notes.iterdir()}
+
+    @pytest.mark.asyncio
+    async def test_bad_args_are_an_error(self, notes):
+        bridge = MCPBridge({"notes": server_spec(notes)})
+        await bridge.connect()
+        try:
+            assert (await bridge.execute("notes", "add_note", "not json")).startswith(
+                "Error: args must"
+            )
+            assert (await bridge.execute("notes", "add_note", ["a"])).startswith("Error: args must")
+            # nested args win over top-level ones on a clash
+            await bridge.execute(
+                "notes", "add_note", {"name": "win", "text": "1"}, name="lose", text="2"
+            )
+        finally:
+            await bridge.close()
+        assert (notes / "win").exists() and not (notes / "lose").exists()

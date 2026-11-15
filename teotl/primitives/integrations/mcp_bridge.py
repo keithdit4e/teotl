@@ -606,12 +606,27 @@ class MCPBridge:
             lines
         )
 
-    async def execute(self, server: str, tool: str, args: dict[str, Any] | None = None) -> str:
+    async def execute(
+        self, server: str, tool: str, args: dict[str, Any] | str | None = None, **extra: Any
+    ) -> str:
         """Call a tool and return its output as text.
 
         Errors start with "Error:" and are returned as ``ToolErrorOutput``, so the agent records them as
         failed calls: the server's own error results (``isError``), refusals, and transport failures.
+
+        Models don't always nest the tool's arguments under ``args``: they may pass them at the top
+        level (``mcp_execute(server, tool, sql=...)``) or as a JSON string. Both are accepted; when
+        both ``args`` and top-level arguments are given, ``args`` wins on a clash.
         """
+        if isinstance(args, str):
+            try:
+                args = json.loads(args) if args.strip() else {}
+            except ValueError:
+                return ToolErrorOutput("Error: args must be a JSON object of the tool's arguments")
+        if args is not None and not isinstance(args, dict):
+            return ToolErrorOutput("Error: args must be an object of the tool's arguments")
+        if extra:
+            args = {**extra, **(args or {})}
         try:
             result = await self.call_tool(server, tool, args)
         except MCPCallRefusedError as e:

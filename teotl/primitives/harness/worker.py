@@ -11,6 +11,7 @@ Key responsibilities:
 - Return results for evaluation
 """
 
+import json
 import logging
 import re
 from pathlib import Path
@@ -52,6 +53,24 @@ def _concrete_path(file_path: str | None) -> Path | None:
     if text.lower() in ("n/a", "na", "none", "-"):
         return None
     return Path(text).expanduser().resolve()
+
+
+def _written_through_mcp(target: str, response: Any) -> bool:
+    """True when a successful MCP tool call in this step named the target path.
+
+    A step's File can live on an MCP server (a remote filesystem, a document store), where it
+    can't be checked on the local disk. The call that wrote it is the evidence instead.
+    """
+    calls = getattr(response, "tool_calls_made", None) or []
+    results = getattr(response, "tool_results", None) or []
+    ok = {r.call_id for r in results if not r.is_error}
+    for call in calls:
+        is_mcp = (
+            call.name == "mcp_execute" or "__" in call.name
+        )  # compact mode, or full mode server__tool
+        if is_mcp and call.id in ok and target in json.dumps(call.args, default=str):
+            return True
+    return False
 
 
 def _is_removal(step: PlanStep) -> bool:
@@ -590,7 +609,12 @@ Begin execution now.
             return (False, "Worker reported DONE without using any tools")
 
         path = _concrete_path(step.file_path)
-        if path is not None and not path.exists() and not _is_removal(step):
+        if (
+            path is not None
+            and not path.exists()
+            and not _is_removal(step)
+            and not _written_through_mcp(str(path), response)
+        ):
             return (False, f"Target file {path} does not exist after the step")
 
         return (True, None)

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **A step's target file on an MCP server no longer fails the step.** The worker checked the plan's File on the local disk, so a report written through an MCP filesystem server failed with "does not exist after the step" even though it was written. A successful MCP call in the step that names the target path now counts as evidence; a failed write or a write to another path still fails.
+- **`mcp_execute` accepts the arguments however the model sends them**: nested under `args` (as before), at the top level (`mcp_execute(server, tool, sql=...)`, which raised "unexpected keyword argument"), or as a JSON string. Nested `args` win on a clash; anything else is a clear error.
+
+### Fixed
 - **A guardrail or output filter that crashes now blocks instead of being skipped.** The event bus used to log a failing handler and carry on, so a `tool_call` guardrail that raised let the call run, and a `tool_result` filter that raised (for example a redactor) let unfiltered output through. For `tool_call` and `tool_result` it now blocks, names the handler and stops; other events still skip a broken handler.
 - **MCP tools that report an error are recorded as failed calls.** A server's error result (`isError`), a refused call or a transport failure still reaches the model as text starting with "Error:", but the tool result now has `is_error=True`, so the harness, heartbeat and audit count it.
 
